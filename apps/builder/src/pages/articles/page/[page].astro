@@ -1,6 +1,12 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 const { page } = Astro.params;
+
+export function getStaticPaths() {
+  return ['2', '3'].map((pageNumber) => ({
+    params: { page: pageNumber },
+  }));
+}
 ---
 
 <BaseLayout title={`Articles - Page ${page}`} description="Paginated article listing placeholder.">
@@ -10,4 +16,3 @@ const { page } = Astro.params;
     <p>Static pagination will be generated here from published content.</p>
   </section>
 </BaseLayout>
-

@@ -9,7 +9,8 @@ coverage
 apps/api/bin
 apps/admin/dist
 apps/builder/dist
+apps/admin/.angular
+apps/builder/.astro
 
 **/*.tmp
 **/*.swp
-

@@ -2,6 +2,16 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const { slug } = Astro.params;
+
+export function getStaticPaths() {
+  return [
+    'what-is-private-cms',
+    'how-static-rendering-helps-seo',
+    'choosing-deployment-targets-per-site',
+  ].map((slug) => ({
+    params: { slug },
+  }));
+}
 ---
 
 <BaseLayout title={slug ?? 'Article'} description="Rendered article details from Markdown.">
@@ -11,4 +21,3 @@ const { slug } = Astro.params;
     <p>The real implementation will load the article by slug, render Markdown, and emit SEO data.</p>
   </article>
 </BaseLayout>
-

@@ -14,8 +14,17 @@ Reusable self-hosted CMS and static site builder.
 ## Local Development
 
 ```bash
+npm install
+npm run dev:admin
 docker compose up --build
 ```
+
+Local host ports:
+
+- Admin: `http://localhost:3000`
+- API: `http://localhost:8081`
+- Postgres: `localhost:5433`
+- MinIO: `http://localhost:9002` and `http://localhost:9003`
 
 ## Notes
 

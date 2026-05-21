@@ -6,5 +6,4 @@ COPY tsconfig.json ./
 COPY src ./src
 COPY public ./public
 EXPOSE 4321
-CMD ["sh", "-lc", "corepack enable && pnpm install && pnpm dev"]
-
+CMD ["sh", "-lc", "npm install && npm run dev"]

@@ -10,6 +10,7 @@ type DashboardSection = {
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
+  standalone: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'dashboard',
@@ -33,4 +34,3 @@ export class DashboardComponent {
     { id: 'deployment-settings', title: 'Deployment Settings', description: 'Provider-specific deployment configuration.' },
   ];
 }
-

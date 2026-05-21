@@ -6,5 +6,4 @@ COPY tsconfig.json ./
 COPY tsconfig.app.json ./
 COPY src ./src
 EXPOSE 3000
-CMD ["sh", "-lc", "corepack enable && pnpm install && pnpm start"]
-
+CMD ["sh", "-lc", "npm install && npm run start"]

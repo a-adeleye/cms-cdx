@@ -1,14 +1,14 @@
 {
   "name": "cms-builder",
   "private": true,
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "npm@11.6.2",
   "workspaces": [
     "apps/*"
   ],
   "scripts": {
-    "dev:admin": "pnpm --dir apps/admin start",
-    "dev:builder": "pnpm --dir apps/builder dev",
-    "build:admin": "pnpm --dir apps/admin build",
-    "build:builder": "pnpm --dir apps/builder build"
+    "dev:admin": "npm run start --workspace apps/admin",
+    "dev:builder": "npm run dev --workspace apps/builder",
+    "build:admin": "npm run build --workspace apps/admin",
+    "build:builder": "npm run build --workspace apps/builder"
   }
 }

@@ -1,0 +1,16 @@
+{
+  "name": "@cms-builder/builder",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 0.0.0.0 --port 4321",
+    "build": "astro build",
+    "preview": "astro preview --host 0.0.0.0 --port 4321"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "astro": "^5.5.0",
+    "typescript": "^5.8.0"
+  }
+}
+

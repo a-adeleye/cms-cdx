@@ -1,0 +1,13 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+const { page } = Astro.params;
+---
+
+<BaseLayout title={`Articles - Page ${page}`} description="Paginated article listing placeholder.">
+  <section class="page">
+    <p class="eyebrow">Articles</p>
+    <h1>Page {page}</h1>
+    <p>Static pagination will be generated here from published content.</p>
+  </section>
+</BaseLayout>
+

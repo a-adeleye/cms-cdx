@@ -1,0 +1,23 @@
+{
+  "name": "Example Site",
+  "slug": "example",
+  "domain": "http://localhost:4321",
+  "blog_path": "/articles",
+  "template_key": "default-blog",
+  "theme_config": {
+    "brand": "Example Site",
+    "accent": "#0058be"
+  },
+  "deploy_provider": "none",
+  "deploy_config": {},
+  "ai_config": {
+    "provider": "none",
+    "model": "",
+    "tone": "clear, premium, simple",
+    "brand_context": "Example CMS site for testing."
+  },
+  "storage_config": {
+    "provider": "s3"
+  }
+}
+

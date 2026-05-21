@@ -1,0 +1,16 @@
+---
+const { section } = Astro.props;
+---
+
+<section class={`section section-${section.key}`}>
+  <p class="eyebrow">{section.title}</p>
+  {section.dynamic ? (
+    <div class="panel">Dynamic section placeholder for {section.key}.</div>
+  ) : (
+    <div class="panel">
+      <strong>{section.content?.headline ?? section.title}</strong>
+      <p>Template-driven content for {section.key}.</p>
+    </div>
+  )}
+</section>
+

@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cms_builder
+      POSTGRES_USER: cms
+      POSTGRES_PASSWORD: cms
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      DATABASE_URL: postgres://cms:cms@postgres:5432/cms_builder?sslmode=disable
+      JWT_SECRET: dev-jwt-secret
+      API_PORT: "8080"
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: cms-builder
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: minio123
+      S3_PUBLIC_URL: http://localhost:9000/cms-builder
+    depends_on:
+      - postgres
+      - minio
+    ports:
+      - "8080:8080"
+
+  admin:
+    build:
+      context: ./apps/admin
+    environment:
+      VITE_API_URL: http://localhost:8080/api/v1
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+
+  builder:
+    build:
+      context: ./apps/builder
+    environment:
+      CMS_API_URL: http://api:8080/api/v1
+    depends_on:
+      - api
+    ports:
+      - "4321:4321"
+
+volumes:
+  postgres_data:
+  minio_data:

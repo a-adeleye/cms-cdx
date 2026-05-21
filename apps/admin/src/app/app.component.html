@@ -1,0 +1,23 @@
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">CMS Builder</div>
+    <nav>
+      @for (item of navItems; track item.id) {
+        <a [href]="'#' + item.id">{{ item.label }}</a>
+      }
+    </nav>
+  </aside>
+
+  <main class="content">
+    <header class="hero">
+      <p class="eyebrow">Angular admin</p>
+      <h1>Multi-site content, builds, and deployment in one place.</h1>
+      <p>
+        Angular dashboard scaffold aligned to the repository brief. Replace the placeholder
+        sections with typed forms, API services, and route-driven editors.
+      </p>
+    </header>
+
+    <router-outlet></router-outlet>
+  </main>
+</div>

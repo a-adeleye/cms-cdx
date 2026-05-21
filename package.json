@@ -1,0 +1,14 @@
+{
+  "name": "cms-builder",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:admin": "pnpm --dir apps/admin start",
+    "dev:builder": "pnpm --dir apps/builder dev",
+    "build:admin": "pnpm --dir apps/admin build",
+    "build:builder": "pnpm --dir apps/builder build"
+  }
+}

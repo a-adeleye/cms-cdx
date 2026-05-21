@@ -1,0 +1,14 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const { slug } = Astro.params;
+---
+
+<BaseLayout title={slug ?? 'Article'} description="Rendered article details from Markdown.">
+  <article class="page">
+    <p class="eyebrow">Article</p>
+    <h1>{slug}</h1>
+    <p>The real implementation will load the article by slug, render Markdown, and emit SEO data.</p>
+  </article>
+</BaseLayout>
+

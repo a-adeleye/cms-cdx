@@ -1,0 +1,9 @@
+---
+const { article } = Astro.props;
+---
+
+<article>
+  <h1>{article?.title ?? 'Article'}</h1>
+  <div set:html={article?.html ?? '<p>Rendered markdown goes here.</p>'} />
+</article>
+

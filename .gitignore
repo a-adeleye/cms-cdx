@@ -1,0 +1,15 @@
+node_modules
+dist
+build
+.turbo
+coverage
+.DS_Store
+*.log
+
+apps/api/bin
+apps/admin/dist
+apps/builder/dist
+
+**/*.tmp
+**/*.swp
+

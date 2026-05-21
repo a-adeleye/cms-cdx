@@ -1,0 +1,24 @@
+package deploy
+
+import (
+	"context"
+
+	"cms-builder/api/internal/models"
+)
+
+type DeployResult struct {
+	Provider string `json:"provider"`
+	URL      string `json:"url,omitempty"`
+	Message  string `json:"message,omitempty"`
+}
+
+type DeployAdapter interface {
+	Deploy(ctx context.Context, site models.Site, build models.Build, outputPath string) (*DeployResult, error)
+}
+
+type NoopAdapter struct{}
+
+func (NoopAdapter) Deploy(ctx context.Context, site models.Site, build models.Build, outputPath string) (*DeployResult, error) {
+	return &DeployResult{Provider: "none", Message: "deployment skipped in scaffold"}, nil
+}
+

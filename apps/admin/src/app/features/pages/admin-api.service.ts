@@ -5,9 +5,11 @@ import {
   ArticleRecord,
   AuthSession,
   BuildRecord,
+  CategoryRecord,
   LandingSectionRecord,
   MediaAssetRecord,
   SiteRecord,
+  TagRecord,
 } from './pages.model';
 import { AuthTokenService } from './auth-token.service';
 
@@ -95,6 +97,15 @@ interface MediaCreatePayload {
   altText: string;
 }
 
+interface CategoryUpsertPayload {
+  name: string;
+  description: string;
+}
+
+interface TagUpsertPayload {
+  name: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -134,6 +145,66 @@ export class AdminApiService {
 
   async listArticles(siteId: string): Promise<ItemsResponse<ArticleRecord>> {
     return firstValueFrom(this.http.get<ItemsResponse<ArticleRecord>>(`${this.baseUrl}/sites/${siteId}/articles`, { headers: this.headers() }));
+  }
+
+  async createCategory(siteId: string, payload: CategoryUpsertPayload): Promise<CategoryRecord> {
+    try {
+      return await firstValueFrom(
+        this.http.post<CategoryRecord>(`${this.baseUrl}/sites/${siteId}/categories`, payload, { headers: this.headers() }),
+      );
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
+
+  async updateCategory(
+    siteId: string,
+    categoryId: string,
+    payload: CategoryUpsertPayload,
+  ): Promise<CategoryRecord> {
+    try {
+      return await firstValueFrom(
+        this.http.patch<CategoryRecord>(`${this.baseUrl}/sites/${siteId}/categories/${categoryId}`, payload, { headers: this.headers() }),
+      );
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
+
+  async deleteCategory(siteId: string, categoryId: string): Promise<void> {
+    try {
+      await firstValueFrom(this.http.delete(`${this.baseUrl}/sites/${siteId}/categories/${categoryId}`, { headers: this.headers() }));
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
+
+  async createTag(siteId: string, payload: TagUpsertPayload): Promise<TagRecord> {
+    try {
+      return await firstValueFrom(
+        this.http.post<TagRecord>(`${this.baseUrl}/sites/${siteId}/tags`, payload, { headers: this.headers() }),
+      );
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
+
+  async updateTag(siteId: string, tagId: string, payload: TagUpsertPayload): Promise<TagRecord> {
+    try {
+      return await firstValueFrom(
+        this.http.patch<TagRecord>(`${this.baseUrl}/sites/${siteId}/tags/${tagId}`, payload, { headers: this.headers() }),
+      );
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
+
+  async deleteTag(siteId: string, tagId: string): Promise<void> {
+    try {
+      await firstValueFrom(this.http.delete(`${this.baseUrl}/sites/${siteId}/tags/${tagId}`, { headers: this.headers() }));
+    } catch (error) {
+      throw this.toError(error);
+    }
   }
 
   async upsertArticle(siteId: string, payload: ArticleUpsertPayload): Promise<ArticleRecord> {

@@ -20,6 +20,12 @@ describe('WorkspaceStateService', () => {
       'createSite',
       'updateSite',
       'upsertArticle',
+      'createCategory',
+      'updateCategory',
+      'deleteCategory',
+      'createTag',
+      'updateTag',
+      'deleteTag',
       'updateLandingSection',
       'reorderLandingSections',
       'createBuild',
@@ -119,6 +125,34 @@ describe('WorkspaceStateService', () => {
       tagIds: [],
       updatedAt: '2026-05-23T00:00:00.000Z',
     });
+    api.createCategory.and.resolveTo({
+      id: 'category-new',
+      siteId: 'site-example',
+      name: 'New Category',
+      slug: 'new-category',
+      description: 'Category description',
+    });
+    api.updateCategory.and.resolveTo({
+      id: 'category-1',
+      siteId: 'site-example',
+      name: 'Updated Category',
+      slug: 'updated-category',
+      description: 'Updated description',
+    });
+    api.deleteCategory.and.resolveTo();
+    api.createTag.and.resolveTo({
+      id: 'tag-new',
+      siteId: 'site-example',
+      name: 'New Tag',
+      slug: 'new-tag',
+    });
+    api.updateTag.and.resolveTo({
+      id: 'tag-1',
+      siteId: 'site-example',
+      name: 'Updated Tag',
+      slug: 'updated-tag',
+    });
+    api.deleteTag.and.resolveTo();
 
     await TestBed.configureTestingModule({
       providers: [
@@ -155,5 +189,47 @@ describe('WorkspaceStateService', () => {
     expect(api.createSite).toHaveBeenCalled();
     expect(service.selectedSite().id).toBe('site-new');
     expect(service.sites().some((site) => site.slug === 'new-site')).toBeTrue();
+  });
+
+  it('creates, updates, and deletes taxonomy records through the API', async () => {
+    await service.login('admin@example.com', 'admin123');
+
+    await service.saveCategory({
+      name: 'New Category',
+      description: 'Category description',
+    });
+    await service.saveCategory({
+      id: 'category-1',
+      name: 'Updated Category',
+      description: 'Updated description',
+    });
+    await service.deleteCategory('category-1');
+
+    await service.saveTag({
+      name: 'New Tag',
+    });
+    await service.saveTag({
+      id: 'tag-1',
+      name: 'Updated Tag',
+    });
+    await service.deleteTag('tag-1');
+
+    expect(api.createCategory).toHaveBeenCalledWith('site-example', {
+      name: 'New Category',
+      description: 'Category description',
+    });
+    expect(api.updateCategory).toHaveBeenCalledWith('site-example', 'category-1', {
+      name: 'Updated Category',
+      description: 'Updated description',
+    });
+    expect(api.deleteCategory).toHaveBeenCalledWith('site-example', 'category-1');
+    expect(api.createTag).toHaveBeenCalledWith('site-example', {
+      name: 'New Tag',
+    });
+    expect(api.updateTag).toHaveBeenCalledWith('site-example', 'tag-1', {
+      name: 'Updated Tag',
+    });
+    expect(api.deleteTag).toHaveBeenCalledWith('site-example', 'tag-1');
+    expect(api.loadWorkspace).toHaveBeenCalledTimes(7);
   });
 });

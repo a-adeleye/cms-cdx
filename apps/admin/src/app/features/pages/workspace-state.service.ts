@@ -6,9 +6,11 @@ import {
   AuthSession,
   BuildRecord,
   BuildType,
+  CategoryRecord,
   LandingSectionRecord,
   MediaAssetRecord,
   SiteRecord,
+  TagRecord,
 } from './pages.model';
 import { INITIAL_STATE } from './pages.seed';
 import { AdminApiService } from './admin-api.service';
@@ -37,6 +39,17 @@ interface SiteDraftInput {
   domain: string;
   blogPath: string;
   templateKey: string;
+}
+
+interface CategoryDraftInput {
+  id?: string;
+  name: string;
+  description: string;
+}
+
+interface TagDraftInput {
+  id?: string;
+  name: string;
 }
 
 const EMPTY_SITE: SiteRecord = {
@@ -267,6 +280,64 @@ export class WorkspaceStateService {
     await this.loadWorkspace(site.id);
     this.state.update((state) => ({ ...state, selectedArticleId: article.id }));
     return article;
+  }
+
+  async saveCategory(input: CategoryDraftInput): Promise<CategoryRecord> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    const category = input.id
+      ? await this.api.updateCategory(site.id, input.id, {
+          name: input.name,
+          description: input.description,
+        })
+      : await this.api.createCategory(site.id, {
+          name: input.name,
+          description: input.description,
+        });
+
+    await this.loadWorkspace(site.id);
+    return category;
+  }
+
+  async deleteCategory(categoryId: string): Promise<void> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    await this.api.deleteCategory(site.id, categoryId);
+    await this.loadWorkspace(site.id);
+  }
+
+  async saveTag(input: TagDraftInput): Promise<TagRecord> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    const tag = input.id
+      ? await this.api.updateTag(site.id, input.id, {
+          name: input.name,
+        })
+      : await this.api.createTag(site.id, {
+          name: input.name,
+        });
+
+    await this.loadWorkspace(site.id);
+    return tag;
+  }
+
+  async deleteTag(tagId: string): Promise<void> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    await this.api.deleteTag(site.id, tagId);
+    await this.loadWorkspace(site.id);
   }
 
   async saveArticle(input: ArticleDraftInput): Promise<ArticleRecord> {

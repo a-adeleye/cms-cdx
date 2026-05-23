@@ -5,6 +5,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of } from 'rxjs';
 import { DashboardPageComponent } from '../../pages/dashboard/dashboard-page.component';
+import { TaxonomyPageComponent } from '../../pages/taxonomy/taxonomy-page.component';
 import { PageViewComponent } from './page-view.component';
 import { SettingsPageComponent } from '../../pages/settings/settings-page.component';
 import { WorkspaceStateService } from './workspace-state.service';
@@ -87,7 +88,7 @@ describe('PageViewComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [PageViewComponent],
-      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, DashboardPageComponent, SettingsPageComponent],
+      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, DashboardPageComponent, SettingsPageComponent, TaxonomyPageComponent],
       providers: [
         {
           provide: ActivatedRoute,
@@ -185,7 +186,7 @@ describe('Settings page', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [PageViewComponent],
-      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, DashboardPageComponent, SettingsPageComponent],
+      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, DashboardPageComponent, SettingsPageComponent, TaxonomyPageComponent],
       providers: [
         {
           provide: ActivatedRoute,
@@ -272,7 +273,7 @@ describe('Articles page', () => {
       imports: [CommonModule, ReactiveFormsModule, RouterTestingModule.withRoutes([
         { path: 'articles', component: PageViewComponent },
         { path: 'article-editor', component: PageViewComponent },
-      ]), DashboardPageComponent, SettingsPageComponent],
+      ]), DashboardPageComponent, SettingsPageComponent, TaxonomyPageComponent],
       providers: [
         {
           provide: ActivatedRoute,
@@ -388,7 +389,7 @@ describe('Article editor page', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [PageViewComponent],
-      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, DashboardPageComponent, SettingsPageComponent],
+      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, DashboardPageComponent, SettingsPageComponent, TaxonomyPageComponent],
       providers: [
         {
           provide: ActivatedRoute,

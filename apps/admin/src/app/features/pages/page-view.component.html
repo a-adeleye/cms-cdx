@@ -29,7 +29,7 @@
           </div>
 
           <div class="hero-actions">
-            @if (currentPage.kind !== 'articles') {
+            @if (currentPage.kind !== 'articles' && currentPage.kind !== 'categories' && currentPage.kind !== 'tags') {
               <a class="button button-primary" [routerLink]="currentPage.primaryAction.path">
                 {{ currentPage.primaryAction.label }}
               </a>
@@ -228,6 +228,14 @@
             </pre>
           </article>
         </section>
+      }
+
+      @case ('categories') {
+        <app-taxonomy-page [kind]="'categories'" />
+      }
+
+      @case ('tags') {
+        <app-taxonomy-page [kind]="'tags'" />
       }
 
       @case ('articles') {

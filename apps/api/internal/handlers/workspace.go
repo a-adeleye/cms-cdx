@@ -12,6 +12,7 @@ import (
 
 	"cms-builder/api/internal/middleware"
 	"cms-builder/api/internal/models"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type workspaceResponse struct {
@@ -157,6 +158,15 @@ type articleUpsertRequest struct {
 	TagIDs          []string `json:"tagIds"`
 	IsFeatured      bool     `json:"isFeatured"`
 	Status          string   `json:"status"`
+}
+
+type categoryUpsertRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type tagUpsertRequest struct {
+	Name string `json:"name"`
 }
 
 type landingReorderRequest struct {
@@ -318,6 +328,10 @@ func (a *API) siteSubroutes(w http.ResponseWriter, r *http.Request) {
 		a.handleLandingSectionRoutes(w, r, siteID, parts[2:])
 	case "articles":
 		a.handleSiteArticleRoutes(w, r, siteID, parts[2:])
+	case "categories":
+		a.handleSiteCategoryRoutes(w, r, siteID, parts[2:])
+	case "tags":
+		a.handleSiteTagRoutes(w, r, siteID, parts[2:])
 	case "builds":
 		a.handleBuildRoutes(w, r, siteID)
 	case "media":
@@ -502,6 +516,144 @@ func (a *API) handleSiteArticleRoutes(w http.ResponseWriter, r *http.Request, si
 	}
 }
 
+func (a *API) handleSiteCategoryRoutes(w http.ResponseWriter, r *http.Request, siteID string, parts []string) {
+	switch {
+	case len(parts) == 0 || parts[0] == "":
+		switch r.Method {
+		case http.MethodGet:
+			categories, err := a.listCategories(r.Context(), siteID)
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to load categories"})
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]any{"items": categories})
+		case http.MethodPost:
+			var payload categoryUpsertRequest
+			if err := decodeJSON(r, &payload); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
+				return
+			}
+			category, err := a.createCategory(r.Context(), siteID, payload)
+			if err != nil {
+				if errors.Is(err, errValidation) {
+					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to create category"})
+				return
+			}
+			writeJSON(w, http.StatusCreated, category)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	default:
+		categoryID := parts[0]
+		switch r.Method {
+		case http.MethodPatch:
+			var payload categoryUpsertRequest
+			if err := decodeJSON(r, &payload); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
+				return
+			}
+			category, err := a.updateCategory(r.Context(), siteID, categoryID, payload)
+			if err != nil {
+				if errors.Is(err, errValidation) {
+					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+					return
+				}
+				if errors.Is(err, sql.ErrNoRows) {
+					http.NotFound(w, r)
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to update category"})
+				return
+			}
+			writeJSON(w, http.StatusOK, category)
+		case http.MethodDelete:
+			if err := a.deleteCategory(r.Context(), siteID, categoryID); err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					http.NotFound(w, r)
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to delete category"})
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func (a *API) handleSiteTagRoutes(w http.ResponseWriter, r *http.Request, siteID string, parts []string) {
+	switch {
+	case len(parts) == 0 || parts[0] == "":
+		switch r.Method {
+		case http.MethodGet:
+			tags, err := a.listTags(r.Context(), siteID)
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to load tags"})
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]any{"items": tags})
+		case http.MethodPost:
+			var payload tagUpsertRequest
+			if err := decodeJSON(r, &payload); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
+				return
+			}
+			tag, err := a.createTag(r.Context(), siteID, payload)
+			if err != nil {
+				if errors.Is(err, errValidation) {
+					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to create tag"})
+				return
+			}
+			writeJSON(w, http.StatusCreated, tag)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	default:
+		tagID := parts[0]
+		switch r.Method {
+		case http.MethodPatch:
+			var payload tagUpsertRequest
+			if err := decodeJSON(r, &payload); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
+				return
+			}
+			tag, err := a.updateTag(r.Context(), siteID, tagID, payload)
+			if err != nil {
+				if errors.Is(err, errValidation) {
+					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+					return
+				}
+				if errors.Is(err, sql.ErrNoRows) {
+					http.NotFound(w, r)
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to update tag"})
+				return
+			}
+			writeJSON(w, http.StatusOK, tag)
+		case http.MethodDelete:
+			if err := a.deleteTag(r.Context(), siteID, tagID); err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					http.NotFound(w, r)
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to delete tag"})
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
 func (a *API) handleBuildRoutes(w http.ResponseWriter, r *http.Request, siteID string) {
 	switch r.Method {
 	case http.MethodGet:
@@ -563,6 +715,14 @@ func (a *API) handleMediaRoutes(w http.ResponseWriter, r *http.Request, siteID s
 }
 
 var errValidation = errors.New("validation error")
+
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return false
+	}
+	return pgErr.Code == "23505"
+}
 
 func (a *API) findUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	row := a.Services.DB.QueryRowContext(ctx, `
@@ -1213,6 +1373,254 @@ func (a *API) listTags(ctx context.Context, siteID string) ([]tagResponse, error
 		items = append(items, item)
 	}
 	return items, rows.Err()
+}
+
+func (a *API) getCategory(ctx context.Context, siteID, categoryID string) (categoryResponse, error) {
+	row := a.Services.DB.QueryRowContext(ctx, `
+		SELECT id::text, site_id::text, name, slug, COALESCE(description, '')
+		FROM categories
+		WHERE site_id = $1 AND id = $2
+	`, siteID, categoryID)
+
+	var item categoryResponse
+	if err := row.Scan(&item.ID, &item.SiteID, &item.Name, &item.Slug, &item.Description); err != nil {
+		return categoryResponse{}, err
+	}
+	return item, nil
+}
+
+func (a *API) createCategory(ctx context.Context, siteID string, payload categoryUpsertRequest) (categoryResponse, error) {
+	name := strings.TrimSpace(payload.Name)
+	if name == "" {
+		return categoryResponse{}, fmt.Errorf("%w: category name is required", errValidation)
+	}
+
+	slug, err := a.uniqueCategorySlug(ctx, siteID, "", name)
+	if err != nil {
+		return categoryResponse{}, err
+	}
+
+	var item categoryResponse
+	err = a.Services.DB.QueryRowContext(ctx, `
+		INSERT INTO categories (site_id, name, slug, description)
+		VALUES ($1, $2, $3, NULLIF($4, ''))
+		RETURNING id::text, site_id::text, name, slug, COALESCE(description, '')
+	`, siteID, name, slug, strings.TrimSpace(payload.Description)).Scan(&item.ID, &item.SiteID, &item.Name, &item.Slug, &item.Description)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return categoryResponse{}, fmt.Errorf("%w: category slug already exists", errValidation)
+		}
+		return categoryResponse{}, err
+	}
+	return item, nil
+}
+
+func (a *API) updateCategory(ctx context.Context, siteID, categoryID string, payload categoryUpsertRequest) (categoryResponse, error) {
+	name := strings.TrimSpace(payload.Name)
+	if name == "" {
+		return categoryResponse{}, fmt.Errorf("%w: category name is required", errValidation)
+	}
+
+	slug, err := a.uniqueCategorySlug(ctx, siteID, categoryID, name)
+	if err != nil {
+		return categoryResponse{}, err
+	}
+
+	result, err := a.Services.DB.ExecContext(ctx, `
+		UPDATE categories
+		SET name = $3, slug = $4, description = NULLIF($5, ''), updated_at = NOW()
+		WHERE id = $1 AND site_id = $2
+	`, categoryID, siteID, name, slug, strings.TrimSpace(payload.Description))
+	if err != nil {
+		if isUniqueViolation(err) {
+			return categoryResponse{}, fmt.Errorf("%w: category slug already exists", errValidation)
+		}
+		return categoryResponse{}, err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return categoryResponse{}, sql.ErrNoRows
+	}
+	return a.getCategory(ctx, siteID, categoryID)
+}
+
+func (a *API) deleteCategory(ctx context.Context, siteID, categoryID string) error {
+	tx, err := a.Services.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	var existingID string
+	if err = tx.QueryRowContext(ctx, `
+		SELECT id::text
+		FROM categories
+		WHERE id = $1 AND site_id = $2
+	`, categoryID, siteID).Scan(&existingID); err != nil {
+		return err
+	}
+
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE articles
+		SET category_id = NULL, updated_at = NOW()
+		WHERE site_id = $1 AND category_id = $2
+	`, siteID, categoryID); err != nil {
+		return err
+	}
+
+	if _, err = tx.ExecContext(ctx, `
+		DELETE FROM categories
+		WHERE id = $1 AND site_id = $2
+	`, categoryID, siteID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (a *API) getTag(ctx context.Context, siteID, tagID string) (tagResponse, error) {
+	row := a.Services.DB.QueryRowContext(ctx, `
+		SELECT id::text, site_id::text, name, slug
+		FROM tags
+		WHERE site_id = $1 AND id = $2
+	`, siteID, tagID)
+
+	var item tagResponse
+	if err := row.Scan(&item.ID, &item.SiteID, &item.Name, &item.Slug); err != nil {
+		return tagResponse{}, err
+	}
+	return item, nil
+}
+
+func (a *API) createTag(ctx context.Context, siteID string, payload tagUpsertRequest) (tagResponse, error) {
+	name := strings.TrimSpace(payload.Name)
+	if name == "" {
+		return tagResponse{}, fmt.Errorf("%w: tag name is required", errValidation)
+	}
+
+	slug, err := a.uniqueTagSlug(ctx, siteID, "", name)
+	if err != nil {
+		return tagResponse{}, err
+	}
+
+	var item tagResponse
+	err = a.Services.DB.QueryRowContext(ctx, `
+		INSERT INTO tags (site_id, name, slug)
+		VALUES ($1, $2, $3)
+		RETURNING id::text, site_id::text, name, slug
+	`, siteID, name, slug).Scan(&item.ID, &item.SiteID, &item.Name, &item.Slug)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return tagResponse{}, fmt.Errorf("%w: tag slug already exists", errValidation)
+		}
+		return tagResponse{}, err
+	}
+	return item, nil
+}
+
+func (a *API) updateTag(ctx context.Context, siteID, tagID string, payload tagUpsertRequest) (tagResponse, error) {
+	name := strings.TrimSpace(payload.Name)
+	if name == "" {
+		return tagResponse{}, fmt.Errorf("%w: tag name is required", errValidation)
+	}
+
+	slug, err := a.uniqueTagSlug(ctx, siteID, tagID, name)
+	if err != nil {
+		return tagResponse{}, err
+	}
+
+	result, err := a.Services.DB.ExecContext(ctx, `
+		UPDATE tags
+		SET name = $3, slug = $4, updated_at = NOW()
+		WHERE id = $1 AND site_id = $2
+	`, tagID, siteID, name, slug)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return tagResponse{}, fmt.Errorf("%w: tag slug already exists", errValidation)
+		}
+		return tagResponse{}, err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return tagResponse{}, sql.ErrNoRows
+	}
+	return a.getTag(ctx, siteID, tagID)
+}
+
+func (a *API) deleteTag(ctx context.Context, siteID, tagID string) error {
+	result, err := a.Services.DB.ExecContext(ctx, `
+		DELETE FROM tags
+		WHERE id = $1 AND site_id = $2
+	`, tagID, siteID)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (a *API) uniqueCategorySlug(ctx context.Context, siteID, categoryID, name string) (string, error) {
+	return a.uniqueSlug(ctx, "categories", siteID, categoryID, name)
+}
+
+func (a *API) uniqueTagSlug(ctx context.Context, siteID, tagID, name string) (string, error) {
+	return a.uniqueSlug(ctx, "tags", siteID, tagID, name)
+}
+
+func (a *API) uniqueSlug(ctx context.Context, table, siteID, excludeID, name string) (string, error) {
+	base := slugify(name)
+	if base == "" {
+		return "", fmt.Errorf("%w: name must contain letters or numbers", errValidation)
+	}
+
+	query := fmt.Sprintf(`SELECT slug FROM %s WHERE site_id = $1`, table)
+	args := []any{siteID}
+	if strings.TrimSpace(excludeID) != "" {
+		query += " AND id <> $2"
+		args = append(args, excludeID)
+	}
+
+	rows, err := a.Services.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	used := make(map[string]struct{})
+	for rows.Next() {
+		var slug string
+		if err := rows.Scan(&slug); err != nil {
+			return "", err
+		}
+		used[slug] = struct{}{}
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+
+	candidate := base
+	if _, exists := used[candidate]; !exists {
+		return candidate, nil
+	}
+
+	for suffix := 2; ; suffix++ {
+		candidate = fmt.Sprintf("%s-%d", base, suffix)
+		if _, exists := used[candidate]; !exists {
+			return candidate, nil
+		}
+	}
+}
+
+var slugPattern = regexp.MustCompile(`[^a-z0-9]+`)
+
+func slugify(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	value = slugPattern.ReplaceAllString(value, "-")
+	return strings.Trim(value, "-")
 }
 
 func (a *API) listMediaAssets(ctx context.Context, siteID string) ([]mediaAssetResponse, error) {

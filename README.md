@@ -21,7 +21,7 @@ docker compose up --build
 
 Local host ports:
 
-- Admin: `http://localhost:3000`
+- Admin: `http://localhost:9960`
 - API: `http://localhost:8081`
 - Postgres: `localhost:5433`
 - MinIO: `http://localhost:9002` and `http://localhost:9003`

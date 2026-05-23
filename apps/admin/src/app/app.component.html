@@ -1,23 +1,33 @@
-<div class="shell">
-  <aside class="sidebar">
-    <div class="brand">CMS Builder</div>
-    <nav>
-      @for (item of navItems; track item.id) {
-        <a [href]="'#' + item.id">{{ item.label }}</a>
+@if (showWorkspaceShell()) {
+  <div class="shell">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <aside class="sidebar">
+      @if (state.isAuthenticated()) {
+          <select id="site-switcher" [value]="state.selectedSiteId()" (change)="onSiteChange(($any($event.target)).value)">
+            @for (site of state.sites(); track site.id) {
+              <option [value]="site.id">{{ site.name }}</option>
+            }
+          </select>
       }
-    </nav>
-  </aside>
 
-  <main class="content">
-    <header class="hero">
-      <p class="eyebrow">Angular admin</p>
-      <h1>Multi-site content, builds, and deployment in one place.</h1>
-      <p>
-        Angular dashboard scaffold aligned to the repository brief. Replace the placeholder
-        sections with typed forms, API services, and route-driven editors.
-      </p>
-    </header>
+      <nav>
+        @for (item of navItems(); track item.path) {
+          <a
+            [routerLink]="['/', item.path]"
+            routerLinkActive="is-active"
+            ariaCurrentWhenActive="page"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            {{ item.navLabel }}
+          </a>
+        }
+      </nav>
+    </aside>
 
-    <router-outlet></router-outlet>
-  </main>
-</div>
+    <main class="content" id="main-content">
+      <router-outlet />
+    </main>
+  </div>
+} @else {
+  <router-outlet />
+}

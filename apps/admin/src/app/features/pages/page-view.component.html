@@ -1,0 +1,527 @@
+@if (page(); as currentPage) {
+  @if (currentPage.kind === 'login') {
+    <section class="login-page">
+      <article class="panel login-panel">
+        <h2>Sign in</h2>
+        <form class="form-grid" [formGroup]="loginForm" (ngSubmit)="signIn()">
+          <label>
+            <span>Email</span>
+            <input type="email" formControlName="email" placeholder="admin@example.com" />
+          </label>
+          <label>
+            <span>Password</span>
+            <input type="password" formControlName="password" placeholder="admin123" />
+          </label>
+          <button class="button button-primary" type="submit">Continue</button>
+        </form>
+        @if (state.error()) {
+          <p class="error-text">{{ state.error() }}</p>
+        }
+      </article>
+    </section>
+  } @else {
+    <section class="page">
+      <header class="hero">
+        <p class="eyebrow">{{ currentPage.eyebrow }}</p>
+        <div class="hero-row">
+          <div>
+            <h1>{{ currentPage.title }}</h1>
+            <p class="lead">{{ currentPage.description }}</p>
+          </div>
+
+          <div class="hero-actions">
+            @if (currentPage.kind !== 'articles') {
+              <a class="button button-primary" [routerLink]="currentPage.primaryAction.path">
+                {{ currentPage.primaryAction.label }}
+              </a>
+            }
+            @if (currentPage.secondaryAction) {
+              <a class="button button-secondary" [routerLink]="currentPage.secondaryAction.path">
+                {{ currentPage.secondaryAction.label }}
+              </a>
+            }
+          </div>
+        </div>
+      </header>
+
+      @switch (currentPage.kind) {
+      @case ('settings') {
+        <section class="two-column">
+          <article class="panel">
+            <h2>Site context</h2>
+            <p class="muted">Switch the active site before editing content or deployment settings.</p>
+            <label>
+              <span>Active site</span>
+              <select
+                [value]="state.selectedSiteId()"
+                (change)="onSiteSelectionChange(($any($event.target)).value)"
+              >
+                @for (site of state.sites(); track site.id) {
+                  <option [value]="site.id">{{ site.name }}</option>
+                }
+              </select>
+            </label>
+            <p class="context-meta">{{ state.selectedSite().domain }}</p>
+          </article>
+
+          <article class="panel">
+            <h2>Shortcut links</h2>
+            <p class="muted">Jump straight to the area you want to update.</p>
+            <div class="stack">
+              @for (group of settingsGroups; track group.title) {
+                <article class="settings-group">
+                  <div class="settings-group-heading">
+                    <div>
+                      <h3>{{ group.title }}</h3>
+                      <p>{{ group.description }}</p>
+                    </div>
+                  </div>
+                  <div class="settings-link-grid">
+                    @for (link of group.links; track link.path) {
+                      <a class="list-card settings-link" [routerLink]="link.path">
+                        <div>
+                          <strong>{{ link.label }}</strong>
+                          <p>{{ link.description }}</p>
+                        </div>
+                        <span>Open</span>
+                      </a>
+                    }
+                  </div>
+                </article>
+              }
+            </div>
+          </article>
+        </section>
+
+        <section class="two-column">
+          <article class="panel">
+            <h2>Account</h2>
+            <p class="muted">Use this when you need to leave the current workspace session.</p>
+            @if (state.authSession(); as session) {
+              <dl class="definition-list">
+                <div>
+                  <dt>Name</dt>
+                  <dd>{{ session.fullName }}</dd>
+                </div>
+                <div>
+                  <dt>Email</dt>
+                  <dd>{{ session.email }}</dd>
+                </div>
+                <div>
+                  <dt>Role</dt>
+                  <dd>{{ session.role }}</dd>
+                </div>
+              </dl>
+            }
+          </article>
+
+          <article class="panel">
+            <h2>Session</h2>
+            <p class="muted">Sign out to return to the login page.</p>
+            <button class="button button-secondary" type="button" (click)="signOut()">Sign out</button>
+          </article>
+        </section>
+      }
+
+      @case ('dashboard') {
+        <section class="metric-grid">
+          @for (metric of state.dashboardStats(); track metric.label) {
+            <article class="metric-card">
+              <p class="metric-value">{{ metric.value }}</p>
+              <h2>{{ metric.label }}</h2>
+              <p>{{ metric.detail }}</p>
+            </article>
+          }
+        </section>
+
+        <section class="two-column">
+          <article class="panel">
+            <h2>Selected site</h2>
+            <p class="muted">{{ state.selectedSite().name }}</p>
+            <dl class="definition-list tabular-nums">
+              <div>
+                <dt>Domain</dt>
+                <dd>{{ state.selectedSite().domain }}</dd>
+              </div>
+              <div>
+                <dt>Blog path</dt>
+                <dd>{{ state.selectedSite().blogPath }}</dd>
+              </div>
+              <div>
+                <dt>Template</dt>
+                <dd>{{ state.selectedSite().templateKey }}</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article class="panel">
+            <h2>Recent articles</h2>
+            <div class="stack">
+              @for (article of state.articles().slice(0, 3); track article.id) {
+                <button class="list-item" type="button" (click)="openArticle(article.id)">
+                  <strong>{{ article.title }}</strong>
+                  <span>{{ article.status }} - {{ article.updatedAt | date: 'mediumDate' }}</span>
+                </button>
+              }
+            </div>
+          </article>
+        </section>
+      }
+
+      @case ('sites') {
+        <section class="two-column">
+          <article class="panel">
+            <h2>Sites</h2>
+            <div class="stack">
+              @for (site of state.sites(); track site.id) {
+                <button
+                  class="list-item"
+                  type="button"
+                  [class.is-active-item]="site.id === state.selectedSiteId()"
+                  (click)="onSiteSelectionChange(site.id)"
+                >
+                  <strong>{{ site.name }}</strong>
+                  <span>{{ site.domain }} - {{ site.status }}</span>
+                </button>
+              }
+            </div>
+          </article>
+
+          <div class="stack">
+            <article class="panel">
+              <h2>Create site</h2>
+              <form class="form-grid" [formGroup]="siteCreateForm" (ngSubmit)="createSite()">
+                <label>
+                  <span>Name</span>
+                  <input type="text" formControlName="name" />
+                </label>
+                <label>
+                  <span>Slug</span>
+                  <input type="text" formControlName="slug" />
+                </label>
+                <label>
+                  <span>Domain</span>
+                  <input type="url" formControlName="domain" />
+                </label>
+                <label>
+                  <span>Blog path</span>
+                  <input type="text" formControlName="blogPath" />
+                </label>
+                <label>
+                  <span>Template</span>
+                  <input type="text" formControlName="templateKey" />
+                </label>
+                <button class="button button-primary" type="submit">Create site</button>
+              </form>
+            </article>
+
+            <article class="panel">
+              <h2>Edit selected site</h2>
+              <form class="form-grid" [formGroup]="siteEditForm" (ngSubmit)="saveSite()">
+                <label>
+                  <span>Name</span>
+                  <input type="text" formControlName="name" />
+                </label>
+                <label>
+                  <span>Slug</span>
+                  <input type="text" formControlName="slug" />
+                </label>
+                <label>
+                  <span>Domain</span>
+                  <input type="url" formControlName="domain" />
+                </label>
+                <label>
+                  <span>Blog path</span>
+                  <input type="text" formControlName="blogPath" />
+                </label>
+                <label>
+                  <span>Template</span>
+                  <input type="text" formControlName="templateKey" />
+                </label>
+                <label>
+                  <span>Status</span>
+                  <select formControlName="status">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </label>
+                <button class="button button-primary" type="submit">Save site</button>
+              </form>
+            </article>
+          </div>
+        </section>
+      }
+
+      @case ('site-settings') {
+        <section class="two-column">
+          <article class="panel">
+            <h2>Site settings</h2>
+            <form class="form-grid" [formGroup]="siteSettingsForm" (ngSubmit)="saveSiteSettings()">
+              <label>
+                <span>Theme config</span>
+                <textarea rows="4" formControlName="themeConfig"></textarea>
+              </label>
+              <label>
+                <span>Deployment provider</span>
+                <input type="text" formControlName="deployProvider" />
+              </label>
+              <label>
+                <span>Deployment config</span>
+                <textarea rows="4" formControlName="deployConfig"></textarea>
+              </label>
+              <label>
+                <span>AI config</span>
+                <textarea rows="4" formControlName="aiConfig"></textarea>
+              </label>
+              <label>
+                <span>Storage config</span>
+                <textarea rows="4" formControlName="storageConfig"></textarea>
+              </label>
+              <button class="button button-primary" type="submit">Save settings</button>
+            </form>
+          </article>
+
+          <article class="panel">
+            <h2>Current site</h2>
+            <dl class="definition-list">
+              <div>
+                <dt>Name</dt>
+                <dd>{{ state.selectedSite().name }}</dd>
+              </div>
+              <div>
+                <dt>Domain</dt>
+                <dd>{{ state.selectedSite().domain }}</dd>
+              </div>
+              <div>
+                <dt>Storage</dt>
+                <dd>{{ state.selectedSite().storageConfig }}</dd>
+              </div>
+            </dl>
+          </article>
+        </section>
+      }
+
+      @case ('landing-page-editor') {
+        <section class="two-column">
+          <article class="panel">
+            <h2>Sections</h2>
+            <div class="stack">
+              @for (section of state.landingSections(); track section.id) {
+                <div class="list-card">
+                  <div>
+                    <strong>{{ section.sectionKey }}</strong>
+                    <p>{{ section.title }}</p>
+                    <small>{{ section.subtitle }}</small>
+                  </div>
+                  <div class="inline-actions">
+                    <button type="button" class="button button-secondary" (click)="toggleSection(section.id)">
+                      {{ section.isEnabled ? 'Disable' : 'Enable' }}
+                    </button>
+                    <button type="button" class="button button-secondary" (click)="moveSection(section.id, 'up')">Up</button>
+                    <button type="button" class="button button-secondary" (click)="moveSection(section.id, 'down')">Down</button>
+                  </div>
+                </div>
+              }
+            </div>
+          </article>
+
+          <article class="panel">
+            <h2>Section JSON</h2>
+            <pre class="code-block">
+@for (section of state.landingSections(); track section.id) {
+{{ section.sectionKey }}:
+{{ section.contentJson }}
+}
+            </pre>
+          </article>
+        </section>
+      }
+
+      @case ('articles') {
+        <section class="panel">
+          <div class="toolbar">
+            <div class="chip-group">
+              @for (filter of articleFilterOptions; track filter.value) {
+                <button
+                  type="button"
+                  class="chip"
+                  [class.is-active-chip]="articleFilter() === filter.value"
+                  (click)="onArticleFilterChange(filter.value)"
+                >
+                  {{ filter.label }}
+                </button>
+              }
+            </div>
+            <button type="button" class="button button-primary" (click)="openArticleEditor()">New article</button>
+          </div>
+
+          <div class="stack">
+            @for (article of filteredArticles(); track article.id) {
+              <article class="list-card">
+                <div>
+                  <strong>{{ article.title }}</strong>
+                  <p>{{ article.excerpt }}</p>
+                  <small>{{ article.status }} - {{ article.updatedAt | date: 'mediumDate' }}</small>
+                </div>
+                <div class="inline-actions">
+                  <button type="button" class="button button-secondary" (click)="openArticle(article.id)">Edit</button>
+                  <button type="button" class="button button-secondary" (click)="state.toggleFeatured(article.id)">
+                    {{ article.isFeatured ? 'Unfeature' : 'Feature' }}
+                  </button>
+                  <button type="button" class="button button-secondary" (click)="state.setArticleStatus(article.id, 'review')">Review</button>
+                  <button type="button" class="button button-secondary" (click)="state.setArticleStatus(article.id, 'published')">Publish</button>
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+      }
+
+          @case ('article-editor') {
+        <section class="article-layout">
+          <article class="panel">
+            <div class="toolbar">
+              <h2>Article details</h2>
+              <label class="preview-toggle">
+                <span>Preview</span>
+                <input
+                  type="checkbox"
+                  [checked]="previewOpen()"
+                  (change)="setPreviewOpen(($any($event.target)).checked)"
+                />
+                <span class="preview-toggle-state">{{ previewOpen() ? 'On' : 'Off' }}</span>
+              </label>
+            </div>
+
+            <form class="form-grid" [formGroup]="articleForm">
+              <input type="hidden" formControlName="id" />
+              <label>
+                <span>Title</span>
+                <input type="text" formControlName="title" />
+              </label>
+              <label>
+                <span>Excerpt</span>
+                <textarea rows="3" formControlName="excerpt"></textarea>
+              </label>
+              <label>
+                <span>Cover image</span>
+                <input type="url" formControlName="coverImageUrl" />
+              </label>
+              <label>
+                <span>SEO title</span>
+                <input type="text" formControlName="seoTitle" />
+              </label>
+              <label>
+                <span>SEO description</span>
+                <textarea rows="3" formControlName="seoDescription"></textarea>
+              </label>
+              <label>
+                <span>Canonical URL</span>
+                <input type="url" formControlName="canonicalUrl" />
+              </label>
+              <div class="field-row">
+                <label>
+                  <span>Author</span>
+                  <select formControlName="authorId">
+                    @for (author of state.authors(); track author.id) {
+                      <option [value]="author.id">{{ author.name }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  <span>Category</span>
+                  <select formControlName="categoryId">
+                    @for (category of state.categories(); track category.id) {
+                      <option [value]="category.id">{{ category.name }}</option>
+                    }
+                  </select>
+                </label>
+              </div>
+              <label>
+                <span>Tag IDs</span>
+                <input type="text" formControlName="tagIds" placeholder="tag-1, tag-2" />
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" formControlName="isFeatured" />
+                <span>Featured article</span>
+              </label>
+            </form>
+
+            <div class="inline-actions">
+              <button type="button" class="button button-primary" (click)="saveArticle()">Save</button>
+            </div>
+          </article>
+
+          <article class="panel markdown-panel" [formGroup]="articleForm">
+            <h2>Markdown body</h2>
+            <label class="editor-textarea">
+              <textarea rows="22" formControlName="contentMarkdown"></textarea>
+            </label>
+          </article>
+
+          @if (previewOpen()) {
+            <article class="panel preview-drawer">
+              <h2>Preview</h2>
+              <p class="preview-title">{{ articleForm.controls.title.value || 'Untitled article' }}</p>
+              <p class="muted">{{ articleForm.controls.excerpt.value }}</p>
+              <pre class="code-block">{{ articleForm.controls.contentMarkdown.value }}</pre>
+            </article>
+          }
+        </section>
+      }
+
+      @default {
+        <section class="support-grid">
+          @for (metric of supportMetrics(); track metric.label) {
+            <article class="metric-card">
+              <p class="metric-value">{{ metric.value }}</p>
+              <h2>{{ metric.label }}</h2>
+              <p>{{ metric.detail }}</p>
+            </article>
+          }
+        </section>
+
+        <section class="two-column">
+          <article class="panel">
+            <h2>Highlights</h2>
+            <ul class="bullets">
+              @for (item of supportHighlights(); track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          </article>
+
+          <article class="panel">
+            <h2>Quick actions</h2>
+            <div class="stack">
+              <a class="list-item link-item" [routerLink]="currentPage.primaryAction.path">
+                <strong>{{ currentPage.primaryAction.label }}</strong>
+                <span>Jump to the next step</span>
+              </a>
+              @if (currentPage.secondaryAction) {
+                <a class="list-item link-item" [routerLink]="currentPage.secondaryAction.path">
+                  <strong>{{ currentPage.secondaryAction.label }}</strong>
+                  <span>Continue the workflow</span>
+                </a>
+              }
+
+              @if (currentPage.kind === 'media-library') {
+                <button class="button button-primary" type="button" (click)="uploadSampleMedia()">Upload sample media</button>
+              }
+
+              @if (currentPage.kind === 'ai-assistant') {
+                <button class="button button-primary" type="button" (click)="createArticleDraft()">Start AI draft</button>
+              }
+
+              @if (currentPage.kind === 'builds') {
+                <button class="button button-primary" type="button" (click)="triggerPreviewBuild()">Trigger preview build</button>
+                <button class="button button-secondary" type="button" (click)="triggerPublishedBuild()">Trigger published build</button>
+              }
+            </div>
+          </article>
+        </section>
+      }
+      }
+    </section>
+  }
+}

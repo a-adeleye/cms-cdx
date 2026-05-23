@@ -2,8 +2,8 @@
   "name": "@cms-builder/admin",
   "private": true,
   "scripts": {
-    "dev": "ng serve --host 0.0.0.0 --port 3000",
-    "start": "ng serve --host 0.0.0.0 --port 3000",
+    "dev": "ng serve --host 0.0.0.0 --port 9960",
+    "start": "ng serve --host 0.0.0.0 --port 9960",
     "build": "ng build",
     "watch": "ng build --watch --configuration development"
   },
@@ -24,7 +24,14 @@
     "@angular-devkit/build-angular": "^19.2.0",
     "@angular/cli": "^19.2.0",
     "@angular/compiler-cli": "^19.2.0",
+    "@types/jasmine": "^6.0.0",
     "@types/node": "^22.13.0",
+    "jasmine-core": "^6.2.0",
+    "karma": "^6.4.4",
+    "karma-chrome-launcher": "^3.2.0",
+    "karma-coverage": "^2.2.1",
+    "karma-jasmine": "^5.1.0",
+    "karma-jasmine-html-reporter": "^2.2.0",
     "typescript": "^5.8.2"
   }
 }

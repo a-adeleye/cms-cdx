@@ -5,5 +5,5 @@ COPY angular.json ./
 COPY tsconfig.json ./
 COPY tsconfig.app.json ./
 COPY src ./src
-EXPOSE 3000
+EXPOSE 9960
 CMD ["sh", "-lc", "npm install && npm run start"]

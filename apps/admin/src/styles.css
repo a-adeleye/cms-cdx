@@ -1,25 +1,43 @@
 :root {
   color-scheme: light;
-  --bg: #f7f9fb;
+  --bg: #f6f8fb;
   --surface: #ffffff;
-  --surface-soft: #eef2f6;
-  --text: #191c1e;
+  --surface-soft: #eef2f7;
+  --text: #161a1d;
   --muted: #5b6572;
-  --line: #d8dde6;
-  --accent: #0058be;
-  --shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
-  font-family: Hanken Grotesk, system-ui, sans-serif;
+  --line: #dde2ea;
+  --accent: #155bb5;
+  --accent-strong: #0f4894;
+  --accent-soft: rgba(21, 91, 181, 0.1);
+  /* Shadows tinted toward the navy accent rather than pure black. */
+  --shadow: 0 18px 40px -18px rgba(17, 40, 79, 0.28);
+  --shadow-sm: 0 2px 10px -4px rgba(17, 40, 79, 0.2);
+  --accent-glow: 0 14px 28px -10px rgba(21, 91, 181, 0.5);
+  --radius: 6px;
+  --focus-ring: 0 0 0 3px rgba(21, 91, 181, 0.4);
+  --motion-fast: 0.18s ease;
+  --motion-medium: 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
 }
 
-html,
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  scroll-behavior: smooth;
+}
+
 body {
   height: 100%;
-}
-
-body {
   margin: 0;
-  background: linear-gradient(180deg, #f7f9fb 0%, #eef2f7 100%);
+  background: radial-gradient(circle at 0% 0%, #eef3fa 0%, var(--bg) 45%);
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -27,3 +45,126 @@ a {
   text-decoration: none;
 }
 
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Tabular figures keep data columns and dates from jittering. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Form controls: shared so every feature renders inputs consistently. */
+input,
+select,
+textarea {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font: inherit;
+  background: var(--surface);
+  color: var(--text);
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 42px;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: #c3ccda;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+/* Buttons: shared design-system primitive used across all features. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 10px 18px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--motion-fast), box-shadow var(--motion-fast), border-color var(--motion-fast),
+    background-color var(--motion-fast);
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+.button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.button-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--accent-glow);
+}
+
+.button-primary:hover {
+  background: var(--accent-strong);
+}
+
+.button-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.button-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Accessible keyboard focus for links, buttons, and other interactive elements. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .button,
+  input,
+  select,
+  textarea {
+    transition: none;
+  }
+
+  .button:hover,
+  .button:active {
+    transform: none;
+  }
+}

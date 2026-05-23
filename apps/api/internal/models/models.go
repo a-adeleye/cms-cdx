@@ -29,6 +29,49 @@ type Site struct {
 	UpdatedAt      time.Time      `json:"updated_at"`
 }
 
+type Author struct {
+	ID        string    `json:"id"`
+	SiteID    string    `json:"site_id"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	Bio       string    `json:"bio,omitempty"`
+	AvatarURL string    `json:"avatar_url,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type Category struct {
+	ID          string    `json:"id"`
+	SiteID      string    `json:"site_id"`
+	Name        string    `json:"name"`
+	Slug        string    `json:"slug"`
+	Description string    `json:"description,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type Tag struct {
+	ID        string    `json:"id"`
+	SiteID    string    `json:"site_id"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type MediaAsset struct {
+	ID              string    `json:"id"`
+	SiteID          string    `json:"site_id"`
+	FileName        string    `json:"file_name"`
+	FileURL         string    `json:"file_url"`
+	MimeType        string    `json:"mime_type,omitempty"`
+	SizeBytes       int64     `json:"size_bytes,omitempty"`
+	StorageProvider string    `json:"storage_provider"`
+	StorageKey      string    `json:"storage_key,omitempty"`
+	AltText         string    `json:"alt_text,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
 type Page struct {
 	ID          string         `json:"id"`
 	SiteID      string         `json:"site_id"`
@@ -105,5 +148,17 @@ type AuditLog struct {
 	EntityID   string         `json:"entity_id,omitempty"`
 	Metadata   map[string]any `json:"metadata"`
 	CreatedAt  time.Time      `json:"created_at"`
+}
+
+type Workspace struct {
+	SelectedSiteID string          `json:"selected_site_id"`
+	Sites          []Site          `json:"sites"`
+	LandingSections []LandingSection `json:"landing_sections"`
+	Articles       []Article       `json:"articles"`
+	Authors        []Author        `json:"authors"`
+	Categories     []Category      `json:"categories"`
+	Tags           []Tag           `json:"tags"`
+	MediaAssets    []MediaAsset    `json:"media_assets"`
+	Builds         []Build         `json:"builds"`
 }
 

@@ -54,4 +54,3 @@ func ParseToken(secret []byte, raw string) (*Claims, error) {
 	}
 	return claims, nil
 }
-

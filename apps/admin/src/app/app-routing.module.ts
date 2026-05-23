@@ -5,12 +5,18 @@ const routes: Routes = [
   {
     path: '',
     loadChildren: () =>
-      import('./features/dashboard/dashboard.module').then((module) => module.DashboardModule),
+      import('./features/pages/pages.module').then((module) => module.PagesModule),
   },
 ];
 
 @NgModule({
-  imports: [RouterModule.forRoot(routes, { bindToComponentInputs: true })],
+  imports: [
+    RouterModule.forRoot(routes, {
+      bindToComponentInputs: true,
+      anchorScrolling: 'enabled',
+      scrollPositionRestoration: 'enabled',
+    }),
+  ],
   exports: [RouterModule],
 })
 export class AppRoutingModule {}

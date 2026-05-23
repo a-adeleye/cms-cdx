@@ -21,7 +21,6 @@ export interface WorkspacePageConfig {
   kind: WorkspacePageKind;
   eyebrow: string;
   title: string;
-  description: string;
   primaryAction: {
     label: string;
     path: string;

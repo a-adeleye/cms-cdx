@@ -5,25 +5,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { WORKSPACE_PAGES } from './pages.data';
 import { ArticleStatus, WorkspacePageConfig } from './pages.model';
+import { SummaryMetric } from './page-view.types';
 import { WorkspaceStateService } from './workspace-state.service';
-
-type SummaryMetric = {
-  label: string;
-  value: string;
-  detail: string;
-};
-
-type SettingsLink = {
-  label: string;
-  description: string;
-  path: string;
-};
-
-type SettingsGroup = {
-  title: string;
-  description: string;
-  links: SettingsLink[];
-};
 
 type ArticleFilterOption = {
   value: ArticleStatus | 'all';
@@ -207,7 +190,7 @@ export class PageViewComponent {
     const page = this.page();
     switch (page.kind) {
       case 'settings':
-        return ['Site context', 'Content tools', 'Publishing controls'];
+        return ['Shortcut links', 'Content tools', 'Publishing controls'];
       case 'authors':
         return ['Contributor attribution', 'Role management', 'Reusable profiles'];
       case 'categories':
@@ -228,37 +211,6 @@ export class PageViewComponent {
         return ['Multi-site context', 'Content ownership', 'Static site output'];
     }
   });
-
-  readonly settingsGroups: SettingsGroup[] = [
-    {
-      title: 'Site setup',
-      description: 'Configure the current site and switch between workspaces.',
-      links: [
-        { label: 'Sites', description: 'Create, select, and edit the active site.', path: '/sites' },
-        { label: 'Site settings', description: 'Update domain, storage, AI, and deployment config.', path: '/site-settings' },
-        { label: 'Landing page editor', description: 'Manage the home page sections for the selected site.', path: '/landing-page-editor' },
-      ],
-    },
-    {
-      title: 'Content structure',
-      description: 'Keep editorial content organized and consistent.',
-      links: [
-        { label: 'Authors', description: 'Maintain contributor profiles and ownership.', path: '/authors' },
-        { label: 'Categories', description: 'Organize content with stable taxonomy groups.', path: '/categories' },
-        { label: 'Tags', description: 'Reuse topic labels across campaigns and pages.', path: '/tags' },
-      ],
-    },
-    {
-      title: 'Publishing',
-      description: 'Handle assets, AI drafting, and deployment output.',
-      links: [
-        { label: 'Media library', description: 'Upload and manage reusable site assets.', path: '/media-library' },
-        { label: 'AI assistant', description: 'Generate draft ideas without publishing automatically.', path: '/ai-assistant' },
-        { label: 'Builds', description: 'Review preview and published build history.', path: '/builds' },
-        { label: 'Deployment settings', description: 'Control deploy targets and secret references.', path: '/deployment-settings' },
-      ],
-    },
-  ];
 
   constructor() {
     effect(() => {
@@ -437,6 +389,7 @@ export class PageViewComponent {
   }
 
   openArticleEditor(): void {
+    this.state.clearSelectedArticle();
     void this.router.navigate(['/article-editor']);
   }
 
@@ -509,15 +462,6 @@ export class PageViewComponent {
       await this.state.selectSite(siteId);
     } catch (error) {
       this.reportActionError('Unable to switch sites.', error);
-    }
-  }
-
-  async signOut(): Promise<void> {
-    try {
-      await this.state.logout();
-      void this.router.navigate(['/login']);
-    } catch (error) {
-      this.reportActionError('Unable to sign out cleanly.', error);
     }
   }
 

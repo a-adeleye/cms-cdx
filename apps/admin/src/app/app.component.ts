@@ -40,4 +40,13 @@ export class AppComponent {
       this.state.reportError('Unable to switch site.');
     }
   }
+
+  async signOut(): Promise<void> {
+    try {
+      await this.state.logout();
+      void this.router.navigate(['/login']);
+    } catch {
+      this.state.reportError('Unable to sign out cleanly.');
+    }
+  }
 }

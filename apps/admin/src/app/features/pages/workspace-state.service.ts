@@ -106,7 +106,7 @@ export class WorkspaceStateService {
   readonly builds = computed(() => this.state().builds.filter((build) => build.siteId === this.selectedSite().id));
   readonly selectedArticleId = computed(() => this.state().selectedArticleId);
   readonly selectedArticle = computed(() =>
-    this.articles().find((article) => article.id === this.state().selectedArticleId) ?? this.articles()[0] ?? null,
+    this.articles().find((article) => article.id === this.state().selectedArticleId) ?? null,
   );
 
   readonly dashboardStats = computed(() => {
@@ -301,6 +301,13 @@ export class WorkspaceStateService {
     this.state.update((state) => ({
       ...state,
       selectedArticleId: articleId,
+    }));
+  }
+
+  clearSelectedArticle(): void {
+    this.state.update((state) => ({
+      ...state,
+      selectedArticleId: null,
     }));
   }
 

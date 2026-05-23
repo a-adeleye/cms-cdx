@@ -7,7 +7,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'login',
     eyebrow: 'Access',
     title: 'Login',
-    description: 'Sign in to manage the CMS, sites, articles, media, and builds.',
     primaryAction: { label: 'Open dashboard', path: '/dashboard' },
   },
   {
@@ -16,7 +15,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'dashboard',
     eyebrow: 'Overview',
     title: 'Dashboard',
-    description: 'A live operational view of the selected site and its publishing state.',
     primaryAction: { label: 'Review articles', path: '/articles' },
     secondaryAction: { label: 'Manage sites', path: '/sites' },
   },
@@ -26,7 +24,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'settings',
     eyebrow: 'Administration',
     title: 'Settings',
-    description: 'Open the site, content, and publishing tools that configure the workspace.',
     primaryAction: { label: 'Manage sites', path: '/sites' },
   },
   {
@@ -35,7 +32,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'sites',
     eyebrow: 'Tenancy',
     title: 'Sites',
-    description: 'Create and switch between multiple sites, each with its own config.',
     primaryAction: { label: 'Open site settings', path: '/site-settings' },
   },
   {
@@ -44,7 +40,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'site-settings',
     eyebrow: 'Configuration',
     title: 'Site Settings',
-    description: 'Update domain, blog path, template, storage, AI, and deployment config.',
     primaryAction: { label: 'Save settings', path: '/sites' },
   },
   {
@@ -53,7 +48,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'landing-page-editor',
     eyebrow: 'Content design',
     title: 'Landing Page Editor',
-    description: 'Manage sections, toggle visibility, and reorder the selected site landing page.',
     primaryAction: { label: 'Edit articles', path: '/articles' },
   },
   {
@@ -62,7 +56,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'articles',
     eyebrow: 'Editorial',
     title: 'Articles',
-    description: 'Review drafts, publish content, and track the editorial workflow.',
     primaryAction: { label: 'Open editor', path: '/article-editor' },
   },
   {
@@ -71,7 +64,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'article-editor',
     eyebrow: 'Writing',
     title: 'Article Editor',
-    description: 'Draft, review, and publish an article with SEO and AI metadata.',
     primaryAction: { label: 'Save draft', path: '/articles' },
   },
   {
@@ -80,7 +72,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'authors',
     eyebrow: 'People',
     title: 'Authors',
-    description: 'Manage contributor profiles and ownership for published articles.',
     primaryAction: { label: 'Review articles', path: '/articles' },
   },
   {
@@ -89,7 +80,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'categories',
     eyebrow: 'Taxonomy',
     title: 'Categories',
-    description: 'Keep editorial categories consistent and easy to navigate.',
     primaryAction: { label: 'Open tags', path: '/tags' },
   },
   {
@@ -98,7 +88,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'tags',
     eyebrow: 'Labels',
     title: 'Tags',
-    description: 'Use reusable tags to connect content across campaigns and topics.',
     primaryAction: { label: 'Open media library', path: '/media-library' },
   },
   {
@@ -107,7 +96,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'media-library',
     eyebrow: 'Assets',
     title: 'Media Library',
-    description: 'Upload and organize site assets for articles and landing pages.',
     primaryAction: { label: 'Add media', path: '/media-library' },
   },
   {
@@ -116,7 +104,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'ai-assistant',
     eyebrow: 'Assistive writing',
     title: 'AI Assistant',
-    description: 'Generate drafts and ideas without ever auto-publishing content.',
     primaryAction: { label: 'Open article editor', path: '/article-editor' },
   },
   {
@@ -125,7 +112,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'builds',
     eyebrow: 'Delivery',
     title: 'Builds',
-    description: 'Track preview and published builds for the selected site.',
     primaryAction: { label: 'Trigger build', path: '/builds' },
   },
   {
@@ -134,7 +120,6 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'deployment-settings',
     eyebrow: 'Publishing',
     title: 'Deployment Settings',
-    description: 'Configure where the builder deploys each site and how secrets are referenced.',
     primaryAction: { label: 'Open builds', path: '/builds' },
   },
 ];

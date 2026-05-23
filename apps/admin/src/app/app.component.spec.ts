@@ -124,4 +124,22 @@ describe('AppComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Dashboard route is active');
     expect(fakeState.selectSite).toHaveBeenCalledWith('site-example');
   });
+
+  it('shows the sign out action in the sidebar and returns to login when clicked', async () => {
+    await router.navigate(['/dashboard']);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const signOutButton = fixture.nativeElement.querySelector('.sidebar-logout') as HTMLButtonElement | null;
+    expect(signOutButton).toBeTruthy();
+    expect(signOutButton?.textContent?.trim()).toBe('Sign out');
+
+    signOutButton?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fakeState.logout).toHaveBeenCalled();
+    expect(location.path()).toBe('/login');
+  });
 });

@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -137,11 +137,15 @@ export class AdminApiService {
   }
 
   async upsertArticle(siteId: string, payload: ArticleUpsertPayload): Promise<ArticleRecord> {
-    if (payload.id) {
-      return firstValueFrom(this.http.patch<ArticleRecord>(`${this.baseUrl}/articles/${payload.id}`, payload, { headers: this.headers() }));
-    }
+    try {
+      if (payload.id) {
+        return await firstValueFrom(this.http.patch<ArticleRecord>(`${this.baseUrl}/articles/${payload.id}`, payload, { headers: this.headers() }));
+      }
 
-    return firstValueFrom(this.http.post<ArticleRecord>(`${this.baseUrl}/sites/${siteId}/articles`, payload, { headers: this.headers() }));
+      return await firstValueFrom(this.http.post<ArticleRecord>(`${this.baseUrl}/sites/${siteId}/articles`, payload, { headers: this.headers() }));
+    } catch (error) {
+      throw this.toError(error);
+    }
   }
 
   async listLandingSections(siteId: string): Promise<ItemsResponse<LandingSectionRecord>> {
@@ -187,5 +191,31 @@ export class AdminApiService {
     }
 
     return new HttpHeaders({ Authorization: `Bearer ${token}` });
+  }
+
+  private toError(error: unknown): Error {
+    if (error instanceof HttpErrorResponse) {
+      const message = this.extractApiErrorMessage(error);
+      return new Error(message);
+    }
+
+    if (error instanceof Error) {
+      return error;
+    }
+
+    return new Error('Request failed');
+  }
+
+  private extractApiErrorMessage(error: HttpErrorResponse): string {
+    const body = error.error;
+    if (typeof body === 'string' && body.trim()) {
+      return body;
+    }
+
+    if (body && typeof body === 'object' && 'error' in body && typeof body.error === 'string' && body.error.trim()) {
+      return body.error;
+    }
+
+    return error.message || 'Request failed';
   }
 }

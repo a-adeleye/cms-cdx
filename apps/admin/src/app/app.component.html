@@ -22,6 +22,10 @@
           </a>
         }
       </nav>
+
+      @if (state.isAuthenticated()) {
+        <button class="button button-secondary sidebar-logout" type="button" (click)="signOut()">Sign out</button>
+      }
     </aside>
 
     <main class="content" id="main-content">

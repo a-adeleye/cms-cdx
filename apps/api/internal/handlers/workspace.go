@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -1061,7 +1062,7 @@ func (a *API) upsertArticle(ctx context.Context, payload articleUpsertRequest, s
 				site_id, author_id, category_id, title, slug, excerpt, content_markdown, cover_image_url, status, is_featured, published_at, seo_title, seo_description, canonical_url, generated_by_ai, human_reviewed, ai_prompt, ai_model, updated_at
 			)
 			VALUES (
-				$1, NULLIF($2, ''), NULLIF($3, ''), $4, $5, $6, $7, NULLIF($8, ''), $9, $10, CASE WHEN $9 = 'published' THEN NOW() ELSE NULL END, $11, $12, NULLIF($13, ''), FALSE, CASE WHEN $9 IN ('review', 'published') THEN TRUE ELSE FALSE END, '', '', NOW()
+				$1, NULLIF($2, '')::uuid, NULLIF($3, '')::uuid, $4, $5, $6, $7, NULLIF($8, ''), $9, $10, CASE WHEN $9 = 'published' THEN NOW() ELSE NULL END, $11, $12, NULLIF($13, ''), FALSE, CASE WHEN $9 IN ('review', 'published') THEN TRUE ELSE FALSE END, '', '', NOW()
 			)
 			RETURNING id::text
 		`, siteID, payload.AuthorID, payload.CategoryID, payload.Title, payload.Slug, payload.Excerpt, payload.ContentMarkdown, payload.CoverImageURL, fallbackString(payload.Status, "draft"), payload.IsFeatured, payload.SEOTitle, payload.SEODescription, payload.CanonicalURL).Scan(&articleID)
@@ -1072,8 +1073,8 @@ func (a *API) upsertArticle(ctx context.Context, payload articleUpsertRequest, s
 		result, err := tx.ExecContext(ctx, `
 			UPDATE articles
 			SET
-				author_id = NULLIF($2, ''),
-				category_id = NULLIF($3, ''),
+				author_id = NULLIF($2, '')::uuid,
+				category_id = NULLIF($3, '')::uuid,
 				title = $4,
 				slug = $5,
 				excerpt = $6,
@@ -1129,11 +1130,20 @@ func replaceArticleTags(ctx context.Context, tx *sql.Tx, articleID string, tagID
 		if tagID == "" {
 			continue
 		}
+		if !isUUID(tagID) {
+			return fmt.Errorf("%w: invalid tag id %q", errValidation, tagID)
+		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO article_tags (article_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, articleID, tagID); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+var uuidPattern = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
+
+func isUUID(value string) bool {
+	return uuidPattern.MatchString(strings.TrimSpace(value))
 }
 
 func (a *API) listAuthors(ctx context.Context, siteID string) ([]authorResponse, error) {

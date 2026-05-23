@@ -1,0 +1,52 @@
+<section>
+  <article class="panel">
+    <h2>Shortcut links</h2>
+    <p class="muted">Jump straight to the area you want to update.</p>
+    <div class="stack">
+      @for (group of settingsGroups; track group.title) {
+        <article class="settings-group">
+          <div class="settings-group-heading">
+            <div>
+              <h3>{{ group.title }}</h3>
+              <p>{{ group.description }}</p>
+            </div>
+          </div>
+          <div class="settings-link-grid">
+            @for (link of group.links; track link.path) {
+              <a class="list-card settings-link" [routerLink]="link.path">
+                <div>
+                  <strong>{{ link.label }}</strong>
+                  <p>{{ link.description }}</p>
+                </div>
+                <span>Open</span>
+              </a>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  </article>
+</section>
+
+<section>
+  <article class="panel">
+    <h2>Account</h2>
+    <p class="muted">Use this when you need to leave the current workspace session.</p>
+    @if (authSession(); as session) {
+      <dl class="definition-list">
+        <div>
+          <dt>Name</dt>
+          <dd>{{ session.fullName }}</dd>
+        </div>
+        <div>
+          <dt>Email</dt>
+          <dd>{{ session.email }}</dd>
+        </div>
+        <div>
+          <dt>Role</dt>
+          <dd>{{ session.role }}</dd>
+        </div>
+      </dl>
+    }
+  </article>
+</section>

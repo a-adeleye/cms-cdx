@@ -85,6 +85,11 @@
   gap: 8px;
 }
 
+.sidebar-logout {
+  margin-top: 8px;
+  justify-self: start;
+}
+
 .sidebar a {
   padding: 10px 13px;
   border-radius: var(--radius);

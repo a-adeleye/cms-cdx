@@ -4,7 +4,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of } from 'rxjs';
+import { DashboardPageComponent } from '../../pages/dashboard/dashboard-page.component';
 import { PageViewComponent } from './page-view.component';
+import { SettingsPageComponent } from '../../pages/settings/settings-page.component';
 import { WorkspaceStateService } from './workspace-state.service';
 
 const settingsPage = {
@@ -13,7 +15,6 @@ const settingsPage = {
   kind: 'settings' as const,
   eyebrow: 'Administration',
   title: 'Settings',
-  description: 'Open the site, content, and publishing tools that configure the workspace.',
   primaryAction: { label: 'Manage sites', path: '/sites' },
 };
 
@@ -23,7 +24,6 @@ const articlesPage = {
   kind: 'articles' as const,
   eyebrow: 'Editorial',
   title: 'Articles',
-  description: 'Review drafts, publish content, and track the editorial workflow.',
   primaryAction: { label: 'Open editor', path: '/article-editor' },
 };
 
@@ -33,7 +33,6 @@ const articleEditorPage = {
   kind: 'article-editor' as const,
   eyebrow: 'Writing',
   title: 'Article Editor',
-  description: 'Draft, review, and publish an article with SEO and AI metadata.',
   primaryAction: { label: 'Save draft', path: '/articles' },
 };
 
@@ -46,7 +45,6 @@ describe('PageViewComponent', () => {
     kind: 'login' as const,
     eyebrow: 'Access',
     title: 'Login',
-    description: 'Sign in to manage the CMS, sites, articles, media, and builds.',
     primaryAction: { label: 'Open dashboard', path: '/dashboard' },
   };
 
@@ -72,6 +70,7 @@ describe('PageViewComponent', () => {
     logout: jasmine.createSpy('logout').and.resolveTo(),
     selectSite: jasmine.createSpy('selectSite').and.resolveTo(),
     selectArticle: jasmine.createSpy('selectArticle').and.resolveTo(),
+    clearSelectedArticle: jasmine.createSpy('clearSelectedArticle'),
     createSite: jasmine.createSpy('createSite').and.resolveTo(),
     updateSelectedSite: jasmine.createSpy('updateSelectedSite').and.resolveTo(),
     createArticleDraft: jasmine.createSpy('createArticleDraft').and.resolveTo({ id: 'article-1' }),
@@ -88,7 +87,7 @@ describe('PageViewComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [PageViewComponent],
-      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule],
+      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, DashboardPageComponent, SettingsPageComponent],
       providers: [
         {
           provide: ActivatedRoute,
@@ -169,6 +168,7 @@ describe('Settings page', () => {
     logout: jasmine.createSpy('logout').and.resolveTo(),
     selectSite: jasmine.createSpy('selectSite').and.resolveTo(),
     selectArticle: jasmine.createSpy('selectArticle').and.resolveTo(),
+    clearSelectedArticle: jasmine.createSpy('clearSelectedArticle'),
     createSite: jasmine.createSpy('createSite').and.resolveTo(),
     updateSelectedSite: jasmine.createSpy('updateSelectedSite').and.resolveTo(),
     createArticleDraft: jasmine.createSpy('createArticleDraft').and.resolveTo({ id: 'article-1' }),
@@ -185,7 +185,7 @@ describe('Settings page', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [PageViewComponent],
-      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule],
+      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, DashboardPageComponent, SettingsPageComponent],
       providers: [
         {
           provide: ActivatedRoute,
@@ -204,6 +204,7 @@ describe('Settings page', () => {
   });
 
   it('shows settings shortcuts for the administration areas', () => {
+    expect(fixture.nativeElement.querySelector('h2')?.textContent).not.toContain('Site context');
     expect(fixture.nativeElement.textContent).toContain('Shortcut links');
     expect(fixture.nativeElement.textContent).toContain('Sites');
     expect(fixture.nativeElement.textContent).toContain('Deployment settings');
@@ -251,6 +252,7 @@ describe('Articles page', () => {
     logout: jasmine.createSpy('logout').and.resolveTo(),
     selectSite: jasmine.createSpy('selectSite').and.resolveTo(),
     selectArticle: jasmine.createSpy('selectArticle').and.resolveTo(),
+    clearSelectedArticle: jasmine.createSpy('clearSelectedArticle'),
     createSite: jasmine.createSpy('createSite').and.resolveTo(),
     updateSelectedSite: jasmine.createSpy('updateSelectedSite').and.resolveTo(),
     createArticleDraft: jasmine.createSpy('createArticleDraft').and.resolveTo({ id: 'article-1' }),
@@ -270,7 +272,7 @@ describe('Articles page', () => {
       imports: [CommonModule, ReactiveFormsModule, RouterTestingModule.withRoutes([
         { path: 'articles', component: PageViewComponent },
         { path: 'article-editor', component: PageViewComponent },
-      ])],
+      ]), DashboardPageComponent, SettingsPageComponent],
       providers: [
         {
           provide: ActivatedRoute,
@@ -304,6 +306,7 @@ describe('Articles page', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
+    expect(fakeState.clearSelectedArticle).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/article-editor']);
   });
 });
@@ -314,7 +317,7 @@ describe('Article editor page', () => {
   const fakeState = {
     loading: () => false,
     isAuthenticated: () => true,
-    error: () => null,
+    error: () => 'Unable to save article. validation error: invalid tag id "not-a-uuid"',
     selectedSite: () => ({
       id: 'site-example',
       name: 'Example Site',
@@ -385,7 +388,7 @@ describe('Article editor page', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [PageViewComponent],
-      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule],
+      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, DashboardPageComponent, SettingsPageComponent],
       providers: [
         {
           provide: ActivatedRoute,
@@ -416,14 +419,96 @@ describe('Article editor page', () => {
     expect(buttonLabels).toEqual(['Save']);
     expect(fixture.nativeElement.querySelector('input[formcontrolname="slug"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('select[formcontrolname="status"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('input[formcontrolname="id"]')?.value).toBe('article-1');
     expect(fixture.nativeElement.querySelector('.field-row')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('.form-grid textarea[formcontrolname="contentMarkdown"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('.markdown-panel textarea[formcontrolname="contentMarkdown"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.page-error')?.textContent).toContain('invalid tag id');
 
     previewToggle?.click();
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('.preview-drawer')).toBeTruthy();
+  });
+});
+
+describe('Blank article editor page', () => {
+  let fixture: ComponentFixture<PageViewComponent>;
+
+  const fakeState = {
+    loading: () => false,
+    isAuthenticated: () => true,
+    error: () => null,
+    selectedSite: () => ({
+      id: 'site-example',
+      name: 'Example Site',
+      slug: 'example',
+      domain: 'https://example.test',
+      blogPath: '/articles',
+      status: 'active' as const,
+      templateKey: 'default-blog',
+      themeConfig: '{}',
+      deployProvider: 'netlify',
+      deployConfig: '{}',
+      aiConfig: '{}',
+      storageConfig: '{}',
+      updatedAt: '2026-05-23T00:00:00.000Z',
+    }),
+    selectedSiteId: () => 'site-example',
+    selectedArticle: () => null,
+    sites: () => [],
+    authSession: () => null,
+    authors: () => [{ id: 'author-1', siteId: 'site-example', name: 'Author', slug: 'author', bio: '' }],
+    categories: () => [{ id: 'category-1', siteId: 'site-example', name: 'Category', slug: 'category', description: '' }],
+    articles: () => [],
+    tags: () => [],
+    mediaAssets: () => [],
+    builds: () => [],
+    dashboardStats: () => [],
+    landingSections: () => [],
+    reportError: jasmine.createSpy('reportError'),
+    login: jasmine.createSpy('login').and.resolveTo(),
+    logout: jasmine.createSpy('logout').and.resolveTo(),
+    selectSite: jasmine.createSpy('selectSite').and.resolveTo(),
+    selectArticle: jasmine.createSpy('selectArticle').and.resolveTo(),
+    clearSelectedArticle: jasmine.createSpy('clearSelectedArticle'),
+    createSite: jasmine.createSpy('createSite').and.resolveTo(),
+    updateSelectedSite: jasmine.createSpy('updateSelectedSite').and.resolveTo(),
+    createArticleDraft: jasmine.createSpy('createArticleDraft').and.resolveTo({ id: 'article-1' }),
+    saveArticle: jasmine.createSpy('saveArticle').and.resolveTo({ id: 'article-1' }),
+    triggerBuild: jasmine.createSpy('triggerBuild').and.resolveTo(),
+    toggleLandingSection: jasmine.createSpy('toggleLandingSection').and.resolveTo(),
+    moveLandingSection: jasmine.createSpy('moveLandingSection').and.resolveTo(),
+    uploadMedia: jasmine.createSpy('uploadMedia').and.resolveTo(),
+    toggleFeatured: jasmine.createSpy('toggleFeatured').and.resolveTo(),
+    setArticleStatus: jasmine.createSpy('setArticleStatus').and.resolveTo(),
+    updateSelectedSiteSettings: jasmine.createSpy('updateSelectedSiteSettings').and.resolveTo(),
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [PageViewComponent],
+      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, DashboardPageComponent, SettingsPageComponent],
+      providers: [
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            data: of({ page: articleEditorPage }),
+          },
+        },
+        { provide: WorkspaceStateService, useValue: fakeState },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PageViewComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  });
+
+  it('starts blank when no article is selected', () => {
+    expect(fixture.nativeElement.querySelector('input[formcontrolname="id"]')?.value).toBe('');
+    expect(fixture.nativeElement.querySelector('.preview-drawer')).toBeNull();
   });
 });

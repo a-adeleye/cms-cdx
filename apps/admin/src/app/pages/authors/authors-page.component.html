@@ -8,6 +8,7 @@
 
       <div class="hero-actions">
         <a class="button button-secondary" routerLink="/settings">Back to settings</a>
+        <button class="button button-primary" type="button" (click)="startCreate()">New author</button>
       </div>
     </div>
   </header>
@@ -24,24 +25,47 @@
 
   <section class="two-column">
     <article class="panel">
-      <h2>Highlights</h2>
-      <ul class="bullets">
-        @for (item of highlights; track item) {
-          <li>{{ item }}</li>
-        }
-      </ul>
+      <h2>Author details</h2>
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="save()">
+        <input type="hidden" formControlName="id" />
+        <label>
+          <span>Name</span>
+          <input type="text" formControlName="name" placeholder="Author name" />
+        </label>
+        <label>
+          <span>Bio</span>
+          <textarea rows="4" formControlName="bio"></textarea>
+        </label>
+
+        <div class="inline-actions">
+          <button type="submit" class="button button-primary">
+            {{ editingId() ? 'Update' : 'Create' }} author
+          </button>
+          @if (editingId()) {
+            <button type="button" class="button button-secondary" (click)="startCreate()">Cancel</button>
+          }
+        </div>
+      </form>
     </article>
 
     <article class="panel">
       <h2>Author list</h2>
       @if (authors().length > 0) {
-        <div class="stack">
+        <div class="table-list">
+          <div class="table-row table-head author-row">
+            <span>Name</span>
+            <span>Bio</span>
+            <span>Actions</span>
+          </div>
           @for (author of authors(); track author.id) {
-            <div class="list-card">
+            <div class="table-row author-row">
               <div>
                 <strong>{{ author.name }}</strong>
-                <p>{{ author.slug }}</p>
-                <small>{{ authorDetail(author) }}</small>
+              </div>
+              <p class="author-bio">{{ author.bio }}</p>
+              <div class="inline-actions table-actions">
+                <button type="button" class="button button-secondary" (click)="edit(author)">Edit</button>
+                <button type="button" class="button button-secondary" (click)="remove(author)">Delete</button>
               </div>
             </div>
           }

@@ -165,6 +165,11 @@ type categoryUpsertRequest struct {
 	Description string `json:"description"`
 }
 
+type authorUpsertRequest struct {
+	Name string `json:"name"`
+	Bio  string `json:"bio"`
+}
+
 type tagUpsertRequest struct {
 	Name string `json:"name"`
 }
@@ -328,6 +333,8 @@ func (a *API) siteSubroutes(w http.ResponseWriter, r *http.Request) {
 		a.handleLandingSectionRoutes(w, r, siteID, parts[2:])
 	case "articles":
 		a.handleSiteArticleRoutes(w, r, siteID, parts[2:])
+	case "authors":
+		a.handleSiteAuthorRoutes(w, r, siteID, parts[2:])
 	case "categories":
 		a.handleSiteCategoryRoutes(w, r, siteID, parts[2:])
 	case "tags":
@@ -513,6 +520,75 @@ func (a *API) handleSiteArticleRoutes(w http.ResponseWriter, r *http.Request, si
 		}
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (a *API) handleSiteAuthorRoutes(w http.ResponseWriter, r *http.Request, siteID string, parts []string) {
+	switch {
+	case len(parts) == 0 || parts[0] == "":
+		switch r.Method {
+		case http.MethodGet:
+			authors, err := a.listAuthors(r.Context(), siteID)
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to load authors"})
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]any{"items": authors})
+		case http.MethodPost:
+			var payload authorUpsertRequest
+			if err := decodeJSON(r, &payload); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
+				return
+			}
+			author, err := a.createAuthor(r.Context(), siteID, payload)
+			if err != nil {
+				if errors.Is(err, errValidation) {
+					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to create author"})
+				return
+			}
+			writeJSON(w, http.StatusCreated, author)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	default:
+		authorID := parts[0]
+		switch r.Method {
+		case http.MethodPatch:
+			var payload authorUpsertRequest
+			if err := decodeJSON(r, &payload); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
+				return
+			}
+			author, err := a.updateAuthor(r.Context(), siteID, authorID, payload)
+			if err != nil {
+				if errors.Is(err, errValidation) {
+					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+					return
+				}
+				if errors.Is(err, sql.ErrNoRows) {
+					http.NotFound(w, r)
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to update author"})
+				return
+			}
+			writeJSON(w, http.StatusOK, author)
+		case http.MethodDelete:
+			if err := a.deleteAuthor(r.Context(), siteID, authorID); err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					http.NotFound(w, r)
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to delete author"})
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
 	}
 }
 
@@ -1567,6 +1643,10 @@ func (a *API) uniqueCategorySlug(ctx context.Context, siteID, categoryID, name s
 	return a.uniqueSlug(ctx, "categories", siteID, categoryID, name)
 }
 
+func (a *API) uniqueAuthorSlug(ctx context.Context, siteID, authorID, name string) (string, error) {
+	return a.uniqueSlug(ctx, "authors", siteID, authorID, name)
+}
+
 func (a *API) uniqueTagSlug(ctx context.Context, siteID, tagID, name string) (string, error) {
 	return a.uniqueSlug(ctx, "tags", siteID, tagID, name)
 }
@@ -1653,6 +1733,112 @@ func (a *API) listMediaAssets(ctx context.Context, siteID string) ([]mediaAssetR
 		items = append(items, item)
 	}
 	return items, rows.Err()
+}
+
+func (a *API) getAuthor(ctx context.Context, siteID, authorID string) (authorResponse, error) {
+	row := a.Services.DB.QueryRowContext(ctx, `
+		SELECT id::text, site_id::text, name, slug, COALESCE(bio, '')
+		FROM authors
+		WHERE site_id = $1 AND id = $2
+	`, siteID, authorID)
+
+	var item authorResponse
+	if err := row.Scan(&item.ID, &item.SiteID, &item.Name, &item.Slug, &item.Bio); err != nil {
+		return authorResponse{}, err
+	}
+	return item, nil
+}
+
+func (a *API) createAuthor(ctx context.Context, siteID string, payload authorUpsertRequest) (authorResponse, error) {
+	name := strings.TrimSpace(payload.Name)
+	if name == "" {
+		return authorResponse{}, fmt.Errorf("%w: author name is required", errValidation)
+	}
+
+	slug, err := a.uniqueAuthorSlug(ctx, siteID, "", name)
+	if err != nil {
+		return authorResponse{}, err
+	}
+
+	var item authorResponse
+	err = a.Services.DB.QueryRowContext(ctx, `
+		INSERT INTO authors (site_id, name, slug, bio)
+		VALUES ($1, $2, $3, NULLIF($4, ''))
+		RETURNING id::text, site_id::text, name, slug, COALESCE(bio, '')
+	`, siteID, name, slug, strings.TrimSpace(payload.Bio)).Scan(&item.ID, &item.SiteID, &item.Name, &item.Slug, &item.Bio)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return authorResponse{}, fmt.Errorf("%w: author slug already exists", errValidation)
+		}
+		return authorResponse{}, err
+	}
+	return item, nil
+}
+
+func (a *API) updateAuthor(ctx context.Context, siteID, authorID string, payload authorUpsertRequest) (authorResponse, error) {
+	name := strings.TrimSpace(payload.Name)
+	if name == "" {
+		return authorResponse{}, fmt.Errorf("%w: author name is required", errValidation)
+	}
+
+	slug, err := a.uniqueAuthorSlug(ctx, siteID, authorID, name)
+	if err != nil {
+		return authorResponse{}, err
+	}
+
+	result, err := a.Services.DB.ExecContext(ctx, `
+		UPDATE authors
+		SET name = $3, slug = $4, bio = NULLIF($5, ''), updated_at = NOW()
+		WHERE id = $1 AND site_id = $2
+	`, authorID, siteID, name, slug, strings.TrimSpace(payload.Bio))
+	if err != nil {
+		if isUniqueViolation(err) {
+			return authorResponse{}, fmt.Errorf("%w: author slug already exists", errValidation)
+		}
+		return authorResponse{}, err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return authorResponse{}, sql.ErrNoRows
+	}
+	return a.getAuthor(ctx, siteID, authorID)
+}
+
+func (a *API) deleteAuthor(ctx context.Context, siteID, authorID string) error {
+	tx, err := a.Services.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	var existingID string
+	if err = tx.QueryRowContext(ctx, `
+		SELECT id::text
+		FROM authors
+		WHERE id = $1 AND site_id = $2
+	`, authorID, siteID).Scan(&existingID); err != nil {
+		return err
+	}
+
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE articles
+		SET author_id = NULL, updated_at = NOW()
+		WHERE site_id = $1 AND author_id = $2
+	`, siteID, authorID); err != nil {
+		return err
+	}
+
+	if _, err = tx.ExecContext(ctx, `
+		DELETE FROM authors
+		WHERE id = $1 AND site_id = $2
+	`, authorID, siteID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (a *API) createMediaAsset(ctx context.Context, siteID string, payload mediaUpsertRequest) (mediaAssetResponse, error) {

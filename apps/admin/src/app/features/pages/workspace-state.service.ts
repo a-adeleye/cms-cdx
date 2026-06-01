@@ -4,6 +4,7 @@ import {
   ArticleRecord,
   ArticleStatus,
   AuthSession,
+  AuthorRecord,
   BuildRecord,
   BuildType,
   CategoryRecord,
@@ -45,6 +46,12 @@ interface CategoryDraftInput {
   id?: string;
   name: string;
   description: string;
+}
+
+interface AuthorDraftInput {
+  id?: string;
+  name: string;
+  bio: string;
 }
 
 interface TagDraftInput {
@@ -300,6 +307,36 @@ export class WorkspaceStateService {
 
     await this.loadWorkspace(site.id);
     return category;
+  }
+
+  async saveAuthor(input: AuthorDraftInput): Promise<AuthorRecord> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    const author = input.id
+      ? await this.api.updateAuthor(site.id, input.id, {
+          name: input.name,
+          bio: input.bio,
+        })
+      : await this.api.createAuthor(site.id, {
+          name: input.name,
+          bio: input.bio,
+        });
+
+    await this.loadWorkspace(site.id);
+    return author;
+  }
+
+  async deleteAuthor(authorId: string): Promise<void> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    await this.api.deleteAuthor(site.id, authorId);
+    await this.loadWorkspace(site.id);
   }
 
   async deleteCategory(categoryId: string): Promise<void> {

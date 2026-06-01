@@ -8,7 +8,7 @@
 
       <div class="hero-actions">
         <a class="button button-secondary" routerLink="/settings">Back to settings</a>
-        @if (!isCategoryPage()) {
+        @if (isCategoryPage()) {
           <button class="button button-primary" type="button" (click)="startCreate()">New {{ singularLabel() }}</button>
         }
       </div>
@@ -47,35 +47,17 @@
     <article class="panel">
       <h2>{{ pageTitle() }} list</h2>
       @if (records().length > 0) {
-        @if (isCategoryPage()) {
-          <div class="table-list">
-            @for (record of records(); track record.id) {
-              <div class="table-row">
-                <strong>{{ record.name }}</strong>
-                <div class="inline-actions table-actions">
-                  <button type="button" class="button button-secondary" (click)="edit(record)">Edit</button>
-                  <button type="button" class="button button-secondary" (click)="remove(record)">Delete</button>
-                </div>
+        <div class="table-list">
+          @for (record of records(); track record.id) {
+            <div class="table-row">
+              <strong>{{ record.name }}</strong>
+              <div class="inline-actions table-actions">
+                <button type="button" class="button button-secondary" (click)="edit(record)">Edit</button>
+                <button type="button" class="button button-secondary" (click)="remove(record)">Delete</button>
               </div>
-            }
-          </div>
-        } @else {
-          <div class="stack">
-            @for (record of records(); track record.id) {
-              <div class="list-card">
-                <div>
-                  <strong>{{ record.name }}</strong>
-                  <p>{{ record.slug }}</p>
-                  <small>{{ recordDetail(record) }}</small>
-                </div>
-                <div class="inline-actions">
-                  <button type="button" class="button button-secondary" (click)="edit(record)">Edit</button>
-                  <button type="button" class="button button-secondary" (click)="remove(record)">Delete</button>
-                </div>
-              </div>
-            }
-          </div>
-        }
+            </div>
+          }
+        </div>
       } @else {
         <p class="muted">No {{ pageTitle().toLowerCase() }} yet. Create the first one on the left.</p>
       }

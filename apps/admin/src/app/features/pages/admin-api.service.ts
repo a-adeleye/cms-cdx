@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   ArticleRecord,
   AuthSession,
+  AuthorRecord,
   BuildRecord,
   CategoryRecord,
   LandingSectionRecord,
@@ -102,6 +103,11 @@ interface CategoryUpsertPayload {
   description: string;
 }
 
+interface AuthorUpsertPayload {
+  name: string;
+  bio: string;
+}
+
 interface TagUpsertPayload {
   name: string;
 }
@@ -145,6 +151,34 @@ export class AdminApiService {
 
   async listArticles(siteId: string): Promise<ItemsResponse<ArticleRecord>> {
     return firstValueFrom(this.http.get<ItemsResponse<ArticleRecord>>(`${this.baseUrl}/sites/${siteId}/articles`, { headers: this.headers() }));
+  }
+
+  async createAuthor(siteId: string, payload: AuthorUpsertPayload): Promise<AuthorRecord> {
+    try {
+      return await firstValueFrom(
+        this.http.post<AuthorRecord>(`${this.baseUrl}/sites/${siteId}/authors`, payload, { headers: this.headers() }),
+      );
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
+
+  async updateAuthor(siteId: string, authorId: string, payload: AuthorUpsertPayload): Promise<AuthorRecord> {
+    try {
+      return await firstValueFrom(
+        this.http.patch<AuthorRecord>(`${this.baseUrl}/sites/${siteId}/authors/${authorId}`, payload, { headers: this.headers() }),
+      );
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
+
+  async deleteAuthor(siteId: string, authorId: string): Promise<void> {
+    try {
+      await firstValueFrom(this.http.delete(`${this.baseUrl}/sites/${siteId}/authors/${authorId}`, { headers: this.headers() }));
+    } catch (error) {
+      throw this.toError(error);
+    }
   }
 
   async createCategory(siteId: string, payload: CategoryUpsertPayload): Promise<CategoryRecord> {

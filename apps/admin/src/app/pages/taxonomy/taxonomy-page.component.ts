@@ -33,11 +33,6 @@ export class TaxonomyPageComponent {
   readonly isCategoryPage = computed(() => this.kind() === 'categories');
   readonly pageTitle = computed(() => (this.isCategoryPage() ? 'Categories' : 'Tags'));
   readonly singularLabel = computed(() => (this.isCategoryPage() ? 'category' : 'tag'));
-  readonly introText = computed(() =>
-    this.isCategoryPage()
-      ? 'Use categories to group articles into stable editorial sections.'
-      : 'Use tags to label articles with reusable topics and campaign markers.',
-  );
   readonly showDescription = computed(() => this.isCategoryPage());
 
   startCreate(): void {
@@ -97,14 +92,6 @@ export class TaxonomyPageComponent {
     } catch (error) {
       this.reportActionError(`Unable to delete ${this.singularLabel()}.`, error);
     }
-  }
-
-  recordDetail(record: TaxonomyRecord): string {
-    if (this.isCategoryPage()) {
-      return 'description' in record && record.description ? record.description : 'No description provided.';
-    }
-
-    return 'Reusable topic label for article filtering.';
   }
 
   private resetForm(): void {

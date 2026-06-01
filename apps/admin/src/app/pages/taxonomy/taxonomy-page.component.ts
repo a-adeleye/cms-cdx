@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { CategoryRecord, TagRecord } from '../../features/pages/pages.model';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 
@@ -12,7 +13,7 @@ type TaxonomyRecord = CategoryRecord | TagRecord;
   templateUrl: './taxonomy-page.component.html',
   styleUrl: '../../features/pages/page-view.component.css',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaxonomyPageComponent {

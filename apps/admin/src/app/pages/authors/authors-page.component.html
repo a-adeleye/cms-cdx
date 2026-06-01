@@ -1,0 +1,54 @@
+<section class="page">
+  <header class="hero">
+    <p class="eyebrow">People</p>
+    <div class="hero-row">
+      <div>
+        <h1>Authors</h1>
+      </div>
+
+      <div class="hero-actions">
+        <a class="button button-secondary" routerLink="/settings">Back to settings</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="support-grid">
+    @for (metric of metrics(); track metric.label) {
+      <article class="metric-card">
+        <p class="metric-value">{{ metric.value }}</p>
+        <h2>{{ metric.label }}</h2>
+        <p>{{ metric.detail }}</p>
+      </article>
+    }
+  </section>
+
+  <section class="two-column">
+    <article class="panel">
+      <h2>Highlights</h2>
+      <ul class="bullets">
+        @for (item of highlights; track item) {
+          <li>{{ item }}</li>
+        }
+      </ul>
+    </article>
+
+    <article class="panel">
+      <h2>Author list</h2>
+      @if (authors().length > 0) {
+        <div class="stack">
+          @for (author of authors(); track author.id) {
+            <div class="list-card">
+              <div>
+                <strong>{{ author.name }}</strong>
+                <p>{{ author.slug }}</p>
+                <small>{{ authorDetail(author) }}</small>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="muted">No authors are available for this site yet.</p>
+      }
+    </article>
+  </section>
+</section>

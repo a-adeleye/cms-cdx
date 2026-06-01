@@ -1,0 +1,65 @@
+<section class="page">
+  <header class="hero">
+    <p class="eyebrow">Configuration</p>
+    <div class="hero-row">
+      <div>
+        <h1>Site settings</h1>
+      </div>
+
+      <div class="hero-actions">
+        <a class="button button-secondary" routerLink="/settings">Back to settings</a>
+      </div>
+    </div>
+  </header>
+
+  @if (state.error()) {
+    <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
+  }
+
+  <section class="two-column">
+    <article class="panel">
+      <h2>Update site settings</h2>
+      <form class="form-grid" [formGroup]="siteSettingsForm" (ngSubmit)="saveSiteSettings()">
+        <label>
+          <span>Theme config</span>
+          <textarea rows="4" formControlName="themeConfig"></textarea>
+        </label>
+        <label>
+          <span>Deployment provider</span>
+          <input type="text" formControlName="deployProvider" />
+        </label>
+        <label>
+          <span>Deployment config</span>
+          <textarea rows="4" formControlName="deployConfig"></textarea>
+        </label>
+        <label>
+          <span>AI config</span>
+          <textarea rows="4" formControlName="aiConfig"></textarea>
+        </label>
+        <label>
+          <span>Storage config</span>
+          <textarea rows="4" formControlName="storageConfig"></textarea>
+        </label>
+        <button class="button button-primary" type="submit">Save settings</button>
+      </form>
+    </article>
+
+    <article class="panel">
+      <h2>Current site</h2>
+      <dl class="definition-list">
+        <div>
+          <dt>Name</dt>
+          <dd>{{ state.selectedSite().name }}</dd>
+        </div>
+        <div>
+          <dt>Domain</dt>
+          <dd>{{ state.selectedSite().domain }}</dd>
+        </div>
+        <div>
+          <dt>Storage</dt>
+          <dd>{{ state.selectedSite().storageConfig }}</dd>
+        </div>
+      </dl>
+    </article>
+  </section>
+</section>

@@ -19,16 +19,16 @@ export class SettingsPageComponent {
       title: 'Site setup',
       links: [
         { label: 'Sites', path: '/settings/sites' },
-        { label: 'Site settings', path: '/site-settings' },
+        { label: 'Site settings', path: '/settings/site-settings' },
         { label: 'Landing page editor', path: '/landing-page-editor' },
       ],
     },
     {
       title: 'Content structure',
       links: [
-        { label: 'Authors', path: '/authors' },
-        { label: 'Categories', path: '/categories' },
-        { label: 'Tags', path: '/tags' },
+        { label: 'Authors', path: '/settings/authors' },
+        { label: 'Categories', path: '/settings/categories' },
+        { label: 'Tags', path: '/settings/tags' },
       ],
     },
     {

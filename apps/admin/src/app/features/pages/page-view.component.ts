@@ -58,14 +58,6 @@ export class PageViewComponent {
     password: ['admin123', [Validators.required, Validators.minLength(6)]],
   });
 
-  readonly siteSettingsForm = this.fb.nonNullable.group({
-    themeConfig: ['', [Validators.required]],
-    deployProvider: ['none', [Validators.required]],
-    deployConfig: ['', [Validators.required]],
-    aiConfig: ['', [Validators.required]],
-    storageConfig: ['', [Validators.required]],
-  });
-
   readonly articleForm = this.fb.nonNullable.group({
     id: [''],
     title: ['', [Validators.required, Validators.minLength(3)]],
@@ -94,27 +86,6 @@ export class PageViewComponent {
   readonly supportMetrics = computed<SummaryMetric[]>(() => {
     const page = this.page();
     const site = this.state.selectedSite();
-
-    if (page.kind === 'authors') {
-      return [
-        { label: 'Authors', value: String(this.state.authors().length), detail: 'Contributors available for attribution.' },
-        { label: 'Editors', value: '1', detail: 'Editorial operators with review access.' },
-      ];
-    }
-
-    if (page.kind === 'categories') {
-      return [
-        { label: 'Categories', value: String(this.state.categories().length), detail: 'Taxonomy groups for the selected site.' },
-        { label: 'Articles', value: String(this.state.articles().length), detail: 'Content organized by those categories.' },
-      ];
-    }
-
-    if (page.kind === 'tags') {
-      return [
-        { label: 'Tags', value: String(this.state.tags().length), detail: 'Reusable labels for content discovery.' },
-        { label: 'Featured', value: String(this.state.articles().filter((article) => article.isFeatured).length), detail: 'Tagged stories promoted on landing pages.' },
-      ];
-    }
 
     if (page.kind === 'media-library') {
       return [
@@ -151,13 +122,6 @@ export class PageViewComponent {
       ];
     }
 
-    if (page.kind === 'site-settings') {
-      return [
-        { label: 'Domain', value: site?.domain ?? 'unset', detail: 'Canonical public URL for the selected site.' },
-        { label: 'Blog path', value: site?.blogPath ?? '/articles', detail: 'Public article listing path.' },
-      ];
-    }
-
     if (page.kind === 'articles' || page.kind === 'article-editor') {
       return [
         { label: 'Drafts', value: String(this.state.articles().filter((article) => article.status === 'draft').length), detail: 'Ready for editing.' },
@@ -176,12 +140,6 @@ export class PageViewComponent {
     switch (page.kind) {
       case 'settings':
         return ['Shortcut links', 'Content tools', 'Publishing controls'];
-      case 'authors':
-        return ['Contributor attribution', 'Role management', 'Reusable profiles'];
-      case 'categories':
-        return ['Taxonomy structure', 'Stable navigation', 'Editorial filtering'];
-      case 'tags':
-        return ['Reusable labels', 'Search facets', 'Content linking'];
       case 'media-library':
         return ['S3-compatible uploads', 'Alt text validation', 'Asset reuse'];
       case 'ai-assistant':
@@ -212,23 +170,6 @@ export class PageViewComponent {
       if (this.state.isAuthenticated() && page.kind === 'login') {
         void this.router.navigate(['/dashboard']);
       }
-    });
-
-    effect(() => {
-      const site = this.state.selectedSite();
-      if (!site) {
-        return;
-      }
-      this.siteSettingsForm.reset(
-        {
-          themeConfig: site.themeConfig,
-          deployProvider: site.deployProvider,
-          deployConfig: site.deployConfig,
-          aiConfig: site.aiConfig,
-          storageConfig: site.storageConfig,
-        },
-        { emitEvent: false },
-      );
     });
 
     effect(() => {
@@ -291,26 +232,6 @@ export class PageViewComponent {
       void this.router.navigate(['/dashboard']);
     } catch (error) {
       this.reportActionError('Unable to sign in.', error);
-    }
-  }
-
-  async saveSiteSettings(): Promise<void> {
-    if (this.siteSettingsForm.invalid) {
-      this.siteSettingsForm.markAllAsTouched();
-      return;
-    }
-
-    const { themeConfig, deployProvider, deployConfig, aiConfig, storageConfig } = this.siteSettingsForm.getRawValue();
-    try {
-      await this.state.updateSelectedSite({
-        themeConfig,
-        deployProvider,
-        deployConfig,
-        aiConfig,
-        storageConfig,
-      });
-    } catch (error) {
-      this.reportActionError('Unable to save site settings.', error);
     }
   }
 

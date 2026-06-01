@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
+import { RouterTestingModule } from '@angular/router/testing';
 import { TaxonomyPageComponent } from './taxonomy-page.component';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 
@@ -84,7 +85,7 @@ describe('TaxonomyPageComponent', () => {
       state = createState();
 
       await TestBed.configureTestingModule({
-        imports: [CommonModule, ReactiveFormsModule, TaxonomyPageComponent],
+        imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, TaxonomyPageComponent],
         providers: [{ provide: WorkspaceStateService, useValue: state }],
       }).compileComponents();
 
@@ -99,6 +100,9 @@ describe('TaxonomyPageComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('Categories');
       expect(fixture.nativeElement.textContent).toContain('Description');
       expect(fixture.nativeElement.querySelector('textarea[formcontrolname="description"]')).toBeTruthy();
+      expect(fixture.nativeElement.textContent).not.toContain('New category');
+      expect(fixture.nativeElement.textContent).not.toContain('Category description');
+      expect(fixture.nativeElement.querySelectorAll('.table-row').length).toBeGreaterThan(0);
 
       fixture.componentInstance.form.controls.name.setValue('Editorial');
       fixture.componentInstance.form.controls.description.setValue('Editorial content');
@@ -129,7 +133,7 @@ describe('TaxonomyPageComponent', () => {
       state = createState();
 
       await TestBed.configureTestingModule({
-        imports: [CommonModule, ReactiveFormsModule, TaxonomyPageComponent],
+        imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, TaxonomyPageComponent],
         providers: [{ provide: WorkspaceStateService, useValue: state }],
       }).compileComponents();
 

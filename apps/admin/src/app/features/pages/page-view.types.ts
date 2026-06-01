@@ -6,12 +6,10 @@ export type SummaryMetric = {
 
 export type SettingsLink = {
   label: string;
-  description: string;
   path: string;
 };
 
 export type SettingsGroup = {
   title: string;
-  description: string;
   links: SettingsLink[];
 };

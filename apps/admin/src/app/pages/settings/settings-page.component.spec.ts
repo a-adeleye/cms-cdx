@@ -23,7 +23,9 @@ describe('SettingsPageComponent', () => {
   it('renders shortcut groups and account details', () => {
     expect(fixture.nativeElement.textContent).toContain('Shortcut links');
     expect(fixture.nativeElement.textContent).toContain('Site setup');
-    expect(fixture.nativeElement.textContent).toContain('Admin User');
     expect(fixture.nativeElement.querySelectorAll('.settings-link').length).toBeGreaterThan(0);
+    expect(fixture.nativeElement.textContent).not.toContain('Maintain contributor profiles and ownership');
+    expect(fixture.nativeElement.textContent).not.toContain('Organize content with stable taxonomy groups');
+    expect(fixture.nativeElement.textContent).not.toContain('Open');
   });
 });

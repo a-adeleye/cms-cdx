@@ -21,27 +21,29 @@
     </section>
   } @else {
     <section class="page">
-      <header class="hero">
-        <p class="eyebrow">{{ currentPage.eyebrow }}</p>
-        <div class="hero-row">
-          <div>
-            <h1>{{ currentPage.title }}</h1>
-          </div>
+      @if (currentPage.kind !== 'settings' || isSettingsRoot()) {
+        <header class="hero">
+          <p class="eyebrow">{{ currentPage.eyebrow }}</p>
+          <div class="hero-row">
+            <div>
+              <h1>{{ currentPage.title }}</h1>
+            </div>
 
-          <div class="hero-actions">
-            @if (currentPage.kind !== 'articles' && currentPage.kind !== 'categories' && currentPage.kind !== 'tags') {
-              <a class="button button-primary" [routerLink]="currentPage.primaryAction.path">
-                {{ currentPage.primaryAction.label }}
-              </a>
-            }
-            @if (currentPage.secondaryAction) {
-              <a class="button button-secondary" [routerLink]="currentPage.secondaryAction.path">
-                {{ currentPage.secondaryAction.label }}
-              </a>
-            }
+            <div class="hero-actions">
+              @if (currentPage.kind !== 'articles' && currentPage.kind !== 'categories' && currentPage.kind !== 'tags') {
+                <a class="button button-primary" [routerLink]="currentPage.primaryAction.path">
+                  {{ currentPage.primaryAction.label }}
+                </a>
+              }
+              @if (currentPage.secondaryAction) {
+                <a class="button button-secondary" [routerLink]="currentPage.secondaryAction.path">
+                  {{ currentPage.secondaryAction.label }}
+                </a>
+              }
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      }
 
       @if (state.error()) {
         <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
@@ -49,7 +51,11 @@
 
       @switch (currentPage.kind) {
       @case ('settings') {
-        <app-settings-page [authSession]="state.authSession()" />
+        @if (isSettingsRoot()) {
+          <app-settings-page [authSession]="state.authSession()" />
+        } @else {
+          <router-outlet />
+        }
       }
 
       @case ('dashboard') {
@@ -59,90 +65,6 @@
           [recentArticles]="state.articles().slice(0, 3)"
           (articleSelected)="openArticle($event)"
         />
-      }
-
-      @case ('sites') {
-        <section class="two-column">
-          <article class="panel">
-            <h2>Sites</h2>
-            <div class="stack">
-              @for (site of state.sites(); track site.id) {
-                <button
-                  class="list-item"
-                  type="button"
-                  [class.is-active-item]="site.id === state.selectedSiteId()"
-                  (click)="onSiteSelectionChange(site.id)"
-                >
-                  <strong>{{ site.name }}</strong>
-                  <span>{{ site.domain }} - {{ site.status }}</span>
-                </button>
-              }
-            </div>
-          </article>
-
-          <div class="stack">
-            <article class="panel">
-              <h2>Create site</h2>
-              <form class="form-grid" [formGroup]="siteCreateForm" (ngSubmit)="createSite()">
-                <label>
-                  <span>Name</span>
-                  <input type="text" formControlName="name" />
-                </label>
-                <label>
-                  <span>Slug</span>
-                  <input type="text" formControlName="slug" />
-                </label>
-                <label>
-                  <span>Domain</span>
-                  <input type="url" formControlName="domain" />
-                </label>
-                <label>
-                  <span>Blog path</span>
-                  <input type="text" formControlName="blogPath" />
-                </label>
-                <label>
-                  <span>Template</span>
-                  <input type="text" formControlName="templateKey" />
-                </label>
-                <button class="button button-primary" type="submit">Create site</button>
-              </form>
-            </article>
-
-            <article class="panel">
-              <h2>Edit selected site</h2>
-              <form class="form-grid" [formGroup]="siteEditForm" (ngSubmit)="saveSite()">
-                <label>
-                  <span>Name</span>
-                  <input type="text" formControlName="name" />
-                </label>
-                <label>
-                  <span>Slug</span>
-                  <input type="text" formControlName="slug" />
-                </label>
-                <label>
-                  <span>Domain</span>
-                  <input type="url" formControlName="domain" />
-                </label>
-                <label>
-                  <span>Blog path</span>
-                  <input type="text" formControlName="blogPath" />
-                </label>
-                <label>
-                  <span>Template</span>
-                  <input type="text" formControlName="templateKey" />
-                </label>
-                <label>
-                  <span>Status</span>
-                  <select formControlName="status">
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </label>
-                <button class="button button-primary" type="submit">Save site</button>
-              </form>
-            </article>
-          </div>
-        </section>
       }
 
       @case ('site-settings') {

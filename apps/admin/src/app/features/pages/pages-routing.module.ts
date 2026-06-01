@@ -2,18 +2,37 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { WORKSPACE_PAGES } from './pages.data';
 import { PageViewComponent } from './page-view.component';
+import { SitesPageComponent } from '../../pages/sites/sites-page.component';
 
-const pageRoutes: Routes = WORKSPACE_PAGES.map((page) => ({
+const pageRoutes: Routes = WORKSPACE_PAGES.filter((page) => page.path !== 'settings' && page.path !== 'sites').map((page) => ({
   path: page.path,
   component: PageViewComponent,
   data: { page },
 }));
+
+const settingsPage = WORKSPACE_PAGES.find((page) => page.path === 'settings')!;
 
 const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
     redirectTo: 'login',
+  },
+  {
+    path: 'settings',
+    component: PageViewComponent,
+    data: { page: settingsPage },
+    children: [
+      {
+        path: 'sites',
+        component: SitesPageComponent,
+      },
+    ],
+  },
+  {
+    path: 'sites',
+    redirectTo: 'settings/sites',
+    pathMatch: 'full',
   },
   ...pageRoutes,
   {

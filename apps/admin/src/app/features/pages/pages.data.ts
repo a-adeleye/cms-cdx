@@ -16,7 +16,7 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     eyebrow: 'Overview',
     title: 'Dashboard',
     primaryAction: { label: 'Review articles', path: '/articles' },
-    secondaryAction: { label: 'Manage sites', path: '/sites' },
+    secondaryAction: { label: 'Manage sites', path: '/settings/sites' },
   },
   {
     path: 'settings',
@@ -24,15 +24,7 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'settings',
     eyebrow: 'Administration',
     title: 'Settings',
-    primaryAction: { label: 'Manage sites', path: '/sites' },
-  },
-  {
-    path: 'sites',
-    navLabel: 'Sites',
-    kind: 'sites',
-    eyebrow: 'Tenancy',
-    title: 'Sites',
-    primaryAction: { label: 'Open site settings', path: '/site-settings' },
+    primaryAction: { label: 'Manage sites', path: '/settings/sites' },
   },
   {
     path: 'site-settings',
@@ -40,7 +32,7 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'site-settings',
     eyebrow: 'Configuration',
     title: 'Site Settings',
-    primaryAction: { label: 'Save settings', path: '/sites' },
+    primaryAction: { label: 'Save settings', path: '/settings/sites' },
   },
   {
     path: 'landing-page-editor',

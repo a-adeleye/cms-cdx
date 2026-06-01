@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs';
+import { filter, map, startWith } from 'rxjs';
 import { WORKSPACE_PAGES } from './pages.data';
 import { ArticleStatus, WorkspacePageConfig } from './pages.model';
 import { SummaryMetric } from './page-view.types';
@@ -33,6 +33,15 @@ export class PageViewComponent {
     this.route.data.pipe(map((data) => (data['page'] as WorkspacePageConfig | undefined) ?? WORKSPACE_PAGES[1])),
     { initialValue: WORKSPACE_PAGES[1] },
   );
+  readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      startWith(null),
+      map(() => this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
+  readonly isSettingsRoot = computed(() => this.page().kind === 'settings' && this.currentUrl() === '/settings');
 
   readonly articleFilter = signal<ArticleStatus | 'all'>('all');
   readonly articleFilterOptions: ArticleFilterOption[] = [
@@ -47,23 +56,6 @@ export class PageViewComponent {
   readonly loginForm = this.fb.nonNullable.group({
     email: ['admin@example.com', [Validators.required, Validators.email]],
     password: ['admin123', [Validators.required, Validators.minLength(6)]],
-  });
-
-  readonly siteCreateForm = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.minLength(2)]],
-    slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9-]+$/)]],
-    domain: ['', [Validators.required]],
-    blogPath: ['/articles', [Validators.required]],
-    templateKey: ['default-blog', [Validators.required]],
-  });
-
-  readonly siteEditForm = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.minLength(2)]],
-    slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9-]+$/)]],
-    domain: ['', [Validators.required]],
-    blogPath: ['/articles', [Validators.required]],
-    templateKey: ['default-blog', [Validators.required]],
-    status: ['active' as 'active' | 'inactive', [Validators.required]],
   });
 
   readonly siteSettingsForm = this.fb.nonNullable.group({
@@ -159,13 +151,6 @@ export class PageViewComponent {
       ];
     }
 
-    if (page.kind === 'sites') {
-      return [
-        { label: 'Sites', value: String(this.state.sites().length), detail: 'Managed websites in this CMS.' },
-        { label: 'Active', value: String(this.state.sites().filter((entry) => entry.status === 'active').length), detail: 'Sites currently publishing.' },
-      ];
-    }
-
     if (page.kind === 'site-settings') {
       return [
         { label: 'Domain', value: site?.domain ?? 'unset', detail: 'Canonical public URL for the selected site.' },
@@ -234,19 +219,6 @@ export class PageViewComponent {
       if (!site) {
         return;
       }
-
-      this.siteEditForm.reset(
-        {
-          name: site.name,
-          slug: site.slug,
-          domain: site.domain,
-          blogPath: site.blogPath,
-          templateKey: site.templateKey,
-          status: site.status,
-        },
-        { emitEvent: false },
-      );
-
       this.siteSettingsForm.reset(
         {
           themeConfig: site.themeConfig,
@@ -319,43 +291,6 @@ export class PageViewComponent {
       void this.router.navigate(['/dashboard']);
     } catch (error) {
       this.reportActionError('Unable to sign in.', error);
-    }
-  }
-
-  async createSite(): Promise<void> {
-    if (this.siteCreateForm.invalid) {
-      this.siteCreateForm.markAllAsTouched();
-      return;
-    }
-
-    try {
-      await this.state.createSite(this.siteCreateForm.getRawValue());
-      this.siteCreateForm.reset({
-        name: '',
-        slug: '',
-        domain: '',
-        blogPath: '/articles',
-        templateKey: 'default-blog',
-      });
-    } catch (error) {
-      this.reportActionError('Unable to create site.', error);
-    }
-  }
-
-  async saveSite(): Promise<void> {
-    if (this.siteEditForm.invalid) {
-      this.siteEditForm.markAllAsTouched();
-      return;
-    }
-
-    const { status, ...site } = this.siteEditForm.getRawValue();
-    try {
-      await this.state.updateSelectedSite({
-        ...site,
-        status,
-      });
-    } catch (error) {
-      this.reportActionError('Unable to save site.', error);
     }
   }
 
@@ -500,4 +435,5 @@ export class PageViewComponent {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
   }
+
 }

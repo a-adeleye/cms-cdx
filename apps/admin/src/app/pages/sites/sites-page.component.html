@@ -1,0 +1,163 @@
+<section class="page">
+  <header class="hero">
+    <p class="eyebrow">Tenancy</p>
+    <div class="hero-row">
+      <div>
+        <h1>Sites</h1>
+      </div>
+
+      <div class="hero-actions">
+        <a class="button button-secondary" routerLink="/settings">Back to settings</a>
+        <button class="button button-primary" type="button" (click)="openCreateSiteModal()">Create site</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="panel sites-panel">
+    <div class="toolbar">
+      <div>
+        <h2>Sites</h2>
+        <p class="muted">Manage the sites in this workspace.</p>
+      </div>
+    </div>
+
+    <div class="stack">
+      @for (site of sites(); track site.id) {
+        <article class="site-row" [class.is-active-item]="site.id === state.selectedSiteId()">
+          <button class="site-row-button" type="button" (click)="selectSite(site.id)">
+            <strong>{{ site.name }}</strong>
+            <span>{{ site.domain || 'No domain configured' }}</span>
+            <small>{{ site.slug }} - {{ site.status }}</small>
+          </button>
+          <div class="inline-actions">
+            <button type="button" class="button button-secondary" (click)="openEditSiteModal(site.id)">Edit site</button>
+          </div>
+        </article>
+      } @empty {
+        <p class="muted">No sites have been created yet.</p>
+      }
+    </div>
+
+    <dialog
+      #siteDialog
+      class="site-dialog"
+      (close)="onSiteDialogClosed()"
+      (cancel)="onSiteDialogCancel($event)"
+    >
+      @if (siteDialogMode() === 'create') {
+        <article class="site-modal-panel">
+          <div class="toolbar">
+            <div>
+              <h2>Create site</h2>
+              <p class="muted">Add a new site to this workspace.</p>
+            </div>
+            <button type="button" class="button button-secondary" (click)="closeSiteDialog()">Close</button>
+          </div>
+
+          <form class="form-grid" [formGroup]="siteCreateForm" (ngSubmit)="saveSiteFromModal()">
+            <label>
+              <span>Name</span>
+              <input type="text" formControlName="name" />
+            </label>
+            <label>
+              <span>Slug</span>
+              <input
+                type="text"
+                formControlName="slug"
+                aria-describedby="site-create-slug-help site-create-slug-error"
+                [attr.aria-invalid]="siteCreateForm.controls.slug.invalid && siteCreateForm.controls.slug.touched ? 'true' : null"
+              />
+              <small id="site-create-slug-help" class="field-help">Use lowercase letters, numbers, and hyphens only.</small>
+              @if (siteCreateForm.controls.slug.touched && siteCreateForm.controls.slug.errors?.['required']) {
+                <p id="site-create-slug-error" class="field-error" role="alert">Slug is required.</p>
+              } @else if (siteCreateForm.controls.slug.touched && siteCreateForm.controls.slug.errors?.['pattern']) {
+                <p id="site-create-slug-error" class="field-error" role="alert">
+                  Slug must use lowercase letters, numbers, and hyphens only.
+                </p>
+              }
+            </label>
+            <label>
+              <span>Domain</span>
+              <input type="url" formControlName="domain" />
+            </label>
+            <label>
+              <span>Blog path</span>
+              <input type="text" formControlName="blogPath" />
+            </label>
+            <label>
+              <span>Template</span>
+              <input type="text" formControlName="templateKey" />
+            </label>
+            @if (siteCreateForm.invalid && siteCreateForm.touched) {
+              <p class="field-error" role="alert">Fix the highlighted fields to create the site.</p>
+            }
+            <div class="inline-actions modal-actions">
+              <button class="button button-secondary" type="button" (click)="closeSiteDialog()">Cancel</button>
+              <button class="button button-primary" type="submit">Create site</button>
+            </div>
+          </form>
+        </article>
+      } @else if (siteDialogMode() === 'edit') {
+        <article class="site-modal-panel">
+          <div class="toolbar">
+            <div>
+              <h2>Edit site</h2>
+              <p class="muted">Update the selected site configuration.</p>
+            </div>
+            <button type="button" class="button button-secondary" (click)="closeSiteDialog()">Close</button>
+          </div>
+
+          <form class="form-grid" [formGroup]="siteEditForm" (ngSubmit)="saveSiteFromModal()">
+            <label>
+              <span>Name</span>
+              <input type="text" formControlName="name" />
+            </label>
+            <label>
+              <span>Slug</span>
+              <input
+                type="text"
+                formControlName="slug"
+                aria-describedby="site-edit-slug-help site-edit-slug-error"
+                [attr.aria-invalid]="siteEditForm.controls.slug.invalid && siteEditForm.controls.slug.touched ? 'true' : null"
+              />
+              <small id="site-edit-slug-help" class="field-help">Use lowercase letters, numbers, and hyphens only.</small>
+              @if (siteEditForm.controls.slug.touched && siteEditForm.controls.slug.errors?.['required']) {
+                <p id="site-edit-slug-error" class="field-error" role="alert">Slug is required.</p>
+              } @else if (siteEditForm.controls.slug.touched && siteEditForm.controls.slug.errors?.['pattern']) {
+                <p id="site-edit-slug-error" class="field-error" role="alert">
+                  Slug must use lowercase letters, numbers, and hyphens only.
+                </p>
+              }
+            </label>
+            <label>
+              <span>Domain</span>
+              <input type="url" formControlName="domain" />
+            </label>
+            <label>
+              <span>Blog path</span>
+              <input type="text" formControlName="blogPath" />
+            </label>
+            <label>
+              <span>Template</span>
+              <input type="text" formControlName="templateKey" />
+            </label>
+            <label>
+              <span>Status</span>
+              <select formControlName="status">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </label>
+            @if (siteEditForm.invalid && siteEditForm.touched) {
+              <p class="field-error" role="alert">Fix the highlighted fields to save the site.</p>
+            }
+            <div class="inline-actions modal-actions">
+              <button class="button button-secondary" type="button" (click)="closeSiteDialog()">Cancel</button>
+              <button class="button button-primary" type="submit">Save site</button>
+            </div>
+          </form>
+        </article>
+      }
+    </dialog>
+  </section>
+</section>

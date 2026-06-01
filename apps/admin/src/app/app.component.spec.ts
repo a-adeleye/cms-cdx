@@ -27,6 +27,13 @@ class DashboardRouteStubComponent {}
 })
 class SettingsRouteStubComponent {}
 
+@Component({
+  selector: 'app-sites-route-stub',
+  standalone: false,
+  template: '<p>Sites route is active</p>',
+})
+class SitesRouteStubComponent {}
+
 describe('AppComponent', () => {
   let fixture: ComponentFixture<AppComponent>;
   let location: Location;
@@ -66,9 +73,13 @@ describe('AppComponent', () => {
           { path: '', pathMatch: 'full', redirectTo: 'login' },
           { path: 'login', component: LoginRouteStubComponent },
           { path: 'dashboard', component: DashboardRouteStubComponent },
-          { path: 'settings', component: SettingsRouteStubComponent },
-        ]),
-      ],
+        {
+          path: 'settings',
+          component: SettingsRouteStubComponent,
+          children: [{ path: 'sites', component: SitesRouteStubComponent }],
+        },
+      ]),
+    ],
       providers: [{ provide: WorkspaceStateService, useValue: fakeState }],
     }).compileComponents();
 
@@ -123,6 +134,21 @@ describe('AppComponent', () => {
     expect(location.path()).toBe('/dashboard');
     expect(fixture.nativeElement.textContent).toContain('Dashboard route is active');
     expect(fakeState.selectSite).toHaveBeenCalledWith('site-example');
+  });
+
+  it('keeps settings active on nested settings routes', async () => {
+    await router.navigate(['/settings/sites']);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const settingsLink = Array.from(
+      fixture.nativeElement.querySelectorAll('nav a') as NodeListOf<HTMLAnchorElement>,
+    ).find((link) => link.textContent?.includes('Settings'));
+
+    expect(location.path()).toBe('/settings/sites');
+    expect(settingsLink?.classList.contains('is-active')).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Settings route is active');
   });
 
   it('shows the sign out action in the sidebar and returns to login when clicked', async () => {

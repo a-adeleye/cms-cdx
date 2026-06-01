@@ -16,7 +16,7 @@ const settingsPage = {
   kind: 'settings' as const,
   eyebrow: 'Administration',
   title: 'Settings',
-  primaryAction: { label: 'Manage sites', path: '/sites' },
+  primaryAction: { label: 'Manage sites', path: '/settings/sites' },
 };
 
 const articlesPage = {
@@ -116,6 +116,7 @@ describe('PageViewComponent', () => {
 
 describe('Settings page', () => {
   let fixture: ComponentFixture<PageViewComponent>;
+  let router: Router;
 
   const fakeState = {
     loading: () => false,
@@ -186,7 +187,14 @@ describe('Settings page', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [PageViewComponent],
-      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, DashboardPageComponent, SettingsPageComponent, TaxonomyPageComponent],
+      imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterTestingModule.withRoutes([{ path: 'settings', component: PageViewComponent }]),
+        DashboardPageComponent,
+        SettingsPageComponent,
+        TaxonomyPageComponent,
+      ],
       providers: [
         {
           provide: ActivatedRoute,
@@ -199,6 +207,8 @@ describe('Settings page', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(PageViewComponent);
+    router = TestBed.inject(Router);
+    await router.navigate(['/settings']);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();

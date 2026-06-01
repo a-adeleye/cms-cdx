@@ -2,7 +2,6 @@ export type WorkspacePageKind =
   | 'login'
   | 'dashboard'
   | 'settings'
-  | 'sites'
   | 'site-settings'
   | 'landing-page-editor'
   | 'articles'

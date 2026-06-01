@@ -1,0 +1,61 @@
+<section class="page">
+  <header class="hero">
+    <p class="eyebrow">Editorial</p>
+    <div class="hero-row">
+      <div>
+        <h1>Articles</h1>
+        <p class="muted">Manage drafts, review items, and published content.</p>
+      </div>
+
+      <div class="hero-actions">
+        <button class="button button-primary" type="button" (click)="startArticle()">New article</button>
+      </div>
+    </div>
+  </header>
+
+  @if (state.error()) {
+    <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
+  }
+
+  <section class="panel">
+    <div class="toolbar">
+      <div class="chip-group">
+        @for (filter of articleFilterOptions; track filter.value) {
+          <button
+            type="button"
+            class="chip"
+            [class.is-active-chip]="articleFilter() === filter.value"
+            (click)="onArticleFilterChange(filter.value)"
+          >
+            {{ filter.label }}
+          </button>
+        }
+      </div>
+      <p class="muted">{{ filteredArticles().length }} articles</p>
+    </div>
+
+    @if (filteredArticles().length > 0) {
+      <div class="stack">
+        @for (article of filteredArticles(); track article.id) {
+          <article class="list-card">
+            <div>
+              <strong>{{ article.title }}</strong>
+              <p>{{ article.excerpt }}</p>
+              <small>{{ article.status }} - {{ article.updatedAt | date: 'mediumDate' }}</small>
+            </div>
+            <div class="inline-actions">
+              <button type="button" class="button button-secondary" (click)="openArticle(article.id)">Edit</button>
+              <button type="button" class="button button-secondary" (click)="toggleFeatured(article.id)">
+                {{ article.isFeatured ? 'Unfeature' : 'Feature' }}
+              </button>
+              <button type="button" class="button button-secondary" (click)="setStatus(article.id, 'review')">Review</button>
+              <button type="button" class="button button-secondary" (click)="setStatus(article.id, 'published')">Publish</button>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <p class="muted">No articles yet. Create the first one with the button above.</p>
+    }
+  </section>
+</section>

@@ -30,6 +30,7 @@ describe('WorkspaceStateService', () => {
       'reorderLandingSections',
       'createBuild',
       'createMediaAsset',
+      'uploadMediaFile',
     ]);
 
     api.loadWorkspace.and.callFake(async (siteId?: string) => ({
@@ -153,6 +154,17 @@ describe('WorkspaceStateService', () => {
       slug: 'updated-tag',
     });
     api.deleteTag.and.resolveTo();
+    api.uploadMediaFile.and.resolveTo({
+      id: 'media-new',
+      siteId: 'site-example',
+      fileName: 'cover.jpg',
+      fileUrl: 'https://cdn.example/cover.jpg',
+      mimeType: 'image/jpeg',
+      sizeBytes: 1024,
+      storageProvider: 'minio',
+      storageKey: 'site-example/cover.jpg',
+      altText: 'Cover image',
+    });
 
     await TestBed.configureTestingModule({
       providers: [
@@ -231,5 +243,18 @@ describe('WorkspaceStateService', () => {
     });
     expect(api.deleteTag).toHaveBeenCalledWith('site-example', 'tag-1');
     expect(api.loadWorkspace).toHaveBeenCalledTimes(7);
+  });
+
+  it('uploads media without reloading the workspace', async () => {
+    await service.login('admin@example.com', 'admin123');
+    const before = api.loadWorkspace.calls.count();
+
+    const file = new File(['fake-image'], 'cover.jpg', { type: 'image/jpeg' });
+    const media = await service.uploadMediaFile(file, 'Cover image');
+
+    expect(api.uploadMediaFile).toHaveBeenCalledWith('site-example', file, 'Cover image');
+    expect(api.loadWorkspace.calls.count()).toBe(before);
+    expect(media.id).toBe('media-new');
+    expect(service.mediaAssets().some((asset) => asset.id === 'media-new')).toBeTrue();
   });
 });

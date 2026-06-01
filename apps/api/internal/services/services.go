@@ -30,7 +30,7 @@ func New(db *sql.DB, cfg config.Config) Services {
 		AI:      ai.NoopProvider{},
 		Builder: builder.NoopBuilder{},
 		Deploy:  deploy.NoopAdapter{},
-		Storage: storage.NoopStorage{},
+		Storage: storage.NewFromConfig(cfg),
 		Sites:   repositories.NoopSites{},
 	}
 }
@@ -45,4 +45,3 @@ func (s Services) ExampleSite() models.Site {
 		TemplateKey: "default-blog",
 	}
 }
-

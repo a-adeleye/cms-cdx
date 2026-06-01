@@ -289,6 +289,13 @@ export class AdminApiService {
     return firstValueFrom(this.http.post<MediaAssetRecord>(`${this.baseUrl}/sites/${siteId}/media`, payload, { headers: this.headers() }));
   }
 
+  async uploadMediaFile(siteId: string, file: File, altText: string): Promise<MediaAssetRecord> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    formData.append('altText', altText);
+    return firstValueFrom(this.http.post<MediaAssetRecord>(`${this.baseUrl}/sites/${siteId}/media`, formData, { headers: this.headers() }));
+  }
+
   private headers(): HttpHeaders {
     const token = this.tokenStore.getToken();
     if (!token) {

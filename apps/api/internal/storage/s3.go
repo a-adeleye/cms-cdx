@@ -1,0 +1,160 @@
+package storage
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"path"
+	"regexp"
+	"strings"
+	"time"
+
+	"cms-builder/api/internal/config"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+)
+
+type s3Storage struct {
+	client    *s3.Client
+	bucket    string
+	publicURL string
+	enabled   bool
+}
+
+var unsafeObjectName = regexp.MustCompile(`[^a-zA-Z0-9._-]+`)
+
+func NewFromConfig(cfg config.Config) StorageProvider {
+	if strings.TrimSpace(cfg.S3Endpoint) == "" ||
+		strings.TrimSpace(cfg.S3Bucket) == "" ||
+		strings.TrimSpace(cfg.S3AccessKey) == "" ||
+		strings.TrimSpace(cfg.S3SecretKey) == "" ||
+		strings.TrimSpace(cfg.S3PublicURL) == "" {
+		return disabledStorage{reason: "storage is not configured"}
+	}
+
+	awsCfg, err := awsconfig.LoadDefaultConfig(
+		context.Background(),
+		awsconfig.WithRegion(cfg.S3Region),
+		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKey, cfg.S3SecretKey, "")),
+	)
+	if err != nil {
+		return disabledStorage{reason: err.Error()}
+	}
+
+	client := s3.NewFromConfig(awsCfg, func(options *s3.Options) {
+		options.BaseEndpoint = aws.String(cfg.S3Endpoint)
+		options.UsePathStyle = true
+	})
+
+	return &s3Storage{
+		client:    client,
+		bucket:    cfg.S3Bucket,
+		publicURL: strings.TrimRight(cfg.S3PublicURL, "/"),
+		enabled:   true,
+	}
+}
+
+func (s *s3Storage) Upload(ctx context.Context, file UploadFile) (*StoredFile, error) {
+	if !s.enabled {
+		return nil, errors.New("storage is not configured")
+	}
+	if len(file.Contents) == 0 {
+		return nil, errors.New("file contents are empty")
+	}
+	if err := s.ensureBucket(ctx); err != nil {
+		return nil, err
+	}
+
+	key := storageObjectKey(file.SiteID, file.FileName)
+	contentType := strings.TrimSpace(file.MimeType)
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(s.bucket),
+		Key:         aws.String(key),
+		Body:        bytes.NewReader(file.Contents),
+		ContentType: aws.String(contentType),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &StoredFile{
+		Key:       key,
+		PublicURL: s.GetPublicURL(key),
+	}, nil
+}
+
+func (s *s3Storage) ensureBucket(ctx context.Context) error {
+	_, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{
+		Bucket: aws.String(s.bucket),
+	})
+	if err == nil {
+		return nil
+	}
+
+	_, createErr := s.client.CreateBucket(ctx, &s3.CreateBucketInput{
+		Bucket: aws.String(s.bucket),
+	})
+	if createErr != nil {
+		return fmt.Errorf("unable to prepare storage bucket: %w", createErr)
+	}
+
+	return nil
+}
+
+func (s *s3Storage) Delete(ctx context.Context, key string) error {
+	if !s.enabled {
+		return errors.New("storage is not configured")
+	}
+
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(strings.TrimSpace(key)),
+	})
+	return err
+}
+
+func (s *s3Storage) GetPublicURL(key string) string {
+	if !s.enabled || s.publicURL == "" {
+		return ""
+	}
+
+	return s.publicURL + "/" + strings.TrimLeft(key, "/")
+}
+
+type disabledStorage struct {
+	reason string
+}
+
+func (d disabledStorage) Upload(ctx context.Context, file UploadFile) (*StoredFile, error) {
+	return nil, errors.New(d.reason)
+}
+
+func (d disabledStorage) Delete(ctx context.Context, key string) error {
+	return errors.New(d.reason)
+}
+
+func (d disabledStorage) GetPublicURL(key string) string {
+	return ""
+}
+
+func storageObjectKey(siteID, fileName string) string {
+	stem := strings.TrimSpace(fileName)
+	if stem == "" {
+		stem = "upload"
+	}
+	stem = path.Base(stem)
+	stem = unsafeObjectName.ReplaceAllString(stem, "-")
+	stem = strings.Trim(stem, "-_.")
+	if stem == "" {
+		stem = "upload"
+	}
+
+	return path.Join(strings.TrimSpace(siteID), "media", fmt.Sprintf("%d-%s", time.Now().UTC().UnixNano(), stem))
+}

@@ -21,7 +21,7 @@
     </section>
   } @else {
     <section class="page">
-      @if (currentPage.kind !== 'settings' || isSettingsRoot()) {
+      @if ((currentPage.kind !== 'settings' || isSettingsRoot()) && currentPage.kind !== 'articles') {
         <header class="hero">
           <p class="eyebrow">{{ currentPage.eyebrow }}</p>
           <div class="hero-row">
@@ -30,15 +30,15 @@
             </div>
 
             <div class="hero-actions">
-              @if (currentPage.kind !== 'articles') {
+              @if (currentPage.kind !== 'dashboard') {
                 <a class="button button-primary" [routerLink]="currentPage.primaryAction.path">
                   {{ currentPage.primaryAction.label }}
                 </a>
-              }
-              @if (currentPage.secondaryAction) {
-                <a class="button button-secondary" [routerLink]="currentPage.secondaryAction.path">
-                  {{ currentPage.secondaryAction.label }}
-                </a>
+                @if (currentPage.secondaryAction) {
+                  <a class="button button-secondary" [routerLink]="currentPage.secondaryAction.path">
+                    {{ currentPage.secondaryAction.label }}
+                  </a>
+                }
               }
             </div>
           </div>
@@ -65,6 +65,10 @@
           [recentArticles]="state.articles().slice(0, 3)"
           (articleSelected)="openArticle($event)"
         />
+      }
+
+      @case ('articles') {
+        <router-outlet />
       }
 
       @case ('landing-page-editor') {
@@ -100,139 +104,6 @@
 }
             </pre>
           </article>
-        </section>
-      }
-
-      @case ('articles') {
-        <section class="panel">
-          <div class="toolbar">
-            <div class="chip-group">
-              @for (filter of articleFilterOptions; track filter.value) {
-                <button
-                  type="button"
-                  class="chip"
-                  [class.is-active-chip]="articleFilter() === filter.value"
-                  (click)="onArticleFilterChange(filter.value)"
-                >
-                  {{ filter.label }}
-                </button>
-              }
-            </div>
-            <button type="button" class="button button-primary" (click)="openArticleEditor()">New article</button>
-          </div>
-
-          <div class="stack">
-            @for (article of filteredArticles(); track article.id) {
-              <article class="list-card">
-                <div>
-                  <strong>{{ article.title }}</strong>
-                  <p>{{ article.excerpt }}</p>
-                  <small>{{ article.status }} - {{ article.updatedAt | date: 'mediumDate' }}</small>
-                </div>
-                <div class="inline-actions">
-                  <button type="button" class="button button-secondary" (click)="openArticle(article.id)">Edit</button>
-                  <button type="button" class="button button-secondary" (click)="state.toggleFeatured(article.id)">
-                    {{ article.isFeatured ? 'Unfeature' : 'Feature' }}
-                  </button>
-                  <button type="button" class="button button-secondary" (click)="state.setArticleStatus(article.id, 'review')">Review</button>
-                  <button type="button" class="button button-secondary" (click)="state.setArticleStatus(article.id, 'published')">Publish</button>
-                </div>
-              </article>
-            }
-          </div>
-        </section>
-      }
-
-          @case ('article-editor') {
-        <section class="article-layout">
-          <article class="panel">
-            <div class="toolbar">
-              <h2>Article details</h2>
-              <label class="preview-toggle">
-                <span>Preview</span>
-                <input
-                  type="checkbox"
-                  [checked]="previewOpen()"
-                  (change)="setPreviewOpen(($any($event.target)).checked)"
-                />
-                <span class="preview-toggle-state">{{ previewOpen() ? 'On' : 'Off' }}</span>
-              </label>
-            </div>
-
-            <form class="form-grid" [formGroup]="articleForm">
-              <input type="hidden" formControlName="id" />
-              <label>
-                <span>Title</span>
-                <input type="text" formControlName="title" />
-              </label>
-              <label>
-                <span>Excerpt</span>
-                <textarea rows="3" formControlName="excerpt"></textarea>
-              </label>
-              <label>
-                <span>Cover image</span>
-                <input type="url" formControlName="coverImageUrl" />
-              </label>
-              <label>
-                <span>SEO title</span>
-                <input type="text" formControlName="seoTitle" />
-              </label>
-              <label>
-                <span>SEO description</span>
-                <textarea rows="3" formControlName="seoDescription"></textarea>
-              </label>
-              <label>
-                <span>Canonical URL</span>
-                <input type="url" formControlName="canonicalUrl" />
-              </label>
-              <div class="field-row">
-                <label>
-                  <span>Author</span>
-                  <select formControlName="authorId">
-                    @for (author of state.authors(); track author.id) {
-                      <option [value]="author.id">{{ author.name }}</option>
-                    }
-                  </select>
-                </label>
-                <label>
-                  <span>Category</span>
-                  <select formControlName="categoryId">
-                    @for (category of state.categories(); track category.id) {
-                      <option [value]="category.id">{{ category.name }}</option>
-                    }
-                  </select>
-                </label>
-              </div>
-              <label>
-                <span>Tag IDs</span>
-                <input type="text" formControlName="tagIds" placeholder="tag-1, tag-2" />
-              </label>
-              <label class="checkbox-row">
-                <input type="checkbox" formControlName="isFeatured" />
-                <span>Featured article</span>
-              </label>
-            </form>
-
-            <div class="inline-actions">
-              <button type="button" class="button button-primary" (click)="saveArticle()">Save</button>
-            </div>
-          </article>
-
-          <article class="panel markdown-panel" [formGroup]="articleForm">
-            <h2>Markdown body</h2>
-            <label class="editor-textarea">
-              <textarea rows="22" formControlName="contentMarkdown"></textarea>
-            </label>
-          </article>
-
-          @if (previewOpen()) {
-            <article class="panel preview-drawer">
-              <h2>Preview</h2>
-              <p class="preview-title">{{ articleForm.controls.title.value || 'Untitled article' }}</p>
-              <p class="muted">{{ articleForm.controls.excerpt.value }}</p>
-              <pre class="code-block">{{ articleForm.controls.contentMarkdown.value }}</pre>
-            </article>
-          }
         </section>
       }
 

@@ -101,7 +101,7 @@ describe('TaxonomyPageComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('New category');
       expect(fixture.nativeElement.textContent).toContain('Description');
       expect(fixture.nativeElement.querySelector('textarea[formcontrolname="description"]')).toBeTruthy();
-      expect(fixture.nativeElement.querySelectorAll('.table-row').length).toBeGreaterThan(1);
+      expect(fixture.nativeElement.querySelectorAll('.table-row').length).toBe(1);
 
       fixture.componentInstance.form.controls.name.setValue('Editorial');
       fixture.componentInstance.form.controls.description.setValue('Editorial content');
@@ -147,7 +147,7 @@ describe('TaxonomyPageComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('Tags');
       expect(fixture.nativeElement.textContent).not.toContain('New tag');
       expect(fixture.nativeElement.querySelector('textarea[formcontrolname="description"]')).toBeNull();
-      expect(fixture.nativeElement.querySelectorAll('.table-row').length).toBeGreaterThan(1);
+      expect(fixture.nativeElement.querySelectorAll('.table-row').length).toBe(1);
 
       fixture.componentInstance.form.controls.name.setValue('Launch');
       await fixture.componentInstance.save();

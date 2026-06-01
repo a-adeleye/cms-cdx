@@ -4,7 +4,6 @@ export type WorkspacePageKind =
   | 'settings'
   | 'landing-page-editor'
   | 'articles'
-  | 'article-editor'
   | 'media-library'
   | 'ai-assistant'
   | 'builds'

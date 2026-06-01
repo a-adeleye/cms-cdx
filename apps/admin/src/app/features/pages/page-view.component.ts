@@ -1,17 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs';
 import { WORKSPACE_PAGES } from './pages.data';
-import { ArticleStatus, WorkspacePageConfig } from './pages.model';
+import { WorkspacePageConfig } from './pages.model';
 import { SummaryMetric } from './page-view.types';
 import { WorkspaceStateService } from './workspace-state.service';
-
-type ArticleFilterOption = {
-  value: ArticleStatus | 'all';
-  label: string;
-};
 
 @Component({
   selector: 'app-page-view',
@@ -43,44 +38,9 @@ export class PageViewComponent {
   );
   readonly isSettingsRoot = computed(() => this.page().kind === 'settings' && this.currentUrl() === '/settings');
 
-  readonly articleFilter = signal<ArticleStatus | 'all'>('all');
-  readonly articleFilterOptions: ArticleFilterOption[] = [
-    { value: 'all', label: 'All' },
-    { value: 'draft', label: 'Draft' },
-    { value: 'review', label: 'Review' },
-    { value: 'published', label: 'Published' },
-    { value: 'archived', label: 'Archived' },
-  ];
-  readonly previewOpen = signal(false);
-
   readonly loginForm = this.fb.nonNullable.group({
     email: ['admin@example.com', [Validators.required, Validators.email]],
     password: ['admin123', [Validators.required, Validators.minLength(6)]],
-  });
-
-  readonly articleForm = this.fb.nonNullable.group({
-    id: [''],
-    title: ['', [Validators.required, Validators.minLength(3)]],
-    excerpt: ['', [Validators.required, Validators.minLength(12)]],
-    coverImageUrl: [''],
-    seoTitle: ['', [Validators.required]],
-    seoDescription: ['', [Validators.required]],
-    canonicalUrl: [''],
-    authorId: ['', [Validators.required]],
-    categoryId: ['', [Validators.required]],
-    tagIds: [''],
-    isFeatured: [false],
-    contentMarkdown: ['', [Validators.required, Validators.minLength(20)]],
-  });
-
-  readonly filteredArticles = computed(() => {
-    const articles = this.state.articles();
-    const filter = this.articleFilter();
-    if (filter === 'all') {
-      return articles;
-    }
-
-    return articles.filter((article) => article.status === filter);
   });
 
   readonly supportMetrics = computed<SummaryMetric[]>(() => {
@@ -119,13 +79,6 @@ export class PageViewComponent {
       return [
         { label: 'Sections', value: String(this.state.landingSections().length), detail: 'Landing page blocks for the selected site.' },
         { label: 'Enabled', value: String(this.state.landingSections().filter((section) => section.isEnabled).length), detail: 'Live sections included in the build.' },
-      ];
-    }
-
-    if (page.kind === 'articles' || page.kind === 'article-editor') {
-      return [
-        { label: 'Drafts', value: String(this.state.articles().filter((article) => article.status === 'draft').length), detail: 'Ready for editing.' },
-        { label: 'Published', value: String(this.state.articles().filter((article) => article.status === 'published').length), detail: 'Visible to site visitors.' },
       ];
     }
 
@@ -172,47 +125,6 @@ export class PageViewComponent {
       }
     });
 
-    effect(() => {
-      const article = this.state.selectedArticle();
-      if (!article) {
-        this.articleForm.reset(
-          {
-            id: '',
-            title: '',
-            excerpt: '',
-            coverImageUrl: '',
-            seoTitle: '',
-            seoDescription: '',
-            canonicalUrl: '',
-            authorId: this.state.authors()[0]?.id ?? '',
-            categoryId: this.state.categories()[0]?.id ?? '',
-            tagIds: '',
-            isFeatured: false,
-            contentMarkdown: '',
-          },
-          { emitEvent: false },
-        );
-        return;
-      }
-
-      this.articleForm.reset(
-        {
-          id: article.id,
-          title: article.title,
-          excerpt: article.excerpt,
-          coverImageUrl: article.coverImageUrl,
-          seoTitle: article.seoTitle,
-          seoDescription: article.seoDescription,
-          canonicalUrl: article.canonicalUrl,
-          authorId: article.authorId,
-          categoryId: article.categoryId,
-          tagIds: article.tagIds.join(', '),
-          isFeatured: article.isFeatured,
-          contentMarkdown: article.contentMarkdown,
-        },
-        { emitEvent: false },
-      );
-    });
   }
 
   private reportActionError(message: string, error: unknown): void {
@@ -238,58 +150,19 @@ export class PageViewComponent {
   async openArticle(articleId: string): Promise<void> {
     try {
       await this.state.selectArticle(articleId);
-      void this.router.navigate(['/article-editor']);
+      void this.router.navigate(['/articles/editor']);
     } catch (error) {
       this.reportActionError('Unable to open article.', error);
     }
-  }
-
-  openArticleEditor(): void {
-    this.state.clearSelectedArticle();
-    void this.router.navigate(['/article-editor']);
   }
 
   async createArticleDraft(): Promise<void> {
     try {
       const article = await this.state.createArticleDraft();
       await this.state.selectArticle(article.id);
-      void this.router.navigate(['/article-editor']);
+      void this.router.navigate(['/articles/editor']);
     } catch (error) {
       this.reportActionError('Unable to create article draft.', error);
-    }
-  }
-
-  async saveArticle(status: ArticleStatus = 'draft'): Promise<void> {
-    if (this.articleForm.invalid) {
-      this.articleForm.markAllAsTouched();
-      return;
-    }
-
-    const value = this.articleForm.getRawValue();
-    try {
-      const article = await this.state.saveArticle({
-        id: value.id,
-        title: value.title,
-        slug: this.buildArticleSlug(value.title),
-        excerpt: value.excerpt,
-        contentMarkdown: value.contentMarkdown,
-        coverImageUrl: value.coverImageUrl,
-        seoTitle: value.seoTitle,
-        seoDescription: value.seoDescription,
-        canonicalUrl: value.canonicalUrl,
-        authorId: value.authorId,
-        categoryId: value.categoryId,
-        tagIds: value.tagIds
-          .split(',')
-          .map((tag) => tag.trim())
-          .filter((tag) => tag.length > 0),
-        isFeatured: value.isFeatured,
-        status,
-      });
-
-      await this.state.selectArticle(article.id);
-    } catch (error) {
-      this.reportActionError('Unable to save article.', error);
     }
   }
 
@@ -309,20 +182,12 @@ export class PageViewComponent {
     }
   }
 
-  setPreviewOpen(isOpen: boolean): void {
-    this.previewOpen.set(isOpen);
-  }
-
   async onSiteSelectionChange(siteId: string): Promise<void> {
     try {
       await this.state.selectSite(siteId);
     } catch (error) {
       this.reportActionError('Unable to switch sites.', error);
     }
-  }
-
-  onArticleFilterChange(value: ArticleStatus | 'all'): void {
-    this.articleFilter.set(value);
   }
 
   async toggleSection(sectionId: string): Promise<void> {
@@ -348,13 +213,4 @@ export class PageViewComponent {
       this.reportActionError('Unable to upload media.', error);
     }
   }
-
-  private buildArticleSlug(title: string): string {
-    return title
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-  }
-
 }

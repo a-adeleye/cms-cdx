@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"cms-builder/api/internal/middleware"
 	"cms-builder/api/internal/models"
+	"cms-builder/api/internal/storage"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -770,6 +772,57 @@ func (a *API) handleMediaRoutes(w http.ResponseWriter, r *http.Request, siteID s
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"items": media})
 	case http.MethodPost:
+		if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+			r.Body = http.MaxBytesReader(w, r.Body, 12<<20)
+			if err := r.ParseMultipartForm(12 << 20); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid multipart payload"})
+				return
+			}
+
+			file, header, err := r.FormFile("file")
+			if err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file is required"})
+				return
+			}
+			defer file.Close()
+
+			contents, err := io.ReadAll(io.LimitReader(file, 12<<20+1))
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to read uploaded file"})
+				return
+			}
+			if len(contents) > 12<<20 {
+				writeJSON(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "file is too large"})
+				return
+			}
+			if len(contents) == 0 {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file is empty"})
+				return
+			}
+
+			mimeType := strings.TrimSpace(header.Header.Get("Content-Type"))
+			if mimeType == "" {
+				mimeType = http.DetectContentType(contents)
+			}
+			if !strings.HasPrefix(mimeType, "image/") {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "only image uploads are supported"})
+				return
+			}
+
+			altText := strings.TrimSpace(r.FormValue("altText"))
+			media, err := a.uploadMediaAsset(r.Context(), siteID, header.Filename, contents, mimeType, altText)
+			if err != nil {
+				if errors.Is(err, errValidation) {
+					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to upload media asset"})
+				return
+			}
+			writeJSON(w, http.StatusCreated, media)
+			return
+		}
+
 		var payload mediaUpsertRequest
 		if err := decodeJSON(r, &payload); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
@@ -1846,6 +1899,42 @@ func (a *API) createMediaAsset(ctx context.Context, siteID string, payload media
 		return mediaAssetResponse{}, fmt.Errorf("%w: file name and URL are required", errValidation)
 	}
 
+	return a.persistMediaAsset(ctx, siteID, payload)
+}
+
+func (a *API) uploadMediaAsset(ctx context.Context, siteID, fileName string, contents []byte, mimeType, altText string) (mediaAssetResponse, error) {
+	if strings.TrimSpace(fileName) == "" {
+		return mediaAssetResponse{}, fmt.Errorf("%w: file name is required", errValidation)
+	}
+	if len(contents) == 0 {
+		return mediaAssetResponse{}, fmt.Errorf("%w: file contents are required", errValidation)
+	}
+
+	stored, err := a.Services.Storage.Upload(ctx, storage.UploadFile{
+		FileName: fileName,
+		Contents: contents,
+		MimeType: mimeType,
+		SiteID:   siteID,
+	})
+	if err != nil {
+		return mediaAssetResponse{}, err
+	}
+	if stored == nil || strings.TrimSpace(stored.PublicURL) == "" {
+		return mediaAssetResponse{}, fmt.Errorf("%w: storage did not return a public URL", errValidation)
+	}
+
+	return a.persistMediaAsset(ctx, siteID, mediaUpsertRequest{
+		FileName:        fileName,
+		FileURL:         stored.PublicURL,
+		MimeType:        mimeType,
+		SizeBytes:       int64(len(contents)),
+		StorageProvider: a.storageProviderName(),
+		StorageKey:      stored.Key,
+		AltText:         altText,
+	})
+}
+
+func (a *API) persistMediaAsset(ctx context.Context, siteID string, payload mediaUpsertRequest) (mediaAssetResponse, error) {
 	var item mediaAssetResponse
 	err := a.Services.DB.QueryRowContext(ctx, `
 		INSERT INTO media_assets (
@@ -1858,6 +1947,21 @@ func (a *API) createMediaAsset(ctx context.Context, siteID string, payload media
 		return mediaAssetResponse{}, err
 	}
 	return item, nil
+}
+
+func (a *API) storageProviderName() string {
+	endpoint := strings.ToLower(strings.TrimSpace(a.Config.S3Endpoint))
+	publicURL := strings.ToLower(strings.TrimSpace(a.Config.S3PublicURL))
+	switch {
+	case strings.Contains(endpoint, "minio") || strings.Contains(publicURL, "localhost:9002"):
+		return "minio"
+	case strings.Contains(endpoint, "r2") || strings.Contains(publicURL, "r2"):
+		return "r2"
+	case endpoint != "":
+		return "s3"
+	default:
+		return "s3"
+	}
 }
 
 func (a *API) listBuilds(ctx context.Context, siteID string) ([]buildResponse, error) {

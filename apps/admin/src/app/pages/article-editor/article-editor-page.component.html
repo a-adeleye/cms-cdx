@@ -1,0 +1,156 @@
+<section class="page article-editor-page">
+  <header class="hero">
+    <p class="eyebrow">Writing</p>
+    <div class="hero-row">
+      <div>
+        <h1>Article editor</h1>
+      </div>
+
+      <div class="hero-actions">
+        <a class="button button-secondary" routerLink="/articles">Back to articles</a>
+        <button class="button button-secondary" type="button" (click)="setPreviewOpen(!previewOpen())">
+          Preview {{ previewOpen() ? 'On' : 'Off' }}
+        </button>
+        <button class="button button-primary" type="button" (click)="saveArticle()">Save draft</button>
+      </div>
+    </div>
+  </header>
+
+  @if (state.error()) {
+    <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
+  }
+
+  <section class="article-layout">
+    <article class="panel">
+      <div class="toolbar">
+        <h2>Article details</h2>
+      </div>
+
+      <form class="article-form-grid" [formGroup]="articleForm">
+        <input type="hidden" formControlName="id" />
+
+        <label>
+          <span>Title</span>
+          <input type="text" formControlName="title" />
+        </label>
+
+        <label>
+          <span>Excerpt</span>
+          <textarea rows="3" formControlName="excerpt"></textarea>
+        </label>
+
+        <div class="cover-field article-span-2">
+          <span>Cover image</span>
+          <div class="cover-field-row">
+            <div class="chip-group cover-image-mode">
+              <button type="button" class="chip" [class.is-active-chip]="coverImageMode() === 'url'" (click)="setCoverImageMode('url')">
+                URL
+              </button>
+              <button type="button" class="chip" [class.is-active-chip]="coverImageMode() === 'upload'" (click)="setCoverImageMode('upload')">
+                Upload
+              </button>
+            </div>
+
+            @if (coverImageMode() === 'url') {
+              <input type="url" formControlName="coverImageUrl" placeholder="https://images.example/cover.jpg" />
+            } @else {
+              <input type="file" accept="image/*" (change)="onCoverImageSelected($event)" />
+            }
+          </div>
+
+          <div class="cover-field-support">
+            <p class="field-help">Uploads go to S3-compatible storage and work with MinIO or R2.</p>
+            @if (coverImageFileName()) {
+              <p class="field-help">Selected file: {{ coverImageFileName() }}</p>
+            }
+            @if (uploadingCoverImage()) {
+              <p class="field-help">Uploading cover image...</p>
+            }
+            @if (coverImageError()) {
+              <p class="field-error">{{ coverImageError() }}</p>
+            }
+            @if (articleForm.controls.coverImageUrl.value) {
+              <img class="cover-preview" [src]="articleForm.controls.coverImageUrl.value" alt="" />
+            }
+          </div>
+        </div>
+
+        <label>
+          <span>SEO title</span>
+          <input type="text" formControlName="seoTitle" />
+        </label>
+
+        <label>
+          <span>SEO description</span>
+          <textarea rows="3" formControlName="seoDescription"></textarea>
+        </label>
+
+        <label>
+          <span>Canonical URL</span>
+          <input type="url" formControlName="canonicalUrl" />
+        </label>
+
+        <div class="article-meta-row article-span-2">
+          <label>
+            <span>Status</span>
+            <select formControlName="status">
+              <option value="draft">Draft</option>
+              <option value="review">Review</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Author</span>
+            <select formControlName="authorId">
+              @for (author of state.authors(); track author.id) {
+                <option [value]="author.id">{{ author.name }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>Category</span>
+            <select formControlName="categoryId">
+              @for (category of state.categories(); track category.id) {
+                <option [value]="category.id">{{ category.name }}</option>
+              }
+            </select>
+          </label>
+
+          <label>
+            <span>Tags</span>
+            <select formControlName="tagIds" multiple size="5">
+              @for (tag of state.tags(); track tag.id) {
+                <option [value]="tag.id">{{ tag.name }}</option>
+              }
+            </select>
+            <span class="field-help">Hold Ctrl or Cmd to select multiple tags.</span>
+          </label>
+
+          <label class="checkbox-row feature-field">
+            <input type="checkbox" formControlName="isFeatured" />
+            <span>Featured article</span>
+          </label>
+        </div>
+
+        <label class="article-markdown article-span-2">
+          <span>Markdown body</span>
+          <textarea rows="22" formControlName="contentMarkdown"></textarea>
+        </label>
+      </form>
+    </article>
+
+    @if (previewOpen()) {
+      <article class="panel preview-drawer">
+        <h2>Preview</h2>
+        <p class="preview-title">{{ articleForm.controls.title.value || 'Untitled article' }}</p>
+        <p class="muted">{{ articleForm.controls.excerpt.value }}</p>
+        @if (articleForm.controls.coverImageUrl.value) {
+          <img class="cover-preview" [src]="articleForm.controls.coverImageUrl.value" alt="" />
+        }
+        <pre class="code-block">{{ articleForm.controls.contentMarkdown.value }}</pre>
+      </article>
+    }
+  </section>
+</section>

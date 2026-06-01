@@ -40,15 +40,7 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'articles',
     eyebrow: 'Editorial',
     title: 'Articles',
-    primaryAction: { label: 'Open editor', path: '/article-editor' },
-  },
-  {
-    path: 'article-editor',
-    navLabel: 'Article Editor',
-    kind: 'article-editor',
-    eyebrow: 'Writing',
-    title: 'Article Editor',
-    primaryAction: { label: 'Save draft', path: '/articles' },
+    primaryAction: { label: 'Open editor', path: '/articles/editor' },
   },
   {
     path: 'media-library',
@@ -64,7 +56,7 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     kind: 'ai-assistant',
     eyebrow: 'Assistive writing',
     title: 'AI Assistant',
-    primaryAction: { label: 'Open article editor', path: '/article-editor' },
+    primaryAction: { label: 'Open article editor', path: '/articles/editor' },
   },
   {
     path: 'builds',

@@ -515,6 +515,20 @@ export class WorkspaceStateService {
     return media;
   }
 
+  async uploadMediaFile(file: File, altText: string): Promise<MediaAssetRecord> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    const media = await this.api.uploadMediaFile(site.id, file, altText);
+    this.state.update((state) => ({
+      ...state,
+      mediaAssets: [media, ...state.mediaAssets.filter((asset) => asset.id !== media.id)],
+    }));
+    return media;
+  }
+
   private async refreshSession(): Promise<void> {
     const session = await this.api.me();
     const workspace = await this.api.loadWorkspace();

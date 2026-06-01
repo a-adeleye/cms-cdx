@@ -6,8 +6,12 @@ import { SitesPageComponent } from '../../pages/sites/sites-page.component';
 import { SiteSettingsPageComponent } from '../../pages/site-settings/site-settings-page.component';
 import { AuthorsPageComponent } from '../../pages/authors/authors-page.component';
 import { TaxonomyPageComponent } from '../../pages/taxonomy/taxonomy-page.component';
+import { ArticlesPageComponent } from '../../pages/articles/articles-page.component';
+import { ArticleEditorPageComponent } from '../../pages/article-editor/article-editor-page.component';
 
-const pageRoutes: Routes = WORKSPACE_PAGES.filter((page) => page.path !== 'settings' && page.path !== 'sites').map((page) => ({
+const pageRoutes: Routes = WORKSPACE_PAGES.filter(
+  (page) => page.path !== 'settings' && page.path !== 'sites' && page.path !== 'articles',
+).map((page) => ({
   path: page.path,
   component: PageViewComponent,
   data: { page },
@@ -51,6 +55,21 @@ const routes: Routes = [
     ],
   },
   {
+    path: 'articles',
+    component: PageViewComponent,
+    data: { page: WORKSPACE_PAGES.find((page) => page.path === 'articles')! },
+    children: [
+      {
+        path: '',
+        component: ArticlesPageComponent,
+      },
+      {
+        path: 'editor',
+        component: ArticleEditorPageComponent,
+      },
+    ],
+  },
+  {
     path: 'sites',
     redirectTo: 'settings/sites',
     pathMatch: 'full',
@@ -73,6 +92,11 @@ const routes: Routes = [
   {
     path: 'tags',
     redirectTo: 'settings/tags',
+    pathMatch: 'full',
+  },
+  {
+    path: 'article-editor',
+    redirectTo: 'articles/editor',
     pathMatch: 'full',
   },
   ...pageRoutes,

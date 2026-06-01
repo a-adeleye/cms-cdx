@@ -34,6 +34,13 @@ class SettingsRouteStubComponent {}
 })
 class SitesRouteStubComponent {}
 
+@Component({
+  selector: 'app-articles-route-stub',
+  standalone: false,
+  template: '<p>Articles route is active</p>',
+})
+class ArticlesRouteStubComponent {}
+
 describe('AppComponent', () => {
   let fixture: ComponentFixture<AppComponent>;
   let location: Location;
@@ -67,19 +74,31 @@ describe('AppComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [AppComponent, LoginRouteStubComponent, DashboardRouteStubComponent, SettingsRouteStubComponent],
+      declarations: [
+        AppComponent,
+        LoginRouteStubComponent,
+        DashboardRouteStubComponent,
+        SettingsRouteStubComponent,
+        SitesRouteStubComponent,
+        ArticlesRouteStubComponent,
+      ],
       imports: [
         RouterTestingModule.withRoutes([
           { path: '', pathMatch: 'full', redirectTo: 'login' },
           { path: 'login', component: LoginRouteStubComponent },
           { path: 'dashboard', component: DashboardRouteStubComponent },
-        {
-          path: 'settings',
-          component: SettingsRouteStubComponent,
-          children: [{ path: 'sites', component: SitesRouteStubComponent }],
-        },
-      ]),
-    ],
+          {
+            path: 'settings',
+            component: SettingsRouteStubComponent,
+            children: [{ path: 'sites', component: SitesRouteStubComponent }],
+          },
+          {
+            path: 'articles',
+            component: ArticlesRouteStubComponent,
+            children: [{ path: 'editor', component: ArticlesRouteStubComponent }],
+          },
+        ]),
+      ],
       providers: [{ provide: WorkspaceStateService, useValue: fakeState }],
     }).compileComponents();
 
@@ -149,6 +168,21 @@ describe('AppComponent', () => {
     expect(location.path()).toBe('/settings/sites');
     expect(settingsLink?.classList.contains('is-active')).toBeTrue();
     expect(fixture.nativeElement.textContent).toContain('Settings route is active');
+  });
+
+  it('keeps articles active on nested article routes', async () => {
+    await router.navigate(['/articles/editor']);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const articlesLink = Array.from(
+      fixture.nativeElement.querySelectorAll('nav a') as NodeListOf<HTMLAnchorElement>,
+    ).find((link) => link.textContent?.includes('Articles'));
+
+    expect(location.path()).toBe('/articles/editor');
+    expect(articlesLink?.classList.contains('is-active')).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Articles route is active');
   });
 
   it('shows the sign out action in the sidebar and returns to login when clicked', async () => {

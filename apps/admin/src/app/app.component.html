@@ -16,7 +16,7 @@
             [routerLink]="['/', item.path]"
             routerLinkActive="is-active"
             ariaCurrentWhenActive="page"
-            [routerLinkActiveOptions]="item.path === 'settings' ? { exact: false } : { exact: true }"
+            [routerLinkActiveOptions]="item.path === 'settings' || item.path === 'articles' ? { exact: false } : { exact: true }"
           >
             {{ item.navLabel }}
           </a>

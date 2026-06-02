@@ -8,9 +8,11 @@ import { AuthorsPageComponent } from '../../pages/authors/authors-page.component
 import { TaxonomyPageComponent } from '../../pages/taxonomy/taxonomy-page.component';
 import { ArticlesPageComponent } from '../../pages/articles/articles-page.component';
 import { ArticleEditorPageComponent } from '../../pages/article-editor/article-editor-page.component';
+import { ArticleDetailsPageComponent } from '../../pages/article-details/article-details-page.component';
+import { PublishingPageComponent } from '../../pages/publishing/publishing-page.component';
 
 const pageRoutes: Routes = WORKSPACE_PAGES.filter(
-  (page) => page.path !== 'settings' && page.path !== 'sites' && page.path !== 'articles',
+  (page) => page.path !== 'settings' && page.path !== 'sites' && page.path !== 'articles' && page.path !== 'publishing',
 ).map((page) => ({
   path: page.path,
   component: PageViewComponent,
@@ -66,6 +68,21 @@ const routes: Routes = [
       {
         path: 'editor',
         component: ArticleEditorPageComponent,
+      },
+      {
+        path: ':articleId',
+        component: ArticleDetailsPageComponent,
+      },
+    ],
+  },
+  {
+    path: 'publishing',
+    component: PageViewComponent,
+    data: { page: WORKSPACE_PAGES.find((page) => page.path === 'publishing')! },
+    children: [
+      {
+        path: '',
+        component: PublishingPageComponent,
       },
     ],
   },

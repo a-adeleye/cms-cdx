@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ArticleStatus } from '../../features/pages/pages.model';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
@@ -23,6 +23,7 @@ export class ArticleEditorPageComponent {
   readonly uploadingCoverImage = signal(false);
   readonly coverImageFileName = signal('');
   readonly coverImageError = signal<string | null>(null);
+  readonly formError = signal<string | null>(null);
 
   readonly articleForm = this.fb.nonNullable.group({
     id: [''],
@@ -138,11 +139,13 @@ export class ArticleEditorPageComponent {
   async saveArticle(): Promise<void> {
     if (this.articleForm.invalid) {
       this.articleForm.markAllAsTouched();
+      this.formError.set('Please fix the highlighted fields before saving.');
       return;
     }
 
     const value = this.articleForm.getRawValue();
     try {
+      this.formError.set(null);
       this.state.clearError();
       const article = await this.state.saveArticle({
         id: value.id,
@@ -162,11 +165,18 @@ export class ArticleEditorPageComponent {
       });
 
       await this.state.selectArticle(article.id);
+      void this.router.navigate(['/articles', article.id], {
+        state: { flashMessage: 'Article saved successfully.' },
+      });
       this.state.clearError();
     } catch (error) {
       const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
       this.state.reportError(`Unable to save article.${detail}`);
     }
+  }
+
+  controlHasError(control: AbstractControl | null, errorName: string): boolean {
+    return Boolean(control?.hasError(errorName) && (control?.touched || control?.dirty));
   }
 
   private buildArticleSlug(title: string): string {

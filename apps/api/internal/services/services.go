@@ -28,8 +28,8 @@ func New(db *sql.DB, cfg config.Config) Services {
 		DB:      db,
 		Config:  cfg,
 		AI:      ai.NoopProvider{},
-		Builder: builder.NoopBuilder{},
-		Deploy:  deploy.NoopAdapter{},
+		Builder: builder.NewLocalBuilder(""),
+		Deploy:  deploy.NewFilesystemAdapter(""),
 		Storage: storage.NewFromConfig(cfg),
 		Sites:   repositories.NoopSites{},
 	}
@@ -37,11 +37,13 @@ func New(db *sql.DB, cfg config.Config) Services {
 
 func (s Services) ExampleSite() models.Site {
 	return models.Site{
-		Name:        "Example Site",
-		Slug:        "example",
-		Domain:      "http://localhost:4321",
-		BlogPath:    "/articles",
-		Status:      "active",
-		TemplateKey: "default-blog",
+		Name:                  "Example Site",
+		Slug:                  "example",
+		Domain:                "http://localhost:4321",
+		BlogPath:              "/articles",
+		Status:                "active",
+		TemplateKey:           "default-blog",
+		DeployProvider:        "none",
+		PreviewDeployProvider: "none",
 	}
 }

@@ -19,6 +19,15 @@ type DeployAdapter interface {
 type NoopAdapter struct{}
 
 func (NoopAdapter) Deploy(ctx context.Context, site models.Site, build models.Build, outputPath string) (*DeployResult, error) {
-	return &DeployResult{Provider: "none", Message: "deployment skipped in scaffold"}, nil
+	return &DeployResult{
+		Provider: fallbackProvider(site.DeployProvider),
+		Message:  "deployment skipped in scaffold",
+	}, nil
 }
 
+func fallbackProvider(value string) string {
+	if value == "" {
+		return "none"
+	}
+	return value
+}

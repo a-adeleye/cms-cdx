@@ -70,6 +70,8 @@ const EMPTY_SITE: SiteRecord = {
   themeConfig: '{}',
   deployProvider: '',
   deployConfig: '{}',
+  previewDeployProvider: '',
+  previewDeployConfig: '{}',
   aiConfig: '{}',
   storageConfig: '{}',
   updatedAt: '',
@@ -229,6 +231,8 @@ export class WorkspaceStateService {
       themeConfig: '{"tone":"professional"}',
       deployProvider: '',
       deployConfig: '{}',
+      previewDeployProvider: '',
+      previewDeployConfig: '{}',
       aiConfig: '{}',
       storageConfig: '{}',
     });
@@ -249,6 +253,8 @@ export class WorkspaceStateService {
       themeConfig: patch.themeConfig ?? current.themeConfig,
       deployProvider: patch.deployProvider ?? current.deployProvider,
       deployConfig: patch.deployConfig ?? current.deployConfig,
+      previewDeployProvider: patch.previewDeployProvider ?? current.previewDeployProvider,
+      previewDeployConfig: patch.previewDeployConfig ?? current.previewDeployConfig,
       aiConfig: patch.aiConfig ?? current.aiConfig,
       storageConfig: patch.storageConfig ?? current.storageConfig,
     });
@@ -401,6 +407,20 @@ export class WorkspaceStateService {
     return article;
   }
 
+  async deleteArticle(articleId: string): Promise<void> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    await this.api.deleteArticle(articleId);
+    await this.loadWorkspace(site.id);
+    this.state.update((state) => ({
+      ...state,
+      selectedArticleId: state.selectedArticleId === articleId ? null : state.selectedArticleId,
+    }));
+  }
+
   async selectArticle(articleId: string): Promise<void> {
     if (!this.articles().some((article) => article.id === articleId)) {
       return;
@@ -425,7 +445,7 @@ export class WorkspaceStateService {
       return;
     }
 
-    await this.saveArticle({
+    await this.updateArticle(article, {
       id: article.id,
       title: article.title,
       slug: article.slug,
@@ -449,7 +469,7 @@ export class WorkspaceStateService {
       return;
     }
 
-    await this.saveArticle({
+    await this.updateArticle(article, {
       id: article.id,
       title: article.title,
       slug: article.slug,
@@ -465,6 +485,27 @@ export class WorkspaceStateService {
       isFeatured: !article.isFeatured,
       status: article.status,
     });
+  }
+
+  private async updateArticle(article: ArticleRecord, input: ArticleDraftInput): Promise<void> {
+    await this.api.updateArticle(article.id, {
+      id: input.id?.trim() || undefined,
+      title: input.title,
+      slug: input.slug,
+      excerpt: input.excerpt,
+      contentMarkdown: input.contentMarkdown,
+      coverImageUrl: input.coverImageUrl,
+      seoTitle: input.seoTitle,
+      seoDescription: input.seoDescription,
+      canonicalUrl: input.canonicalUrl,
+      authorId: input.authorId,
+      categoryId: input.categoryId,
+      tagIds: input.tagIds,
+      isFeatured: input.isFeatured,
+      status: input.status,
+    });
+
+    await this.loadWorkspace(this.selectedSite().id);
   }
 
   async toggleLandingSection(sectionId: string): Promise<void> {
@@ -493,9 +534,9 @@ export class WorkspaceStateService {
     await this.loadWorkspace(site.id);
   }
 
-  async triggerBuild(buildType: BuildType): Promise<BuildRecord> {
+  async triggerBuild(buildType: BuildType, articleIds: string[] = []): Promise<BuildRecord> {
     const site = this.selectedSite();
-    const build = await this.api.createBuild(site.id, buildType);
+    const build = await this.api.createBuild(site.id, buildType, articleIds);
     await this.loadWorkspace(site.id);
     return build;
   }

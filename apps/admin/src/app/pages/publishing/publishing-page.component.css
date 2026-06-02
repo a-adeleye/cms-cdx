@@ -1,0 +1,41 @@
+.publishing-row {
+  align-items: center;
+}
+
+.publishing-checkbox {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  flex: 0 0 24px;
+}
+
+.publishing-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.publishing-main span,
+.publishing-meta {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.publishing-meta {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.publishing-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.publishing-row.is-selected {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  background: color-mix(in srgb, var(--accent-soft) 26%, var(--surface-soft));
+}

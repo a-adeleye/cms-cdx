@@ -21,6 +21,8 @@ describe('SiteSettingsPageComponent', () => {
       themeConfig: '{"tone":"professional"}',
       deployProvider: 'netlify',
       deployConfig: '{"build":"on"}',
+      previewDeployProvider: 'cloudflare',
+      previewDeployConfig: '{"build":"preview"}',
       aiConfig: '{}',
       storageConfig: '{}',
       updatedAt: '2026-05-23T00:00:00.000Z',
@@ -54,9 +56,12 @@ describe('SiteSettingsPageComponent', () => {
     fixture.detectChanges();
 
     expect(state.updateSelectedSite).toHaveBeenCalledWith({
+      templateKey: 'default-blog',
       themeConfig: '{"tone":"professional"}',
       deployProvider: 'netlify',
       deployConfig: '{"build":"on"}',
+      previewDeployProvider: 'cloudflare',
+      previewDeployConfig: '{"build":"preview"}',
       aiConfig: '{}',
       storageConfig: '{}',
     });

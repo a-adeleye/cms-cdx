@@ -17,6 +17,10 @@
     <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
   }
 
+  @if (successMessage()) {
+    <p class="page-error" role="status" aria-live="polite">{{ successMessage() }}</p>
+  }
+
   <section class="panel">
     <div class="toolbar">
       <div class="chip-group">

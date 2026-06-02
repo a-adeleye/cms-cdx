@@ -21,16 +21,40 @@
       <h2>Update site settings</h2>
       <form class="form-grid" [formGroup]="siteSettingsForm" (ngSubmit)="saveSiteSettings()">
         <label>
+          <span>Template</span>
+          <select formControlName="templateKey">
+            @for (option of templateOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+        <label>
           <span>Theme config</span>
           <textarea rows="4" formControlName="themeConfig"></textarea>
         </label>
         <label>
           <span>Deployment provider</span>
-          <input type="text" formControlName="deployProvider" />
+          <select formControlName="deployProvider">
+            @for (option of deployProviderOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
         </label>
         <label>
           <span>Deployment config</span>
           <textarea rows="4" formControlName="deployConfig"></textarea>
+        </label>
+        <label>
+          <span>Preview deployment provider</span>
+          <select formControlName="previewDeployProvider">
+            @for (option of deployProviderOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>Preview deployment config</span>
+          <textarea rows="4" formControlName="previewDeployConfig"></textarea>
         </label>
         <label>
           <span>AI config</span>
@@ -54,6 +78,18 @@
         <div>
           <dt>Domain</dt>
           <dd>{{ state.selectedSite().domain }}</dd>
+        </div>
+        <div>
+          <dt>Template</dt>
+          <dd>{{ state.selectedSite().templateKey }}</dd>
+        </div>
+        <div>
+          <dt>Production deploy</dt>
+          <dd>{{ state.selectedSite().deployProvider || 'none' }}</dd>
+        </div>
+        <div>
+          <dt>Preview deploy</dt>
+          <dd>{{ state.selectedSite().previewDeployProvider || 'none' }}</dd>
         </div>
         <div>
           <dt>Storage</dt>

@@ -39,6 +39,8 @@ describe('AuthorsPageComponent', () => {
         themeConfig: '{}',
         deployProvider: 'netlify',
         deployConfig: '{}',
+        previewDeployProvider: 'cloudflare',
+        previewDeployConfig: '{}',
         aiConfig: '{}',
         storageConfig: '{}',
         updatedAt: '2026-05-23T00:00:00.000Z',

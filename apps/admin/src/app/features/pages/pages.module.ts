@@ -8,6 +8,8 @@ import { DashboardPageComponent } from '../../pages/dashboard/dashboard-page.com
 import { SettingsPageComponent } from '../../pages/settings/settings-page.component';
 import { ArticlesPageComponent } from '../../pages/articles/articles-page.component';
 import { ArticleEditorPageComponent } from '../../pages/article-editor/article-editor-page.component';
+import { ArticleDetailsPageComponent } from '../../pages/article-details/article-details-page.component';
+import { PublishingPageComponent } from '../../pages/publishing/publishing-page.component';
 
 @NgModule({
   declarations: [PageViewComponent],
@@ -20,6 +22,8 @@ import { ArticleEditorPageComponent } from '../../pages/article-editor/article-e
     SettingsPageComponent,
     ArticlesPageComponent,
     ArticleEditorPageComponent,
+    ArticleDetailsPageComponent,
+    PublishingPageComponent,
   ],
 })
 export class PagesModule {}

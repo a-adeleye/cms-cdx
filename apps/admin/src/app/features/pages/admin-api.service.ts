@@ -71,6 +71,8 @@ interface SiteUpsertPayload {
   themeConfig: string;
   deployProvider: string;
   deployConfig: string;
+  previewDeployProvider: string;
+  previewDeployConfig: string;
   aiConfig: string;
   storageConfig: string;
 }
@@ -86,6 +88,7 @@ interface LandingUpdatePayload {
 
 interface BuildCreatePayload {
   buildType: 'preview' | 'published';
+  articleIds?: string[];
 }
 
 interface MediaCreatePayload {
@@ -243,11 +246,29 @@ export class AdminApiService {
 
   async upsertArticle(siteId: string, payload: ArticleUpsertPayload): Promise<ArticleRecord> {
     try {
-      if (payload.id) {
-        return await firstValueFrom(this.http.patch<ArticleRecord>(`${this.baseUrl}/articles/${payload.id}`, payload, { headers: this.headers() }));
-      }
+      // Temporarily disable update semantics while we trace the editor/article ID flow.
+      // Always create a new article so PATCH cannot be triggered from the client.
+      const createPayload = { ...payload };
+      delete createPayload.id;
+      return await firstValueFrom(this.http.post<ArticleRecord>(`${this.baseUrl}/sites/${siteId}/articles`, createPayload, { headers: this.headers() }));
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
 
-      return await firstValueFrom(this.http.post<ArticleRecord>(`${this.baseUrl}/sites/${siteId}/articles`, payload, { headers: this.headers() }));
+  async updateArticle(articleId: string, payload: ArticleUpsertPayload): Promise<ArticleRecord> {
+    try {
+      return await firstValueFrom(
+        this.http.patch<ArticleRecord>(`${this.baseUrl}/articles/${articleId}`, payload, { headers: this.headers() }),
+      );
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
+
+  async deleteArticle(articleId: string): Promise<void> {
+    try {
+      await firstValueFrom(this.http.delete(`${this.baseUrl}/articles/${articleId}`, { headers: this.headers() }));
     } catch (error) {
       throw this.toError(error);
     }
@@ -277,11 +298,15 @@ export class AdminApiService {
     );
   }
 
-  async createBuild(siteId: string, buildType: 'preview' | 'published'): Promise<BuildRecord> {
+  async createBuild(siteId: string, buildType: 'preview' | 'published', articleIds: string[] = []): Promise<BuildRecord> {
     return firstValueFrom(
-      this.http.post<BuildRecord>(`${this.baseUrl}/sites/${siteId}/builds`, { buildType } satisfies BuildCreatePayload, {
-        headers: this.headers(),
-      }),
+      this.http.post<BuildRecord>(
+        `${this.baseUrl}/sites/${siteId}/builds`,
+        { buildType, articleIds } satisfies BuildCreatePayload,
+        {
+          headers: this.headers(),
+        },
+      ),
     );
   }
 

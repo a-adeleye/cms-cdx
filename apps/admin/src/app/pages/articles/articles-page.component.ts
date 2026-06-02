@@ -20,6 +20,7 @@ type ArticleFilterOption = {
 export class ArticlesPageComponent {
   private readonly router = inject(Router);
   readonly state = inject(WorkspaceStateService);
+  readonly successMessage = signal<string | null>(null);
 
   readonly articleFilter = signal<ArticleStatus | 'all'>('all');
   readonly articleFilterOptions: ArticleFilterOption[] = [
@@ -40,18 +41,20 @@ export class ArticlesPageComponent {
     return articles.filter((article) => article.status === filter);
   });
 
+  constructor() {
+    const flashMessage = window.history.state?.flashMessage;
+    if (typeof flashMessage === 'string' && flashMessage.trim()) {
+      this.successMessage.set(flashMessage);
+    }
+  }
+
   onArticleFilterChange(value: ArticleStatus | 'all'): void {
     this.articleFilter.set(value);
   }
 
   async startArticle(): Promise<void> {
-    try {
-      const article = await this.state.createArticleDraft();
-      await this.state.selectArticle(article.id);
-      void this.router.navigate(['/articles/editor']);
-    } catch (error) {
-      this.reportActionError('Unable to create article draft.', error);
-    }
+    this.state.clearSelectedArticle();
+    void this.router.navigate(['/articles/editor']);
   }
 
   async openArticle(articleId: string): Promise<void> {

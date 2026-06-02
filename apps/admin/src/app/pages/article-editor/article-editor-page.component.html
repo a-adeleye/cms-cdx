@@ -20,6 +20,10 @@
     <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
   }
 
+  @if (formError()) {
+    <p class="page-error" role="alert" aria-live="polite">{{ formError() }}</p>
+  }
+
   <section class="article-layout">
     <article class="panel">
       <div class="toolbar">
@@ -32,11 +36,21 @@
         <label>
           <span>Title</span>
           <input type="text" formControlName="title" />
+          @if (controlHasError(articleForm.controls.title, 'required')) {
+            <span class="field-error">Title is required.</span>
+          } @else if (controlHasError(articleForm.controls.title, 'minlength')) {
+            <span class="field-error">Title must be at least 3 characters.</span>
+          }
         </label>
 
         <label>
           <span>Excerpt</span>
           <textarea rows="3" formControlName="excerpt"></textarea>
+          @if (controlHasError(articleForm.controls.excerpt, 'required')) {
+            <span class="field-error">Excerpt is required.</span>
+          } @else if (controlHasError(articleForm.controls.excerpt, 'minlength')) {
+            <span class="field-error">Excerpt must be at least 12 characters.</span>
+          }
         </label>
 
         <div class="cover-field article-span-2">
@@ -78,11 +92,17 @@
         <label>
           <span>SEO title</span>
           <input type="text" formControlName="seoTitle" />
+          @if (controlHasError(articleForm.controls.seoTitle, 'required')) {
+            <span class="field-error">SEO title is required.</span>
+          }
         </label>
 
         <label>
           <span>SEO description</span>
           <textarea rows="3" formControlName="seoDescription"></textarea>
+          @if (controlHasError(articleForm.controls.seoDescription, 'required')) {
+            <span class="field-error">SEO description is required.</span>
+          }
         </label>
 
         <label>
@@ -108,6 +128,9 @@
                 <option [value]="author.id">{{ author.name }}</option>
               }
             </select>
+            @if (controlHasError(articleForm.controls.authorId, 'required')) {
+              <span class="field-error">Author is required.</span>
+            }
           </label>
           <label>
             <span>Category</span>
@@ -116,6 +139,9 @@
                 <option [value]="category.id">{{ category.name }}</option>
               }
             </select>
+            @if (controlHasError(articleForm.controls.categoryId, 'required')) {
+              <span class="field-error">Category is required.</span>
+            }
           </label>
 
           <label>
@@ -137,6 +163,11 @@
         <label class="article-markdown article-span-2">
           <span>Markdown body</span>
           <textarea rows="22" formControlName="contentMarkdown"></textarea>
+          @if (controlHasError(articleForm.controls.contentMarkdown, 'required')) {
+            <span class="field-error">Markdown body is required.</span>
+          } @else if (controlHasError(articleForm.controls.contentMarkdown, 'minlength')) {
+            <span class="field-error">Markdown body must be at least 20 characters.</span>
+          }
         </label>
       </form>
     </article>

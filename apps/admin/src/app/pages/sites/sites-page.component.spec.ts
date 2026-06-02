@@ -20,6 +20,8 @@ describe('SitesPageComponent', () => {
     themeConfig: '{}',
     deployProvider: '',
     deployConfig: '{}',
+    previewDeployProvider: '',
+    previewDeployConfig: '{}',
     aiConfig: '{}',
     storageConfig: '{}',
     updatedAt: '2026-05-23T00:00:00.000Z',

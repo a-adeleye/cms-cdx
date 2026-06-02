@@ -5,7 +5,7 @@ import { filter, map, startWith } from 'rxjs';
 import { WORKSPACE_PAGES } from './features/pages/pages.data';
 import { WorkspaceStateService } from './features/pages/workspace-state.service';
 
-const PRIMARY_NAV_PATHS = ['dashboard', 'articles', 'settings'] as const;
+const PRIMARY_NAV_PATHS = ['dashboard', 'articles', 'publishing', 'settings'] as const;
 
 @Component({
   selector: 'app-root',

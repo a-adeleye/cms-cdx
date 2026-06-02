@@ -86,7 +86,11 @@
             </label>
             <label>
               <span>Template</span>
-              <input type="text" formControlName="templateKey" />
+              <select formControlName="templateKey">
+                @for (option of templateOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
             </label>
             @if (siteCreateForm.invalid && siteCreateForm.touched) {
               <p class="field-error" role="alert">Fix the highlighted fields to create the site.</p>
@@ -139,7 +143,11 @@
             </label>
             <label>
               <span>Template</span>
-              <input type="text" formControlName="templateKey" />
+              <select formControlName="templateKey">
+                @for (option of templateOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
             </label>
             <label>
               <span>Status</span>

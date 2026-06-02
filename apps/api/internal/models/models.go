@@ -13,20 +13,22 @@ type User struct {
 }
 
 type Site struct {
-	ID             string         `json:"id"`
-	Name           string         `json:"name"`
-	Slug           string         `json:"slug"`
-	Domain         string         `json:"domain,omitempty"`
-	BlogPath       string         `json:"blog_path"`
-	Status         string         `json:"status"`
-	TemplateKey    string         `json:"template_key"`
-	ThemeConfig    map[string]any `json:"theme_config"`
-	DeployProvider string         `json:"deploy_provider,omitempty"`
-	DeployConfig   map[string]any `json:"deploy_config"`
-	AIConfig       map[string]any `json:"ai_config"`
-	StorageConfig  map[string]any `json:"storage_config"`
-	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
+	ID                    string         `json:"id"`
+	Name                  string         `json:"name"`
+	Slug                  string         `json:"slug"`
+	Domain                string         `json:"domain,omitempty"`
+	BlogPath              string         `json:"blog_path"`
+	Status                string         `json:"status"`
+	TemplateKey           string         `json:"template_key"`
+	ThemeConfig           map[string]any `json:"theme_config"`
+	DeployProvider        string         `json:"deploy_provider,omitempty"`
+	DeployConfig          map[string]any `json:"deploy_config"`
+	PreviewDeployProvider string         `json:"preview_deploy_provider,omitempty"`
+	PreviewDeployConfig   map[string]any `json:"preview_deploy_config"`
+	AIConfig              map[string]any `json:"ai_config"`
+	StorageConfig         map[string]any `json:"storage_config"`
+	CreatedAt             time.Time      `json:"created_at"`
+	UpdatedAt             time.Time      `json:"updated_at"`
 }
 
 type Author struct {
@@ -101,42 +103,42 @@ type LandingSection struct {
 }
 
 type Article struct {
-	ID             string         `json:"id"`
-	SiteID         string         `json:"site_id"`
-	AuthorID       string         `json:"author_id,omitempty"`
-	CategoryID     string         `json:"category_id,omitempty"`
-	Title          string         `json:"title"`
-	Slug           string         `json:"slug"`
-	Excerpt        string         `json:"excerpt,omitempty"`
-	ContentMarkdown string        `json:"content_markdown"`
-	CoverImageURL  string         `json:"cover_image_url,omitempty"`
-	Status         string         `json:"status"`
-	IsFeatured     bool           `json:"is_featured"`
-	PublishedAt    *time.Time     `json:"published_at,omitempty"`
-	SEOTitle       string         `json:"seo_title,omitempty"`
-	SEODescription string         `json:"seo_description,omitempty"`
-	CanonicalURL   string         `json:"canonical_url,omitempty"`
-	GeneratedByAI  bool           `json:"generated_by_ai"`
-	HumanReviewed  bool           `json:"human_reviewed"`
-	AIPrompt       string         `json:"ai_prompt,omitempty"`
-	AIModel        string         `json:"ai_model,omitempty"`
-	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
+	ID              string     `json:"id"`
+	SiteID          string     `json:"site_id"`
+	AuthorID        string     `json:"author_id,omitempty"`
+	CategoryID      string     `json:"category_id,omitempty"`
+	Title           string     `json:"title"`
+	Slug            string     `json:"slug"`
+	Excerpt         string     `json:"excerpt,omitempty"`
+	ContentMarkdown string     `json:"content_markdown"`
+	CoverImageURL   string     `json:"cover_image_url,omitempty"`
+	Status          string     `json:"status"`
+	IsFeatured      bool       `json:"is_featured"`
+	PublishedAt     *time.Time `json:"published_at,omitempty"`
+	SEOTitle        string     `json:"seo_title,omitempty"`
+	SEODescription  string     `json:"seo_description,omitempty"`
+	CanonicalURL    string     `json:"canonical_url,omitempty"`
+	GeneratedByAI   bool       `json:"generated_by_ai"`
+	HumanReviewed   bool       `json:"human_reviewed"`
+	AIPrompt        string     `json:"ai_prompt,omitempty"`
+	AIModel         string     `json:"ai_model,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 type Build struct {
-	ID           string     `json:"id"`
-	SiteID       string     `json:"site_id"`
-	Status       string     `json:"status"`
-	BuildType    string     `json:"build_type"`
-	Logs         string     `json:"logs,omitempty"`
-	OutputPath   string     `json:"output_path,omitempty"`
-	DeployProvider string   `json:"deploy_provider,omitempty"`
-	DeployStatus string     `json:"deploy_status,omitempty"`
-	DeployURL    string     `json:"deploy_url,omitempty"`
-	StartedAt    *time.Time `json:"started_at,omitempty"`
-	FinishedAt   *time.Time `json:"finished_at,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
+	ID             string     `json:"id"`
+	SiteID         string     `json:"site_id"`
+	Status         string     `json:"status"`
+	BuildType      string     `json:"build_type"`
+	Logs           string     `json:"logs,omitempty"`
+	OutputPath     string     `json:"output_path,omitempty"`
+	DeployProvider string     `json:"deploy_provider,omitempty"`
+	DeployStatus   string     `json:"deploy_status,omitempty"`
+	DeployURL      string     `json:"deploy_url,omitempty"`
+	StartedAt      *time.Time `json:"started_at,omitempty"`
+	FinishedAt     *time.Time `json:"finished_at,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 type AuditLog struct {
@@ -151,14 +153,13 @@ type AuditLog struct {
 }
 
 type Workspace struct {
-	SelectedSiteID string          `json:"selected_site_id"`
-	Sites          []Site          `json:"sites"`
+	SelectedSiteID  string           `json:"selected_site_id"`
+	Sites           []Site           `json:"sites"`
 	LandingSections []LandingSection `json:"landing_sections"`
-	Articles       []Article       `json:"articles"`
-	Authors        []Author        `json:"authors"`
-	Categories     []Category      `json:"categories"`
-	Tags           []Tag           `json:"tags"`
-	MediaAssets    []MediaAsset    `json:"media_assets"`
-	Builds         []Build         `json:"builds"`
+	Articles        []Article        `json:"articles"`
+	Authors         []Author         `json:"authors"`
+	Categories      []Category       `json:"categories"`
+	Tags            []Tag            `json:"tags"`
+	MediaAssets     []MediaAsset     `json:"media_assets"`
+	Builds          []Build          `json:"builds"`
 }
-

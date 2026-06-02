@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"path/filepath"
 
 	"cms-builder/api/internal/config"
 	"cms-builder/api/internal/middleware"
@@ -28,11 +29,16 @@ func NewRouter(svc services.Services, cfg config.Config) http.Handler {
 	mux.Handle("/api/v1/sites/", protected(http.HandlerFunc(api.siteSubroutes)))
 	mux.Handle("/api/v1/articles/", protected(http.HandlerFunc(api.articleSubroutes)))
 	mux.Handle("/api/v1/builds/", protected(http.HandlerFunc(api.buildSubroutes)))
+	mux.Handle("/deployments/", http.StripPrefix("/deployments/", http.FileServer(http.Dir(api.deploymentsRoot()))))
 	return mux
 }
 
 func (a *API) healthz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (a *API) deploymentsRoot() string {
+	return filepath.Join("dist", "deployments")
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { ArticleEditorPageComponent } from './article-editor-page.component';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 
 describe('ArticleEditorPageComponent', () => {
   let fixture: ComponentFixture<ArticleEditorPageComponent>;
+  let router: Router;
 
   const fakeState = {
     selectedArticle: () => ({
@@ -63,6 +64,8 @@ describe('ArticleEditorPageComponent', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(ArticleEditorPageComponent);
+    router = TestBed.inject(Router);
+    spyOn(router, 'navigate').and.resolveTo(true);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -91,6 +94,19 @@ describe('ArticleEditorPageComponent', () => {
     expect(fixture.nativeElement.querySelector('input[formcontrolname="coverImageUrl"]')?.value).toBe('https://cdn.example/cover.jpg');
   });
 
+  it('navigates to the article details page after a successful save', async () => {
+    fixture.componentInstance.articleForm.controls.contentMarkdown.setValue('# Example article\n\nBody text for the save test.');
+    const saveButton = fixture.nativeElement.querySelector('.hero-actions .button-primary') as HTMLButtonElement | null;
+    saveButton?.click();
+
+    await fixture.whenStable();
+
+    expect(fakeState.saveArticle).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/articles', 'article-1'], {
+      state: { flashMessage: 'Article saved successfully.' },
+    });
+  });
+
   it('renders tags as a multi-select from the workspace tag list', () => {
     const select = fixture.nativeElement.querySelector('select[formcontrolname="tagIds"]') as HTMLSelectElement | null;
     expect(select).toBeTruthy();
@@ -98,5 +114,22 @@ describe('ArticleEditorPageComponent', () => {
     expect(select?.options.length).toBe(2);
     expect(select?.options[0].textContent?.trim()).toBe('Tag One');
     expect(select?.options[1].textContent?.trim()).toBe('Tag Two');
+  });
+
+  it('shows validation feedback instead of silently doing nothing on invalid save', async () => {
+    fakeState.saveArticle.calls.reset();
+    fixture.componentInstance.articleForm.controls.title.setValue('');
+    fixture.componentInstance.articleForm.controls.contentMarkdown.setValue('');
+
+    const saveButton = fixture.nativeElement.querySelector('.hero-actions .button-primary') as HTMLButtonElement | null;
+    saveButton?.click();
+
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fakeState.saveArticle).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Please fix the highlighted fields before saving.');
+    expect(fixture.nativeElement.textContent).toContain('Title is required.');
+    expect(fixture.nativeElement.textContent).toContain('Markdown body is required.');
   });
 });

@@ -19,6 +19,27 @@
   color: var(--muted);
 }
 
+.article-form-grid input.ng-invalid.ng-touched,
+.article-form-grid select.ng-invalid.ng-touched,
+.article-form-grid textarea.ng-invalid.ng-touched {
+  border-color: #dc2626;
+  background: #fffafb;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.14);
+}
+
+.article-form-grid input.ng-invalid.ng-touched:focus-visible,
+.article-form-grid select.ng-invalid.ng-touched:focus-visible,
+.article-form-grid textarea.ng-invalid.ng-touched:focus-visible {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+}
+
+.article-form-grid label:has(input.ng-invalid.ng-touched),
+.article-form-grid label:has(select.ng-invalid.ng-touched),
+.article-form-grid label:has(textarea.ng-invalid.ng-touched) {
+  color: #b42318;
+}
+
 .article-span-2 {
   grid-column: 1 / -1;
 }

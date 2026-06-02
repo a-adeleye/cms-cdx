@@ -37,7 +37,7 @@ describe('ArticlesPageComponent', () => {
     ],
     error: () => null,
     reportError: jasmine.createSpy('reportError'),
-    createArticleDraft: jasmine.createSpy('createArticleDraft').and.resolveTo({ id: 'article-new' }),
+    clearSelectedArticle: jasmine.createSpy('clearSelectedArticle'),
     selectArticle: jasmine.createSpy('selectArticle').and.resolveTo(),
     toggleFeatured: jasmine.createSpy('toggleFeatured').and.resolveTo(),
     setArticleStatus: jasmine.createSpy('setArticleStatus').and.resolveTo(),
@@ -69,8 +69,7 @@ describe('ArticlesPageComponent', () => {
 
     await fixture.whenStable();
 
-    expect(fakeState.createArticleDraft).toHaveBeenCalled();
-    expect(fakeState.selectArticle).toHaveBeenCalledWith('article-new');
+    expect(fakeState.clearSelectedArticle).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/articles/editor']);
   });
 });

@@ -3,6 +3,7 @@ import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { TEMPLATE_OPTIONS } from '../../features/pages/site-config-options';
 import { SiteRecord } from '../../features/pages/pages.model';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 
@@ -21,6 +22,7 @@ export class SitesPageComponent {
   private readonly fb = inject(FormBuilder);
   readonly state = inject(WorkspaceStateService);
   private siteDialogReturnFocus: HTMLElement | null = null;
+  readonly templateOptions = TEMPLATE_OPTIONS;
 
   readonly siteDialogMode = signal<'create' | 'edit' | null>(null);
   readonly editingSiteId = signal<string | null>(null);

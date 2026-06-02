@@ -21,7 +21,7 @@
     </section>
   } @else {
     <section class="page">
-      @if ((currentPage.kind !== 'settings' || isSettingsRoot()) && currentPage.kind !== 'articles') {
+      @if ((currentPage.kind !== 'settings' || isSettingsRoot()) && currentPage.kind !== 'articles' && currentPage.kind !== 'publishing') {
         <header class="hero">
           <p class="eyebrow">{{ currentPage.eyebrow }}</p>
           <div class="hero-row">
@@ -68,6 +68,10 @@
       }
 
       @case ('articles') {
+        <router-outlet />
+      }
+
+      @case ('publishing') {
         <router-outlet />
       }
 

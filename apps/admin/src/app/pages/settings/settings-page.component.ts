@@ -34,6 +34,7 @@ export class SettingsPageComponent {
     {
       title: 'Publishing',
       links: [
+        { label: 'Publishing', path: '/publishing' },
         { label: 'Media library', path: '/media-library' },
         { label: 'AI assistant', path: '/ai-assistant' },
         { label: 'Builds', path: '/builds' },

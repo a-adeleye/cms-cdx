@@ -27,6 +27,14 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     primaryAction: { label: 'Manage sites', path: '/settings/sites' },
   },
   {
+    path: 'publishing',
+    navLabel: 'Publishing',
+    kind: 'publishing',
+    eyebrow: 'Delivery',
+    title: 'Publishing',
+    primaryAction: { label: 'Open articles', path: '/articles' },
+  },
+  {
     path: 'landing-page-editor',
     navLabel: 'Landing Page Editor',
     kind: 'landing-page-editor',

@@ -7,7 +7,8 @@ export type WorkspacePageKind =
   | 'media-library'
   | 'ai-assistant'
   | 'builds'
-  | 'deployment-settings';
+  | 'deployment-settings'
+  | 'publishing';
 
 export interface WorkspacePageConfig {
   path: string;
@@ -48,6 +49,8 @@ export interface SiteRecord {
   themeConfig: string;
   deployProvider: string;
   deployConfig: string;
+  previewDeployProvider: string;
+  previewDeployConfig: string;
   aiConfig: string;
   storageConfig: string;
   updatedAt: string;

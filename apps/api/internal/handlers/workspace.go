@@ -770,7 +770,7 @@ func (a *API) handleBuildRoutes(w http.ResponseWriter, r *http.Request, siteID s
 				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 				return
 			}
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to create build"})
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("unable to create build: %v", err)})
 			return
 		}
 		writeJSON(w, http.StatusCreated, build)

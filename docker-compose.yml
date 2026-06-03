@@ -35,6 +35,7 @@ services:
       S3_ACCESS_KEY: minio
       S3_SECRET_KEY: minio123
       S3_PUBLIC_URL: http://localhost:9002/cms-builder
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON}
     depends_on:
       - postgres
       - minio

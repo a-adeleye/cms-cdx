@@ -4,6 +4,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { SiteSettingsPageComponent } from './site-settings-page.component';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
+import { defaultDeployConfigTemplate } from '../../features/pages/site-config-options';
 
 describe('SiteSettingsPageComponent', () => {
   let fixture: ComponentFixture<SiteSettingsPageComponent>;
@@ -20,9 +21,9 @@ describe('SiteSettingsPageComponent', () => {
       templateKey: 'default-blog',
       themeConfig: '{"tone":"professional"}',
       deployProvider: 'netlify',
-      deployConfig: '{"build":"on"}',
+      deployConfig: '',
       previewDeployProvider: 'cloudflare',
-      previewDeployConfig: '{"build":"preview"}',
+      previewDeployConfig: '',
       aiConfig: '{}',
       storageConfig: '{}',
       updatedAt: '2026-05-23T00:00:00.000Z',
@@ -59,9 +60,9 @@ describe('SiteSettingsPageComponent', () => {
       templateKey: 'default-blog',
       themeConfig: '{"tone":"professional"}',
       deployProvider: 'netlify',
-      deployConfig: '{"build":"on"}',
+      deployConfig: defaultDeployConfigTemplate('netlify'),
       previewDeployProvider: 'cloudflare',
-      previewDeployConfig: '{"build":"preview"}',
+      previewDeployConfig: defaultDeployConfigTemplate('cloudflare'),
       aiConfig: '{}',
       storageConfig: '{}',
     });

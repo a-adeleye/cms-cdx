@@ -326,7 +326,7 @@ func renderHomePage(site renderedSite) string {
 	}
 	body.WriteString(`<div class="hero-actions">`)
 	body.WriteString(`<a class="button primary" href="`)
-	body.WriteString(html.EscapeString(site.PublicBaseURL + site.BasePath + "/"))
+	body.WriteString(html.EscapeString(articlesPath(site)))
 	body.WriteString(`">Browse articles</a>`)
 	body.WriteString(`</div></section>`)
 
@@ -400,7 +400,7 @@ func renderArticlesPage(site renderedSite) string {
 	}
 	body.WriteString(`</div></section>`)
 
-	return renderDocument(site, "Articles", body.String(), site.PublicBaseURL+site.BasePath+"/")
+	return renderDocument(site, "Articles", body.String(), articlesURL(site))
 }
 
 func renderArticlePage(site renderedSite, article ArticleContent) string {
@@ -472,7 +472,7 @@ func renderArticleCard(site renderedSite, article ArticleContent, featured bool)
 		body.WriteString(` featured`)
 	}
 	body.WriteString(`" href="`)
-	body.WriteString(html.EscapeString(articleURL(site, article)))
+	body.WriteString(html.EscapeString(articlePath(site, article)))
 	body.WriteString(`">`)
 	if strings.TrimSpace(article.CoverImageURL) != "" {
 		body.WriteString(`<img class="article-image" src="`)
@@ -775,7 +775,19 @@ func renderMarkdown(markdownContent string) string {
 }
 
 func articleURL(site renderedSite, article ArticleContent) string {
-	return site.PublicBaseURL + site.BasePath + "/" + safePathSegment(article.Slug) + "/"
+	return site.PublicBaseURL + articlePath(site, article)
+}
+
+func articlesURL(site renderedSite) string {
+	return site.PublicBaseURL + articlesPath(site)
+}
+
+func articlesPath(site renderedSite) string {
+	return site.BasePath + "/"
+}
+
+func articlePath(site renderedSite, article ArticleContent) string {
+	return site.BasePath + "/" + safePathSegment(article.Slug) + "/"
 }
 
 func canonicalURL(site renderedSite, article ArticleContent) string {

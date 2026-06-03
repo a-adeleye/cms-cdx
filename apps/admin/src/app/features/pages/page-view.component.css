@@ -133,6 +133,34 @@
   font-weight: 600;
 }
 
+.page-warning {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid #facc15;
+  border-radius: var(--radius);
+  background: #fffbeb;
+  color: #92400e;
+  box-shadow: 0 10px 24px -20px rgba(120, 53, 15, 0.45);
+}
+
+.page-warning h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.page-warning p {
+  margin: 0 0 10px;
+}
+
+.page-warning ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.page-warning li + li {
+  margin-top: 6px;
+}
+
 .hero-actions,
 .inline-actions {
   display: flex;
@@ -163,7 +191,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
-  margin-bottom: 1.5rem;
 }
 
 .metric-value {

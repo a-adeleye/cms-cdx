@@ -18,6 +18,7 @@ export class PublishingPageComponent {
 
   readonly selectedArticleIdSet = computed(() => new Set(this.selectedArticleIds()));
   readonly selectedCount = computed(() => this.selectedArticleIds().length);
+  readonly deploymentWarnings = computed(() => this.state.selectedSite().deploymentWarnings ?? []);
   readonly articles = computed(() => this.state.articles());
   readonly selectedArticles = computed(() => this.articles().filter((article) => this.selectedArticleIdSet().has(article.id)));
   readonly isAllSelected = computed(() => {

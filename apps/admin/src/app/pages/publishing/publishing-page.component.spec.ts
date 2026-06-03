@@ -24,6 +24,7 @@ describe('PublishingPageComponent', () => {
       previewDeployConfig: '{}',
       aiConfig: '{}',
       storageConfig: '{}',
+      deploymentWarnings: ['Firebase production deploy secret FIREBASE_SERVICE_ACCOUNT_JSON is not set on the API server.'],
       updatedAt: '2026-05-23T00:00:00.000Z',
     };
 
@@ -87,6 +88,11 @@ describe('PublishingPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('First article');
     expect(fixture.nativeElement.textContent).toContain('cloudflare');
     expect(fixture.nativeElement.textContent).toContain('default-blog');
+  });
+
+  it('renders deployment warnings when the selected site is missing deploy secrets', () => {
+    expect(fixture.nativeElement.textContent).toContain('Deployment warning');
+    expect(fixture.nativeElement.textContent).toContain('Firebase production deploy secret FIREBASE_SERVICE_ACCOUNT_JSON is not set on the API server.');
   });
 
   it('selects all articles and triggers preview builds', async () => {

@@ -23,6 +23,18 @@
     <p class="page-error" role="status" aria-live="polite">{{ successMessage() }}</p>
   }
 
+  @if (deploymentWarnings().length) {
+    <section class="page-warning" role="alert" aria-live="polite">
+      <h2>Deployment warning</h2>
+      <p class="muted">Fix the following site settings before triggering a real deploy:</p>
+      <ul>
+        @for (warning of deploymentWarnings(); track warning) {
+          <li>{{ warning }}</li>
+        }
+      </ul>
+    </section>
+  }
+
   <section class="metric-grid">
     @for (metric of summaryMetrics(); track metric.label) {
       <article class="metric-card">

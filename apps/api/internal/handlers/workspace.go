@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -48,6 +49,7 @@ type siteResponse struct {
 	PreviewDeployConfig   string `json:"previewDeployConfig"`
 	AIConfig              string `json:"aiConfig"`
 	StorageConfig         string `json:"storageConfig"`
+	DeploymentWarnings    []string `json:"deploymentWarnings,omitempty"`
 	UpdatedAt             string `json:"updatedAt"`
 }
 
@@ -1001,6 +1003,7 @@ func (a *API) listSites(ctx context.Context) ([]siteResponse, error) {
 			return nil, err
 		}
 		site.UpdatedAt = updatedAt.Format(time.RFC3339)
+		site.DeploymentWarnings = deploymentWarningsForSite(site)
 		sites = append(sites, site)
 	}
 
@@ -1035,6 +1038,7 @@ func (a *API) getSite(ctx context.Context, siteID string) (siteResponse, error) 
 		return siteResponse{}, err
 	}
 	site.UpdatedAt = updatedAt.Format(time.RFC3339)
+	site.DeploymentWarnings = deploymentWarningsForSite(site)
 	return site, nil
 }
 
@@ -2412,6 +2416,48 @@ func parseJSONMap(raw string) map[string]any {
 		return map[string]any{}
 	}
 	return value
+}
+
+func deploymentWarningsForSite(site siteResponse) []string {
+	warnings := make([]string, 0, 2)
+	warnings = append(warnings, firebaseDeploymentWarnings("production", site.DeployProvider, site.DeployConfig)...)
+	warnings = append(warnings, firebaseDeploymentWarnings("preview", site.PreviewDeployProvider, site.PreviewDeployConfig)...)
+	return warnings
+}
+
+func firebaseDeploymentWarnings(channel, provider, rawConfig string) []string {
+	values := parseJSONMap(rawConfig)
+	resolvedProvider := strings.TrimSpace(provider)
+	if resolvedProvider == "" {
+		resolvedProvider = strings.TrimSpace(configValue(values, "provider"))
+	}
+	if resolvedProvider != "firebase" {
+		return nil
+	}
+
+	secretRef := strings.TrimSpace(configValue(values, "serviceAccountSecretRef"))
+	if secretRef == "" {
+		secretRef = strings.TrimSpace(configValue(values, "tokenSecretRef"))
+	}
+	if secretRef == "" {
+		return []string{fmt.Sprintf("Firebase %s deployment config is missing serviceAccountSecretRef.", channel)}
+	}
+	if strings.TrimSpace(os.Getenv(secretRef)) == "" {
+		return []string{fmt.Sprintf("Firebase %s deploy secret %s is not set on the API server.", channel, secretRef)}
+	}
+	return nil
+}
+
+func configValue(values map[string]any, key string) string {
+	raw, ok := values[key]
+	if !ok || raw == nil {
+		return ""
+	}
+	text, ok := raw.(string)
+	if !ok {
+		return ""
+	}
+	return text
 }
 
 func seedSiteDefaults(ctx context.Context, tx *sql.Tx, siteID string) error {

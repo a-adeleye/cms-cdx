@@ -52,6 +52,7 @@ export interface SiteRecord {
   previewDeployConfig: string;
   aiConfig: string;
   storageConfig: string;
+  deploymentWarnings?: string[];
   updatedAt: string;
 }
 

@@ -7,7 +7,6 @@ export type WorkspacePageKind =
   | 'media-library'
   | 'ai-assistant'
   | 'builds'
-  | 'deployment-settings'
   | 'publishing';
 
 export interface WorkspacePageConfig {

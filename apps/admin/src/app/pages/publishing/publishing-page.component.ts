@@ -33,8 +33,8 @@ export class PublishingPageComponent {
 
   async triggerPreviewBuild(): Promise<void> {
     try {
-      await this.state.triggerBuild('preview', this.selectedArticleIds());
-      this.successMessage.set('Preview build started successfully.');
+      const build = await this.state.triggerBuild('preview', this.selectedArticleIds());
+      this.successMessage.set(this.buildSuccessMessage('Preview build', build.deployProvider, build.deployUrl));
     } catch (error) {
       this.reportActionError('Unable to start preview build.', error);
     }
@@ -48,8 +48,8 @@ export class PublishingPageComponent {
         }
       }
 
-      await this.state.triggerBuild('published', this.selectedArticleIds());
-      this.successMessage.set('Published build started successfully.');
+      const build = await this.state.triggerBuild('published', this.selectedArticleIds());
+      this.successMessage.set(this.buildSuccessMessage('Published build', build.deployProvider, build.deployUrl));
     } catch (error) {
       this.reportActionError('Unable to start published build.', error);
     }
@@ -81,5 +81,20 @@ export class PublishingPageComponent {
   private reportActionError(message: string, error: unknown): void {
     const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
     this.state.reportError(`${message}${detail}`);
+  }
+
+  private buildSuccessMessage(prefix: string, provider: string, deployUrl: string): string {
+    const trimmedProvider = provider.trim();
+    const trimmedUrl = deployUrl.trim();
+    if (trimmedProvider && trimmedUrl) {
+      return `${prefix} deployed to ${trimmedProvider}. Open ${trimmedUrl}`;
+    }
+    if (trimmedProvider) {
+      return `${prefix} deployed to ${trimmedProvider}.`;
+    }
+    if (trimmedUrl) {
+      return `${prefix} deployed successfully. Open ${trimmedUrl}`;
+    }
+    return `${prefix} deployed successfully.`;
   }
 }

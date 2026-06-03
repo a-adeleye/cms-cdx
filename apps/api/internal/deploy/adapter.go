@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"context"
+	"strings"
 
 	"cms-builder/api/internal/models"
 )
@@ -30,4 +31,14 @@ func fallbackProvider(value string) string {
 		return "none"
 	}
 	return value
+}
+
+func configString(values map[string]any, key string) string {
+	if values == nil {
+		return ""
+	}
+	if value, ok := values[key].(string); ok {
+		return strings.TrimSpace(value)
+	}
+	return ""
 }

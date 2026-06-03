@@ -38,7 +38,7 @@ export class SettingsPageComponent {
         { label: 'Media library', path: '/media-library' },
         { label: 'AI assistant', path: '/ai-assistant' },
         { label: 'Builds', path: '/builds' },
-        { label: 'Deployment settings', path: '/deployment-settings' },
+        { label: 'Deployment settings', path: '/settings/deployment-settings' },
       ],
     },
   ];

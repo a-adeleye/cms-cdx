@@ -10,9 +10,15 @@ import { ArticlesPageComponent } from '../../pages/articles/articles-page.compon
 import { ArticleEditorPageComponent } from '../../pages/article-editor/article-editor-page.component';
 import { ArticleDetailsPageComponent } from '../../pages/article-details/article-details-page.component';
 import { PublishingPageComponent } from '../../pages/publishing/publishing-page.component';
+import { DeploymentSettingsPageComponent } from '../../pages/deployment-settings/deployment-settings-page.component';
 
 const pageRoutes: Routes = WORKSPACE_PAGES.filter(
-  (page) => page.path !== 'settings' && page.path !== 'sites' && page.path !== 'articles' && page.path !== 'publishing',
+  (page) =>
+    page.path !== 'settings' &&
+    page.path !== 'sites' &&
+    page.path !== 'articles' &&
+    page.path !== 'publishing' &&
+    page.path !== 'deployment-settings',
 ).map((page) => ({
   path: page.path,
   component: PageViewComponent,
@@ -39,6 +45,10 @@ const routes: Routes = [
       {
         path: 'site-settings',
         component: SiteSettingsPageComponent,
+      },
+      {
+        path: 'deployment-settings',
+        component: DeploymentSettingsPageComponent,
       },
       {
         path: 'authors',
@@ -94,6 +104,11 @@ const routes: Routes = [
   {
     path: 'site-settings',
     redirectTo: 'settings/site-settings',
+    pathMatch: 'full',
+  },
+  {
+    path: 'deployment-settings',
+    redirectTo: 'settings/deployment-settings',
     pathMatch: 'full',
   },
   {

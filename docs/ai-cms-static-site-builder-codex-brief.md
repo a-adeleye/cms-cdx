@@ -948,7 +948,7 @@ Example:
   "provider": "firebase",
   "projectId": "anonime-landing",
   "siteId": "anonime",
-  "tokenSecretRef": "FIREBASE_TOKEN"
+  "serviceAccountSecretRef": "FIREBASE_SERVICE_ACCOUNT_JSON"
 }
 ```
 
@@ -1195,4 +1195,3 @@ It should let the user create multiple websites, manage content for each one, ge
 The public sites should be fast, static, SEO-friendly, and independent of the CMS runtime after deployment.
 
 The CMS should be reusable across many brands, landing pages, and blogs.
-

@@ -548,7 +548,7 @@ export class WorkspaceStateService {
       fileUrl,
       mimeType: 'image/jpeg',
       sizeBytes: 180_000,
-      storageProvider: site.storageConfig.includes('r2') ? 'r2' : 'minio',
+      storageProvider: (site.storageConfig ?? '').includes('r2') ? 'r2' : 'minio',
       storageKey: `${site.slug || 'site'}/${fileName}`,
       altText,
     });

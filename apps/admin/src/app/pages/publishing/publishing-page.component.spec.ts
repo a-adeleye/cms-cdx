@@ -65,7 +65,7 @@ describe('PublishingPageComponent', () => {
         outputPath: 'dist/preview/site',
         deployProvider: 'cloudflare',
         deployStatus: 'deployed',
-        deployUrl: '',
+        deployUrl: 'http://localhost:8081/deployments/cloudflare/example/preview/',
         startedAt: null,
         finishedAt: null,
       }),
@@ -106,6 +106,7 @@ describe('PublishingPageComponent', () => {
     fixture.detectChanges();
 
     expect(fakeState.triggerBuild).toHaveBeenCalledWith('preview', ['article-1']);
-    expect(fixture.nativeElement.textContent).toContain('Preview build started successfully.');
+    expect(fixture.nativeElement.textContent).toContain('Preview build deployed to cloudflare.');
+    expect(fixture.nativeElement.textContent).toContain('http://localhost:8081/deployments/cloudflare/example/preview/');
   });
 });

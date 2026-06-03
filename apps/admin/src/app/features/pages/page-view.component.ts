@@ -50,7 +50,11 @@ export class PageViewComponent {
     if (page.kind === 'media-library') {
       return [
         { label: 'Media assets', value: String(this.state.mediaAssets().length), detail: 'Uploaded assets for the current site.' },
-        { label: 'Storage provider', value: site?.storageConfig.includes('r2') ? 'R2' : 'MinIO', detail: 'Configured storage backend for uploads.' },
+        {
+          label: 'Storage provider',
+          value: (site?.storageConfig ?? '').includes('r2') ? 'R2' : 'MinIO',
+          detail: 'Configured storage backend for uploads.',
+        },
       ];
     }
 
@@ -65,13 +69,6 @@ export class PageViewComponent {
       return [
         { label: 'Builds', value: String(this.state.builds().length), detail: 'Preview and published build history.' },
         { label: 'Latest status', value: this.state.builds()[0]?.status ?? 'idle', detail: 'Current publish health.' },
-      ];
-    }
-
-    if (page.kind === 'deployment-settings') {
-      return [
-        { label: 'Provider', value: site?.deployProvider || 'none', detail: 'Deployment target for the selected site.' },
-        { label: 'Template', value: site?.templateKey || 'default-blog', detail: 'Current output template key.' },
       ];
     }
 
@@ -99,8 +96,6 @@ export class PageViewComponent {
         return ['Draft only output', 'Human review required', 'Provider-based generation'];
       case 'builds':
         return ['Preview builds', 'Published builds', 'Rollback-friendly history'];
-      case 'deployment-settings':
-        return ['Provider config', 'Secret references', 'Publish targets'];
       case 'landing-page-editor':
         return ['Section ordering', 'Enable/disable controls', 'Template-driven rendering'];
       default:

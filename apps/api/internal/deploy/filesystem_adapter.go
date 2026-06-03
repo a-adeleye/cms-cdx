@@ -35,7 +35,7 @@ func (a FilesystemAdapter) Deploy(ctx context.Context, site models.Site, build m
 		return nil, errors.New("site slug is required")
 	}
 
-	provider := fallbackProvider(site.DeployProvider)
+	provider, config := providerConfigForBuild(site, build)
 	targetDir := filepath.Join(a.DeployRoot, provider, safePathSegment(site.Slug), safePathSegment(build.BuildType))
 	if err := os.RemoveAll(targetDir); err != nil {
 		return nil, err
@@ -46,14 +46,30 @@ func (a FilesystemAdapter) Deploy(ctx context.Context, site models.Site, build m
 
 	return &DeployResult{
 		Provider: provider,
-		URL:      deploymentURL(site, build, provider),
+		URL:      deploymentURL(site, build, provider, config),
 		Message:  fmt.Sprintf("deployed to %s", targetDir),
 	}, nil
 }
 
-func deploymentURL(site models.Site, build models.Build, provider string) string {
+func providerConfigForBuild(site models.Site, build models.Build) (string, map[string]any) {
+	if strings.EqualFold(strings.TrimSpace(build.BuildType), "preview") {
+		provider := fallbackProvider(site.PreviewDeployProvider)
+		if provider == "none" {
+			provider = fallbackProvider(site.DeployProvider)
+		}
+		config := site.PreviewDeployConfig
+		if len(config) == 0 {
+			config = site.DeployConfig
+		}
+		return provider, config
+	}
+
+	return fallbackProvider(site.DeployProvider), site.DeployConfig
+}
+
+func deploymentURL(site models.Site, build models.Build, provider string, config map[string]any) string {
 	base := ""
-	if publicURL, ok := site.DeployConfig["publicUrl"].(string); ok && strings.TrimSpace(publicURL) != "" {
+	if publicURL, ok := config["publicUrl"].(string); ok && strings.TrimSpace(publicURL) != "" {
 		base = strings.TrimRight(strings.TrimSpace(publicURL), "/")
 	}
 	if base == "" {

@@ -29,7 +29,7 @@ func New(db *sql.DB, cfg config.Config) Services {
 		Config:  cfg,
 		AI:      ai.NoopProvider{},
 		Builder: builder.NewLocalBuilder(""),
-		Deploy:  deploy.NewFilesystemAdapter(""),
+		Deploy:  deploy.NewAdapter(""),
 		Storage: storage.NewFromConfig(cfg),
 		Sites:   repositories.NoopSites{},
 	}

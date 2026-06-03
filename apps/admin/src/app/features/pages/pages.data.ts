@@ -74,12 +74,4 @@ export const WORKSPACE_PAGES: WorkspacePageConfig[] = [
     title: 'Builds',
     primaryAction: { label: 'Trigger build', path: '/builds' },
   },
-  {
-    path: 'deployment-settings',
-    navLabel: 'Deployment Settings',
-    kind: 'deployment-settings',
-    eyebrow: 'Publishing',
-    title: 'Deployment Settings',
-    primaryAction: { label: 'Open builds', path: '/builds' },
-  },
 ];

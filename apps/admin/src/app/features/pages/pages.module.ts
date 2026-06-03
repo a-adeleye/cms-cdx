@@ -9,6 +9,7 @@ import { SettingsPageComponent } from '../../pages/settings/settings-page.compon
 import { ArticlesPageComponent } from '../../pages/articles/articles-page.component';
 import { ArticleEditorPageComponent } from '../../pages/article-editor/article-editor-page.component';
 import { ArticleDetailsPageComponent } from '../../pages/article-details/article-details-page.component';
+import { DeploymentSettingsPageComponent } from '../../pages/deployment-settings/deployment-settings-page.component';
 import { PublishingPageComponent } from '../../pages/publishing/publishing-page.component';
 
 @NgModule({
@@ -23,6 +24,7 @@ import { PublishingPageComponent } from '../../pages/publishing/publishing-page.
     ArticlesPageComponent,
     ArticleEditorPageComponent,
     ArticleDetailsPageComponent,
+    DeploymentSettingsPageComponent,
     PublishingPageComponent,
   ],
 })

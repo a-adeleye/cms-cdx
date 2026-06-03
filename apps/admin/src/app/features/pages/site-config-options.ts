@@ -31,7 +31,7 @@ const DEPLOY_CONFIG_TEMPLATES: Record<string, Record<string, string>> = {
     provider: 'firebase',
     projectId: '',
     siteId: '',
-    tokenSecretRef: '',
+    serviceAccountSecretRef: '',
   },
   s3: {
     provider: 's3',
@@ -41,46 +41,59 @@ const DEPLOY_CONFIG_TEMPLATES: Record<string, Record<string, string>> = {
   },
 };
 
+const AI_CONFIG_TEMPLATE = {
+  provider: '',
+  model: '',
+  tone: '',
+  brand_context: '',
+};
+
+const STORAGE_CONFIG_TEMPLATE = {
+  provider: '',
+  bucket: '',
+  region: '',
+  prefix: '',
+  public_url: '',
+};
+
 export function defaultDeployConfigTemplate(provider: string): string {
   return JSON.stringify(DEPLOY_CONFIG_TEMPLATES[provider] ?? DEPLOY_CONFIG_TEMPLATES['none'], null, 2);
 }
 
-export function shouldReplaceDeployConfigTemplate(provider: string, value: string): boolean {
-  const template = DEPLOY_CONFIG_TEMPLATES[provider] ?? DEPLOY_CONFIG_TEMPLATES['none'];
+export function defaultAiConfigTemplate(): string {
+  return JSON.stringify(AI_CONFIG_TEMPLATE, null, 2);
+}
+
+export function defaultStorageConfigTemplate(): string {
+  return JSON.stringify(STORAGE_CONFIG_TEMPLATE, null, 2);
+}
+
+export function isJsonTemplate(value: string): boolean {
   if (!value.trim()) {
     return true;
   }
 
   try {
     const parsed = JSON.parse(value) as Record<string, unknown>;
-    const keys = Object.keys(parsed);
-    const templateKeys = Object.keys(template);
-    if (keys.length !== templateKeys.length) {
-      return keys.length === 0;
-    }
-
-    return templateKeys.every((key) => parsed[key] === template[key]);
+    return (
+      matchesTemplate(parsed, DEPLOY_CONFIG_TEMPLATES['none']) ||
+      matchesTemplate(parsed, DEPLOY_CONFIG_TEMPLATES['netlify']) ||
+      matchesTemplate(parsed, DEPLOY_CONFIG_TEMPLATES['cloudflare']) ||
+      matchesTemplate(parsed, DEPLOY_CONFIG_TEMPLATES['firebase']) ||
+      matchesTemplate(parsed, DEPLOY_CONFIG_TEMPLATES['s3']) ||
+      matchesTemplate(parsed, AI_CONFIG_TEMPLATE) ||
+      matchesTemplate(parsed, STORAGE_CONFIG_TEMPLATE)
+    );
   } catch {
     return true;
   }
 }
 
-export function isDeployConfigTemplate(value: string): boolean {
-  if (!value.trim()) {
-    return true;
+function matchesTemplate(parsed: Record<string, unknown>, template: Record<string, string>): boolean {
+  const templateKeys = Object.keys(template);
+  const keys = Object.keys(parsed);
+  if (keys.length !== templateKeys.length) {
+    return false;
   }
-
-  try {
-    const parsed = JSON.parse(value) as Record<string, unknown>;
-    return Object.values(DEPLOY_CONFIG_TEMPLATES).some((template) => {
-      const templateKeys = Object.keys(template);
-      const keys = Object.keys(parsed);
-      if (keys.length !== templateKeys.length) {
-        return false;
-      }
-      return templateKeys.every((key) => parsed[key] === template[key]);
-    });
-  } catch {
-    return true;
-  }
+  return templateKeys.every((key) => parsed[key] === template[key]);
 }

@@ -2,11 +2,11 @@ import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
-import { SiteSettingsPageComponent } from './site-settings-page.component';
+import { DeploymentSettingsPageComponent } from './deployment-settings-page.component';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 
-describe('SiteSettingsPageComponent', () => {
-  let fixture: ComponentFixture<SiteSettingsPageComponent>;
+describe('DeploymentSettingsPageComponent', () => {
+  let fixture: ComponentFixture<DeploymentSettingsPageComponent>;
   let state: WorkspaceStateService;
 
   beforeEach(async () => {
@@ -19,8 +19,12 @@ describe('SiteSettingsPageComponent', () => {
       status: 'active' as const,
       templateKey: 'default-blog',
       themeConfig: '{"tone":"professional"}',
-      deployProvider: 'netlify',
+      deployProvider: 'firebase',
+      deployConfig: '',
       previewDeployProvider: 'cloudflare',
+      previewDeployConfig: '',
+      aiConfig: '',
+      storageConfig: '',
       updatedAt: '2026-05-23T00:00:00.000Z',
     };
 
@@ -32,19 +36,19 @@ describe('SiteSettingsPageComponent', () => {
     } as unknown as WorkspaceStateService;
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, SiteSettingsPageComponent],
+      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, DeploymentSettingsPageComponent],
       providers: [{ provide: WorkspaceStateService, useValue: state }],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(SiteSettingsPageComponent);
+    fixture = TestBed.createComponent(DeploymentSettingsPageComponent);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
   });
 
-  it('renders the current site and saves updates', async () => {
-    expect(fixture.nativeElement.textContent).toContain('Back to settings');
-    expect(fixture.nativeElement.textContent).toContain('Example Site');
+  it('loads default templates and saves deployment settings', async () => {
+    expect(fixture.nativeElement.textContent).toContain('Deployment settings');
+    expect(fixture.nativeElement.textContent).toContain('firebase');
 
     const submitButton = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement | null;
     submitButton?.click();
@@ -52,10 +56,47 @@ describe('SiteSettingsPageComponent', () => {
     fixture.detectChanges();
 
     expect(state.updateSelectedSite).toHaveBeenCalledWith({
-      templateKey: 'default-blog',
-      themeConfig: '{"tone":"professional"}',
-      deployProvider: 'netlify',
-      previewDeployProvider: 'cloudflare',
+      deployConfig: JSON.stringify(
+        {
+          provider: 'firebase',
+          projectId: '',
+          siteId: '',
+          serviceAccountSecretRef: '',
+        },
+        null,
+        2,
+      ),
+      previewDeployConfig: JSON.stringify(
+        {
+          provider: 'cloudflare',
+          accountId: '',
+          projectName: '',
+          apiTokenSecretRef: '',
+        },
+        null,
+        2,
+      ),
+      aiConfig: JSON.stringify(
+        {
+          provider: '',
+          model: '',
+          tone: '',
+          brand_context: '',
+        },
+        null,
+        2,
+      ),
+      storageConfig: JSON.stringify(
+        {
+          provider: '',
+          bucket: '',
+          region: '',
+          prefix: '',
+          public_url: '',
+        },
+        null,
+        2,
+      ),
     });
   });
 });

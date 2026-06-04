@@ -19,6 +19,24 @@
     <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
   }
 
+  @if (feedback.state(); as feedbackState) {
+    @if (feedbackState.kind !== 'idle' && feedbackState.message) {
+      <p
+        class="page-status"
+        [class.page-status--loading]="feedbackState.kind === 'loading'"
+        [class.page-status--success]="feedbackState.kind === 'success'"
+        [class.page-status--error]="feedbackState.kind === 'error'"
+        [attr.role]="feedbackState.kind === 'error' ? 'alert' : 'status'"
+        [attr.aria-live]="feedbackState.kind === 'error' ? 'assertive' : 'polite'"
+      >
+        @if (feedbackState.kind === 'loading') {
+          <span class="page-status__spinner" aria-hidden="true"></span>
+        }
+        <span class="page-status__message">{{ feedbackState.message }}</span>
+      </p>
+    }
+  }
+
   <section class="two-column">
     <article class="panel">
       <h2>Update deployment settings</h2>
@@ -26,7 +44,12 @@
         The provider itself is selected in site settings. This page stores the provider-specific JSON values.
       </p>
 
-      <form class="form-grid" [formGroup]="deploymentSettingsForm" (ngSubmit)="saveDeploymentSettings()">
+      <form
+        class="form-grid"
+        [formGroup]="deploymentSettingsForm"
+        (ngSubmit)="saveDeploymentSettings()"
+        [attr.aria-busy]="feedback.isBusy()"
+      >
         <label>
           <span>Production deployment config</span>
           <textarea rows="6" formControlName="deployConfig"></textarea>
@@ -51,7 +74,9 @@
           <small class="field-help">Stores S3-compatible upload settings for the current site.</small>
         </label>
 
-        <button class="button button-primary" type="submit">Save deployment settings</button>
+        <button class="button button-primary" type="submit" [disabled]="feedback.isBusy()">
+          {{ feedback.isBusy() ? 'Saving...' : 'Save deployment settings' }}
+        </button>
       </form>
     </article>
 

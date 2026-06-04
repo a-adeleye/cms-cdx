@@ -11,7 +11,9 @@
         <button class="button button-secondary" type="button" (click)="setPreviewOpen(!previewOpen())">
           Preview {{ previewOpen() ? 'On' : 'Off' }}
         </button>
-        <button class="button button-primary" type="button" (click)="saveArticle()">Save draft</button>
+        <button class="button button-primary" type="button" [disabled]="feedback.isBusy()" (click)="saveArticle()">
+          {{ feedback.isBusy() ? 'Saving...' : 'Save draft' }}
+        </button>
       </div>
     </div>
   </header>
@@ -20,8 +22,22 @@
     <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
   }
 
-  @if (formError()) {
-    <p class="page-error" role="alert" aria-live="polite">{{ formError() }}</p>
+  @if (feedback.state(); as feedbackState) {
+    @if (feedbackState.kind !== 'idle' && feedbackState.message) {
+      <p
+        class="page-status"
+        [class.page-status--loading]="feedbackState.kind === 'loading'"
+        [class.page-status--success]="feedbackState.kind === 'success'"
+        [class.page-status--error]="feedbackState.kind === 'error'"
+        [attr.role]="feedbackState.kind === 'error' ? 'alert' : 'status'"
+        [attr.aria-live]="feedbackState.kind === 'error' ? 'assertive' : 'polite'"
+      >
+        @if (feedbackState.kind === 'loading') {
+          <span class="page-status__spinner" aria-hidden="true"></span>
+        }
+        <span class="page-status__message">{{ feedbackState.message }}</span>
+      </p>
+    }
   }
 
   <section class="article-layout">
@@ -30,7 +46,7 @@
         <h2>Article details</h2>
       </div>
 
-      <form class="article-form-grid" [formGroup]="articleForm">
+      <form class="article-form-grid" [formGroup]="articleForm" [attr.aria-busy]="feedback.isBusy()">
         <input type="hidden" formControlName="id" />
 
         <label>

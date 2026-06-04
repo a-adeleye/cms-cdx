@@ -8,8 +8,10 @@ import { WorkspaceStateService } from '../../features/pages/workspace-state.serv
 describe('SiteSettingsPageComponent', () => {
   let fixture: ComponentFixture<SiteSettingsPageComponent>;
   let state: WorkspaceStateService;
+  let resolveUpdateSelectedSite: (() => void) | null;
 
   beforeEach(async () => {
+    resolveUpdateSelectedSite = null;
     const selectedSite = {
       id: 'site-example',
       name: 'Example Site',
@@ -26,8 +28,18 @@ describe('SiteSettingsPageComponent', () => {
 
     state = {
       selectedSite: jasmine.createSpy('selectedSite').and.returnValue(selectedSite),
+      templates: jasmine.createSpy('templates').and.returnValue([
+        { id: 'template-default', name: 'Default Blog', slug: 'default-blog', updatedAt: '2026-05-23T00:00:00.000Z' },
+        { id: 'template-premium', name: 'Premium SaaS', slug: 'premium-saas', updatedAt: '2026-05-23T00:00:00.000Z' },
+      ]),
       error: jasmine.createSpy('error').and.returnValue(null),
-      updateSelectedSite: jasmine.createSpy('updateSelectedSite').and.resolveTo(),
+      clearError: jasmine.createSpy('clearError'),
+      updateSelectedSite: jasmine.createSpy('updateSelectedSite').and.callFake(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveUpdateSelectedSite = resolve;
+          }),
+      ),
       reportError: jasmine.createSpy('reportError'),
     } as unknown as WorkspaceStateService;
 
@@ -48,6 +60,13 @@ describe('SiteSettingsPageComponent', () => {
 
     const submitButton = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement | null;
     submitButton?.click();
+    fixture.detectChanges();
+
+    expect(submitButton?.disabled).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Saving site settings...');
+
+    resolveUpdateSelectedSite?.();
+
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -57,5 +76,6 @@ describe('SiteSettingsPageComponent', () => {
       deployProvider: 'netlify',
       previewDeployProvider: 'cloudflare',
     });
+    expect(fixture.nativeElement.textContent).toContain('Site settings saved successfully.');
   });
 });

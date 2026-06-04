@@ -25,6 +25,7 @@ func NewRouter(svc services.Services, cfg config.Config) http.Handler {
 	mux.Handle("/api/v1/auth/logout", protected(http.HandlerFunc(api.logout)))
 	mux.Handle("/api/v1/auth/me", protected(http.HandlerFunc(api.me)))
 	mux.Handle("/api/v1/workspace", protected(http.HandlerFunc(api.workspace)))
+	mux.Handle("/api/v1/templates", protected(http.HandlerFunc(api.templates)))
 	mux.Handle("/api/v1/sites", protected(http.HandlerFunc(api.sites)))
 	mux.Handle("/api/v1/sites/", protected(http.HandlerFunc(api.siteSubroutes)))
 	mux.Handle("/api/v1/articles/", protected(http.HandlerFunc(api.articleSubroutes)))

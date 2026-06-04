@@ -145,6 +145,18 @@ textarea:focus-visible {
   color: var(--accent);
 }
 
+.button:disabled {
+  opacity: 0.68;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.button:disabled:hover,
+.button:disabled:active {
+  transform: none;
+}
+
 /* Accessible keyboard focus for links, buttons, and other interactive elements. */
 :focus-visible {
   outline: 2px solid var(--accent);

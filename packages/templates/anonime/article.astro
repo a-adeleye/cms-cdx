@@ -1,0 +1,225 @@
+---
+import Header from './components/Header.astro';
+import Footer from './components/Footer.astro';
+import ArticleCard from './components/ArticleCard.astro';
+import Avatar from './components/Avatar.astro';
+import './styles/anonime.css';
+
+const { site = {}, article = {} } = Astro.props;
+const blogPath = site.blogPath ?? '/articles';
+const title = article.title ?? 'Who Needs Encrypted Communication? Scenarios Where Privacy Matters Most';
+const category = article.category ?? 'Security';
+const excerpt =
+  article.excerpt ??
+  'Explore real cases where encrypted communication is essential for protecting sensitive business information and safeguarding personal privacy.';
+
+const articleBody =
+  article.html ??
+  article.contentHtml ??
+  `
+    <p>In today\'s digital world, nearly every conversation leaves a trace. Emails are scanned, messages are logged, and data is stored for longer than most people realize. Encrypted communication changes that.</p>
+    <p>It ensures that only the intended recipient can read the message - not your provider, not hackers, not even governments. But who really needs it? The answer may surprise you.</p>
+    <h2 id="individuals">1. Individuals Protecting Their Personal Lives</h2>
+    <p>From dating apps to medical consultations, we share deeply personal information online. Without encryption, this data can be exposed in breaches or sold to third parties.</p>
+    <blockquote><p>Privacy is not about hiding something. It is about protecting the right to be left alone.</p></blockquote>
+    <p>Encrypted messaging ensures your conversations stay between you and the people you trust.</p>
+    <h2 id="businesses">2. Businesses Handling Sensitive Information</h2>
+    <p>Companies deal with confidential data every day - finances, client details, product plans, and more. A single leak can damage trust and cost millions.</p>
+    <div class="anonime-inline-callout">
+      <div class="anonime-callout-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+          <path d="M12 3.2 4.7 6.8v5.2c0 4.9 3.5 8.5 7.3 9.8 3.8-1.3 7.3-4.9 7.3-9.8V6.8L12 3.2Z" stroke="currentColor" stroke-width="1.8" />
+        </svg>
+      </div>
+      <p>Encrypted communication helps teams share, collaborate, and operate securely.</p>
+    </div>
+    <p>Whether you are a startup or an enterprise, encryption is now a business essential.</p>
+    <h2 id="journalists">3. Journalists, Activists, and Communities at Risk</h2>
+    <p>For those who speak truth to power, privacy is safety. Encrypted communication protects sources, organizes movements, and ensures critical information reaches the right people.</p>
+    <div class="anonime-inline-callout">
+      <div class="anonime-callout-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+          <path d="M7.5 11.2V8.8a4.5 4.5 0 1 1 9 0v2.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          <rect x="6.5" y="11.2" width="11" height="8.5" rx="2.4" stroke="currentColor" stroke-width="1.8" />
+        </svg>
+      </div>
+      <p>In high-risk environments, encryption can be the difference between exposure and protection.</p>
+    </div>
+    <h2 id="bottom-line">The Bottom Line</h2>
+    <p>Encrypted communication isn\'t just for tech experts or security professionals. It is for anyone who values privacy, security, and control over their words and data.</p>
+  `;
+
+const toc = Astro.props.toc ?? [
+  { id: 'individuals', label: 'Individuals Protecting Their Personal Lives', active: true },
+  { id: 'businesses', label: 'Businesses Handling Sensitive Information' },
+  { id: 'journalists', label: 'Journalists, Activists, and Communities at Risk' },
+  { id: 'bottom-line', label: 'The Bottom Line' },
+];
+
+const relatedArticles = Astro.props.relatedArticles ?? [
+  {
+    title: 'Beyond Encryption: Zero-Knowledge Architecture and Why It Matters',
+    publishedAt: 'Jan 24, 2026',
+    readTime: '5 min read',
+    slug: 'beyond-encryption',
+    artVariant: 'shield',
+    hrefBase: blogPath,
+  },
+  {
+    title: 'Why Your Email Address Is Your Biggest Privacy Liability',
+    publishedAt: 'Jan 22, 2026',
+    readTime: '3 min read',
+    slug: 'email-liability',
+    artVariant: 'shield',
+    hrefBase: blogPath,
+  },
+  {
+    title: 'The Hidden Risks of Data Brokers',
+    publishedAt: 'Jan 18, 2026',
+    readTime: '4 min read',
+    slug: 'hidden-risks-of-data-brokers',
+    artVariant: 'paper',
+    hrefBase: blogPath,
+  },
+  {
+    title: 'Digital Minimalism: Owning Less of Yourself Online',
+    publishedAt: 'Jan 16, 2026',
+    readTime: '6 min read',
+    slug: 'digital-minimalism',
+    artVariant: 'fingerprint',
+    hrefBase: blogPath,
+  },
+];
+---
+
+<section class="anonime-template">
+  <div class="anonime-shell">
+    <Header blogPath={blogPath} />
+
+    <section class="anonime-article-layout anonime-section">
+      <article class="anonime-article-main">
+        <header class="anonime-article-header">
+          <nav class="anonime-breadcrumbs" aria-label="Breadcrumb">
+            <a href={blogPath}>Blog</a>
+            <span aria-hidden="true">/</span>
+            <a href={`${blogPath}?category=${encodeURIComponent(category.toLowerCase())}`}>{category}</a>
+            <span aria-hidden="true">/</span>
+            <span>{title}</span>
+          </nav>
+
+          <p class="anonime-eyebrow">Secure communication</p>
+          <h1 class="anonime-article-heading">{title}</h1>
+          <p class="anonime-article-intro">{excerpt}</p>
+
+          <div class="anonime-article-toolbar">
+            <div class="anonime-meta-inline">
+              <Avatar name={article.authorName ?? 'Rene Carter'} src={article.authorAvatar} alt={article.authorName ?? 'Rene Carter'} />
+              <span>{article.authorName ?? 'Rene Carter'}</span>
+              <span class="anonime-meta-separator" aria-hidden="true"></span>
+              <span>{article.publishedAt ?? 'Feb 7, 2026'}</span>
+              <span class="anonime-meta-separator" aria-hidden="true"></span>
+              <span>{article.readTime ?? '5 min read'}</span>
+            </div>
+
+            <button class="anonime-icon-button" type="button" aria-label="Bookmark article">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path d="M7 4.8h10v14.7l-5-3.2-5 3.2V4.8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <button class="anonime-icon-button" type="button" aria-label="Share article">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path d="M16.5 8.5a2.5 2.5 0 1 0-2.3-3.5 2.5 2.5 0 0 0 2.3 3.5ZM7.5 14.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Zm9-2a2.5 2.5 0 1 0 2.2 3.5 2.5 2.5 0 0 0-2.2-3.5ZM9.5 15.6l5.3-2.8m-5.3-2.8 5.3 2.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <button class="anonime-icon-button" type="button" aria-label="Copy link">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path d="M9.2 14.8 14.8 9.2m-5.4 6.8a3 3 0 0 1-4.2 0 3 3 0 0 1 0-4.2l2.1-2.1m8.7-.1 2.1-2.1a3 3 0 0 1 4.2 0 3 3 0 0 1 0 4.2l-2.1 2.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <figure class="anonime-article-figure">
+          {article.image ? (
+            <img src={article.image} alt={title} />
+          ) : (
+            <div class="anonime-featured-hero" aria-hidden="true">
+              <div class="anonime-featured-lock"></div>
+            </div>
+          )}
+        </figure>
+
+        <div class="anonime-article-body" set:html={articleBody} />
+
+        <footer class="anonime-article-footer">
+          <div class="anonime-article-footer-card">
+            <div>
+              <h3>Your conversations are yours. Keep them that way.</h3>
+              <p>Encrypted communication helps protect the people and work that matter most.</p>
+            </div>
+            <a class="anonime-button" href="#get-started">
+              Explore Anonime
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path d="M7 12h10m0 0-4-4m4 4-4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+          </div>
+
+          <div class="anonime-article-feedback">
+            <span class="anonime-muted">Was this article helpful?</span>
+            <button class="anonime-help-button" type="button">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path d="M9.5 11.5V20H6V11.5h3.5Zm1.8-.8 1.6-4.1A2 2 0 0 1 14.8 5h1.4a1.8 1.8 0 0 1 1.7 2.2l-1 4.2H21v2.4a4 4 0 0 1-4 4h-5.5a2 2 0 0 1-1.9-1.4l-1.8-5a1.8 1.8 0 0 1 1.5-2.5Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              Yes
+            </button>
+            <button class="anonime-help-button" type="button">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path d="M14.5 12.5V4H18v8.5h-3.5Zm-1.8.8-1.6 4.1A2 2 0 0 1 9.2 19H7.8a1.8 1.8 0 0 1-1.7-2.2l1-4.2H3v-2.4a4 4 0 0 1 4-4h5.5a2 2 0 0 1 1.9 1.4l1.8 5a1.8 1.8 0 0 1-1.5 2.5Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              No
+            </button>
+          </div>
+        </footer>
+      </article>
+
+      <aside class="anonime-article-sidebar">
+        <section class="anonime-panel">
+          <h2 class="anonime-panel-title">On this page</h2>
+          <ol class="anonime-article-toc-list">
+            {toc.map((entry) => (
+              <li class={entry.active ? 'is-active' : undefined}>
+                <a href={`#${entry.id}`}>{entry.label}</a>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section class="anonime-panel">
+          <h2 class="anonime-panel-title">Related Articles</h2>
+          <div class="anonime-article-related">
+            {relatedArticles.map((related) => (
+              <ArticleCard article={related} compact={true} showMeta={true} />
+            ))}
+          </div>
+        </section>
+
+        <section class="anonime-callout">
+          <div class="anonime-badge anonime-badge-ghost">Product mission</div>
+          <h2 class="anonime-callout-title">Privacy is not just our product. It is our mission.</h2>
+          <p class="anonime-callout-copy">Read more insights, guides, and real-world stories on taking back control of your digital life.</p>
+          <div class="anonime-callout-actions">
+            <a class="anonime-button anonime-button-primary" href={blogPath}>
+              Explore all articles
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path d="M7 12h10m0 0-4-4m4 4-4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+          </div>
+        </section>
+      </aside>
+    </section>
+
+    <Footer blogPath={blogPath} />
+  </div>
+</section>

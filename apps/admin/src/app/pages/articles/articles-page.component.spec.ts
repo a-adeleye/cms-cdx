@@ -36,6 +36,7 @@ describe('ArticlesPageComponent', () => {
       },
     ],
     error: () => null,
+    clearError: jasmine.createSpy('clearError'),
     reportError: jasmine.createSpy('reportError'),
     clearSelectedArticle: jasmine.createSpy('clearSelectedArticle'),
     selectArticle: jasmine.createSpy('selectArticle').and.resolveTo(),
@@ -71,5 +72,16 @@ describe('ArticlesPageComponent', () => {
 
     expect(fakeState.clearSelectedArticle).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/articles/editor']);
+  });
+
+  it('shows success feedback after updating an article', async () => {
+    const featureButton = fixture.nativeElement.querySelector('.list-card .button-secondary:nth-child(2)') as HTMLButtonElement | null;
+    featureButton?.click();
+
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fakeState.toggleFeatured).toHaveBeenCalledWith('article-1');
+    expect(fixture.nativeElement.textContent).toContain('Featured state updated successfully.');
   });
 });

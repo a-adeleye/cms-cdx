@@ -1,0 +1,19 @@
+---
+const { name = 'Anonime', src = '', alt = name } = Astro.props;
+
+const initials = name
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((part) => part.charAt(0))
+  .join('')
+  .toUpperCase() || 'A';
+---
+
+{src ? (
+  <img class="anonime-avatar" src={src} alt={alt} />
+) : (
+  <span class="anonime-avatar anonime-avatar-fallback" aria-hidden="true">
+    {initials}
+  </span>
+)}

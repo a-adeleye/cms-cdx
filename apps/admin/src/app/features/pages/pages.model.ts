@@ -56,6 +56,13 @@ export interface SiteRecord {
   updatedAt: string;
 }
 
+export interface TemplateRecord {
+  id: string;
+  name: string;
+  slug: string;
+  updatedAt: string;
+}
+
 export interface LandingSectionRecord {
   id: string;
   siteId: string;
@@ -145,6 +152,7 @@ export interface AdminStateSnapshot {
   selectedSiteId: string;
   selectedArticleId: string | null;
   sites: SiteRecord[];
+  templates: TemplateRecord[];
   landingSections: LandingSectionRecord[];
   articles: ArticleRecord[];
   authors: AuthorRecord[];

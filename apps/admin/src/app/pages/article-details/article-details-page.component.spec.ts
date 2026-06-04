@@ -8,6 +8,7 @@ import { WorkspaceStateService } from '../../features/pages/workspace-state.serv
 describe('ArticleDetailsPageComponent', () => {
   let fixture: ComponentFixture<ArticleDetailsPageComponent>;
   let router: Router;
+  let resolveDeleteArticle: (() => void) | null;
 
   const fakeState = {
     selectedArticle: () => ({
@@ -38,12 +39,18 @@ describe('ArticleDetailsPageComponent', () => {
     categories: () => [{ id: 'category-1', siteId: 'site-example', name: 'Category', slug: 'category', description: '' }],
     tags: () => [{ id: 'tag-1', siteId: 'site-example', name: 'Tag One', slug: 'tag-one' }],
     selectArticle: jasmine.createSpy('selectArticle').and.resolveTo(),
-    deleteArticle: jasmine.createSpy('deleteArticle').and.resolveTo(),
+    deleteArticle: jasmine.createSpy('deleteArticle').and.callFake(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveDeleteArticle = resolve;
+        }),
+    ),
     clearError: jasmine.createSpy('clearError'),
     reportError: jasmine.createSpy('reportError'),
   };
 
   beforeEach(async () => {
+    resolveDeleteArticle = null;
     await TestBed.configureTestingModule({
       imports: [CommonModule, RouterTestingModule, ArticleDetailsPageComponent],
       providers: [
@@ -81,6 +88,12 @@ describe('ArticleDetailsPageComponent', () => {
       button.textContent?.includes('Delete article'),
     );
     deleteButton?.click();
+    fixture.detectChanges();
+
+    expect(deleteButton?.disabled).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Deleting article...');
+
+    resolveDeleteArticle?.();
 
     await fixture.whenStable();
 

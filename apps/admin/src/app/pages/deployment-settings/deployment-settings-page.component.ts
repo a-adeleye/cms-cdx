@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { createPageActionFeedback } from '../../features/pages/page-feedback';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 import {
   defaultAiConfigTemplate,
@@ -21,6 +22,7 @@ import {
 export class DeploymentSettingsPageComponent {
   private readonly fb = inject(FormBuilder);
   readonly state = inject(WorkspaceStateService);
+  readonly feedback = createPageActionFeedback();
 
   readonly deploymentSettingsForm = this.fb.nonNullable.group({
     deployConfig: ['', [Validators.required]],
@@ -54,20 +56,23 @@ export class DeploymentSettingsPageComponent {
   async saveDeploymentSettings(): Promise<void> {
     if (this.deploymentSettingsForm.invalid) {
       this.deploymentSettingsForm.markAllAsTouched();
+      this.feedback.error('Fix the highlighted fields to save the deployment settings.');
       return;
     }
 
     const { deployConfig, previewDeployConfig, aiConfig, storageConfig } = this.deploymentSettingsForm.getRawValue();
     try {
+      this.state.clearError();
+      this.feedback.loading('Saving deployment settings...');
       await this.state.updateSelectedSite({
         deployConfig,
         previewDeployConfig,
         aiConfig,
         storageConfig,
       });
+      this.feedback.success('Deployment settings saved successfully.');
     } catch (error) {
-      const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
-      this.state.reportError(`Unable to save deployment settings.${detail}`);
+      this.feedback.error(this.buildErrorMessage('Unable to save deployment settings.', error));
     }
   }
 
@@ -77,5 +82,10 @@ export class DeploymentSettingsPageComponent {
     }
 
     return value;
+  }
+
+  private buildErrorMessage(message: string, error: unknown): string {
+    const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
+    return `${message}${detail}`;
   }
 }

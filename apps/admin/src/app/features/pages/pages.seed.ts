@@ -5,6 +5,7 @@ export const INITIAL_STATE: AdminStateSnapshot = {
   selectedSiteId: '',
   selectedArticleId: null,
   sites: [],
+  templates: [],
   landingSections: [],
   articles: [],
   authors: [],

@@ -1,0 +1,38 @@
+---
+const { blogPath = '/articles' } = Astro.props;
+
+const navItems = [
+  { label: 'Features', href: '#features' },
+  { label: 'Pricing', href: '#pricing' },
+  { label: 'Blog', href: blogPath, current: true },
+];
+---
+
+<header class="anonime-header">
+  <a class="anonime-brand" href="/">
+    <span class="anonime-brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+        <path d="M12 2.5 20 6.8v6.8c0 4.6-3.4 7.7-8 8.9-4.6-1.2-8-4.3-8-8.9V6.8L12 2.5Z" fill="currentColor" />
+        <path d="M9.2 12.2a2.8 2.8 0 1 1 5.6 0c0 1.1-.6 2.1-1.5 2.6l.3 2.3h-3.2l.3-2.3a2.8 2.8 0 0 1-1.5-2.6Z" fill="#fff" opacity=".92" />
+      </svg>
+    </span>
+    <span>anonime</span>
+  </a>
+
+  <nav class="anonime-nav" aria-label="Primary">
+    {navItems.map((item) => (
+      <a href={item.href} aria-current={item.current ? 'page' : undefined}>
+        {item.label}
+      </a>
+    ))}
+  </nav>
+
+  <div class="anonime-header-actions">
+    <button class="anonime-icon-button" type="button" aria-label="Toggle theme">
+      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" aria-hidden="true">
+        <path d="M20.5 13.4A8.7 8.7 0 0 1 10.6 3.5a8.6 8.6 0 1 0 9.9 9.9Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+    <a class="anonime-button anonime-button-primary" href="#get-started">Get Started</a>
+  </div>
+</header>

@@ -11,6 +11,7 @@ import {
   LandingSectionRecord,
   MediaAssetRecord,
   SiteRecord,
+  TemplateRecord,
   TagRecord,
 } from './pages.model';
 import { INITIAL_STATE } from './pages.seed';
@@ -40,6 +41,11 @@ interface SiteDraftInput {
   domain: string;
   blogPath: string;
   templateKey: string;
+}
+
+interface TemplateDraftInput {
+  name: string;
+  slug: string;
 }
 
 interface CategoryDraftInput {
@@ -83,6 +89,7 @@ const EMPTY_STATE: AdminStateSnapshot = {
   selectedSiteId: '',
   selectedArticleId: null,
   sites: [],
+  templates: [],
   landingSections: [],
   articles: [],
   authors: [],
@@ -107,6 +114,7 @@ export class WorkspaceStateService {
   readonly loading = computed(() => this.loadingState());
   readonly error = computed(() => this.errorState());
   readonly sites = computed(() => this.state().sites.slice().sort((left, right) => left.name.localeCompare(right.name)));
+  readonly templates = computed(() => this.state().templates.slice().sort((left, right) => left.name.localeCompare(right.name)));
   readonly selectedSiteId = computed(() => this.state().selectedSiteId);
   readonly selectedSite = computed(() => this.findSite(this.state().selectedSiteId) ?? this.state().sites[0] ?? EMPTY_SITE);
   readonly landingSections = computed(() =>
@@ -239,6 +247,16 @@ export class WorkspaceStateService {
 
     await this.loadWorkspace(site.id);
     return site;
+  }
+
+  async createTemplate(input: TemplateDraftInput): Promise<TemplateRecord> {
+    const template = await this.api.createTemplate({
+      name: input.name,
+      slug: input.slug,
+    });
+
+    await this.loadWorkspace(this.selectedSiteId() || undefined);
+    return template;
   }
 
   async updateSite(siteId: string, patch: Partial<SiteRecord>): Promise<SiteRecord> {
@@ -590,6 +608,7 @@ export class WorkspaceStateService {
       selectedSiteId: workspace.selectedSiteId,
       selectedArticleId: workspace.selectedArticleId || null,
       sites: workspace.sites,
+      templates: workspace.templates,
       landingSections: workspace.landingSections,
       articles: workspace.articles,
       authors: workspace.authors,

@@ -1,0 +1,227 @@
+---
+import Header from './components/Header.astro';
+import Footer from './components/Footer.astro';
+import ArticleCard from './components/ArticleCard.astro';
+import './styles/anonime.css';
+
+const { site = {} } = Astro.props;
+const blogPath = site.blogPath ?? '/articles';
+
+const articles = Astro.props.articles ?? [
+  {
+    title: "The Problem with 'Free': Why Ad-Driven Services Put Your Privacy at Risk",
+    category: 'Privacy Basics',
+    excerpt: 'Uncover the hidden costs of free online services that rely on advertising and data collection.',
+    authorName: 'Rene Carter',
+    publishedAt: 'Feb 2, 2026',
+    readTime: '4 min read',
+    slug: 'the-problem-with-free',
+    artVariant: 'person',
+    hrefBase: blogPath,
+  },
+  {
+    title: 'Leaving No Trace: How to Communicate Anonymously and Securely with Anonime',
+    category: 'Guides',
+    excerpt: 'Discover how Anonime enables private, anonymous communication through end-to-end encryption.',
+    authorName: 'Rene Carter',
+    publishedAt: 'Jan 29, 2026',
+    readTime: '5 min read',
+    slug: 'leaving-no-trace',
+    artVariant: 'key',
+    hrefBase: blogPath,
+  },
+  {
+    title: 'Reclaim Your Digital Footprint: The Power of Ephemeral Messaging',
+    category: 'Security',
+    excerpt: 'Tired of your data living online forever? Discover how ephemeral messaging helps you stay in control.',
+    authorName: 'Rene Carter',
+    publishedAt: 'Jan 27, 2026',
+    readTime: '4 min read',
+    slug: 'reclaim-your-digital-footprint',
+    artVariant: 'paper',
+    hrefBase: blogPath,
+  },
+  {
+    title: 'Protect Your Online Identity: The Power of Private Personas',
+    category: 'Identity',
+    excerpt: 'Discover how creating distinct online personas shields your real identity from tracking and profiling.',
+    authorName: 'Rene Carter',
+    publishedAt: 'Jan 23, 2026',
+    readTime: '10 min read',
+    slug: 'private-personas',
+    artVariant: 'shield',
+    hrefBase: blogPath,
+  },
+  {
+    title: "What's New in Anonime: Updates That Put You First",
+    category: 'Product',
+    excerpt: 'Explore the latest features and improvements built for your privacy.',
+    authorName: 'Rene Carter',
+    publishedAt: 'Jan 21, 2026',
+    readTime: '4 min read',
+    slug: 'whats-new-in-anonime',
+    artVariant: 'cube',
+    hrefBase: blogPath,
+  },
+  {
+    title: 'Welcome to the Anonime Blog',
+    category: 'Welcome',
+    excerpt: 'Introducing the Anonime blog - your source for privacy insights, security tips, and tools to take back control of your digital life.',
+    authorName: 'Rene Carter',
+    publishedAt: 'Jan 20, 2026',
+    readTime: '2 min read',
+    slug: 'welcome-to-the-anonime-blog',
+    artVariant: 'fingerprint',
+    hrefBase: blogPath,
+  },
+];
+
+const sidebarArticles = Astro.props.popularArticles ?? articles.slice(0, 5);
+const topics = Astro.props.topics ?? [
+  { label: 'Privacy Basics', count: 12 },
+  { label: 'Security', count: 10 },
+  { label: 'Anonymity', count: 8 },
+  { label: 'Guides', count: 11 },
+  { label: 'Product', count: 6 },
+  { label: 'Identity', count: 7 },
+  { label: 'Welcome', count: 2 },
+];
+---
+
+<section class="anonime-template">
+  <div class="anonime-shell">
+    <Header blogPath={blogPath} />
+
+    <section class="anonime-hero anonime-section">
+      <div class="anonime-hero-copy">
+        <p class="anonime-eyebrow">The privacy blog</p>
+        <h1 class="anonime-title">
+          All <strong>Articles</strong>
+        </h1>
+        <p class="anonime-subtitle">
+          Insights on privacy, identity, and encrypted communication. Real-world guides and ideas to help you take back control.
+        </p>
+      </div>
+
+      <div class="anonime-hero-art" aria-hidden="true">
+        <div class="anonime-hero-grid"></div>
+        <div class="anonime-hero-small top-left">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M7.5 11.2V8.8a4.5 4.5 0 1 1 9 0v2.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            <rect x="6.5" y="11.2" width="11" height="8.5" rx="2.4" stroke="currentColor" stroke-width="1.8" />
+          </svg>
+        </div>
+        <div class="anonime-hero-small top-right">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4.5 7.5h15v9h-5.2l-2.3 2.3-2.3-2.3H4.5v-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+            <path d="M8 10.5h8M8 13h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div class="anonime-hero-card">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3.2 4.7 6.8v5.2c0 4.9 3.5 8.5 7.3 9.8 3.8-1.3 7.3-4.9 7.3-9.8V6.8L12 3.2Z" stroke="currentColor" stroke-width="1.8" />
+          </svg>
+        </div>
+        <div class="anonime-hero-small bottom-right">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="9.6" r="3" stroke="currentColor" stroke-width="1.8" />
+            <path d="M5.5 19c1.3-3 4-4.5 6.5-4.5S17.2 16 18.5 19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section class="anonime-section" aria-label="Article categories">
+      <div class="anonime-topic-row">
+        <button class="anonime-pill is-active" type="button">All Articles</button>
+        <button class="anonime-pill" type="button">Privacy Basics</button>
+        <button class="anonime-pill" type="button">Security</button>
+        <button class="anonime-pill" type="button">Anonymity</button>
+        <button class="anonime-pill" type="button">Guides</button>
+        <button class="anonime-pill" type="button">Product</button>
+        <button class="anonime-pill" type="button">Identity</button>
+        <button class="anonime-pill" type="button">Latest</button>
+      </div>
+    </section>
+
+    <section class="anonime-content-grid anonime-section" id="articles-grid">
+      <div class="anonime-article-stack">
+        {articles.map((article) => (
+          <ArticleCard article={article} />
+        ))}
+
+        <div class="anonime-pagination" aria-label="Pagination">
+          <button class="anonime-pagination-button" type="button" aria-label="Previous page">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
+              <path d="M14 7 9 12l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <button class="anonime-pagination-button is-active" type="button">1</button>
+          <button class="anonime-pagination-button" type="button">2</button>
+          <button class="anonime-pagination-button" type="button">3</button>
+          <button class="anonime-pagination-button" type="button">4</button>
+          <button class="anonime-pagination-button" type="button">5</button>
+          <button class="anonime-pagination-button" type="button">...</button>
+          <button class="anonime-pagination-button" type="button">12</button>
+          <button class="anonime-pagination-button" type="button" aria-label="Next page">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
+              <path d="M10 7 15 12l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <aside class="anonime-sidebar-panel">
+        <section class="anonime-panel">
+          <h2 class="anonime-panel-title">Explore by topic</h2>
+          <div class="anonime-topic-list">
+            {topics.map((topic) => (
+              <div class="anonime-topic-entry">
+                <strong>{topic.label}</strong>
+                <span class="anonime-topic-count">{topic.count}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section class="anonime-panel">
+          <h2 class="anonime-panel-title">Popular articles</h2>
+          <div class="anonime-sidebar-list">
+            {sidebarArticles.map((article) => (
+              <article class="anonime-sidebar-item">
+                <a href={`${blogPath}/${article.slug}/`} aria-label={article.title}>
+                  <div class="anonime-sidebar-thumb anonime-article-art" data-art={article.artVariant} aria-hidden="true"></div>
+                </a>
+                <div>
+                  <p class="anonime-article-category is-tight">{article.category}</p>
+                  <h3 class="anonime-sidebar-title">
+                    <a href={`${blogPath}/${article.slug}/`}>{article.title}</a>
+                  </h3>
+                  <p class="anonime-sidebar-meta">
+                    {article.publishedAt} <span class="anonime-meta-separator" aria-hidden="true"></span> {article.readTime}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section class="anonime-callout">
+          <div class="anonime-badge anonime-badge-ghost">Product mission</div>
+          <h2 class="anonime-callout-title">Privacy is not just our product. It is our mission.</h2>
+          <p class="anonime-callout-copy">Read more insights, guides, and real-world stories on taking back control of your digital life.</p>
+          <div class="anonime-callout-actions">
+            <a class="anonime-button anonime-button-primary" href={blogPath}>
+              Explore all articles
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path d="M7 12h10m0 0-4-4m4 4-4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+          </div>
+        </section>
+      </aside>
+    </section>
+
+    <Footer blogPath={blogPath} />
+  </div>
+</section>

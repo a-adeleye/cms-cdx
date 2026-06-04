@@ -15,11 +15,29 @@
     </div>
   </header>
 
+  @if (feedback.state(); as feedbackState) {
+    @if (feedbackState.kind !== 'idle' && feedbackState.message) {
+      <p
+        class="page-status"
+        [class.page-status--loading]="feedbackState.kind === 'loading'"
+        [class.page-status--success]="feedbackState.kind === 'success'"
+        [class.page-status--error]="feedbackState.kind === 'error'"
+        [attr.role]="feedbackState.kind === 'error' ? 'alert' : 'status'"
+        [attr.aria-live]="feedbackState.kind === 'error' ? 'assertive' : 'polite'"
+      >
+        @if (feedbackState.kind === 'loading') {
+          <span class="page-status__spinner" aria-hidden="true"></span>
+        }
+        <span class="page-status__message">{{ feedbackState.message }}</span>
+      </p>
+    }
+  }
+
   <section class="two-column">
     <article class="panel">
       <h2>{{ pageTitle() }}</h2>
 
-      <form class="form-grid" [formGroup]="form" (ngSubmit)="save()">
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="save()" [attr.aria-busy]="feedback.isBusy()">
         <input type="hidden" formControlName="id" />
         <label>
           <span>Name</span>
@@ -34,11 +52,11 @@
         }
 
         <div class="inline-actions">
-          <button type="submit" class="button button-primary">
-            {{ editingId() ? 'Update' : 'Create' }} {{ singularLabel() }}
+          <button type="submit" class="button button-primary" [disabled]="feedback.isBusy()">
+            {{ feedback.isBusy() ? 'Saving...' : ((editingId() ? 'Update' : 'Create') + ' ' + singularLabel()) }}
           </button>
           @if (editingId()) {
-            <button type="button" class="button button-secondary" (click)="startCreate()">Cancel</button>
+            <button type="button" class="button button-secondary" [disabled]="feedback.isBusy()" (click)="startCreate()">Cancel</button>
           }
         </div>
       </form>
@@ -52,8 +70,8 @@
             <div class="table-row">
               <strong>{{ record.name }}</strong>
               <div class="inline-actions table-actions">
-                <button type="button" class="button button-secondary" (click)="edit(record)">Edit</button>
-                <button type="button" class="button button-secondary" (click)="remove(record)">Delete</button>
+                <button type="button" class="button button-secondary" [disabled]="feedback.isBusy()" (click)="edit(record)">Edit</button>
+                <button type="button" class="button button-secondary" [disabled]="feedback.isBusy()" (click)="remove(record)">Delete</button>
               </div>
             </div>
           }

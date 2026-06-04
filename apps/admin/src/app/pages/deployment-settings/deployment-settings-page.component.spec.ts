@@ -8,8 +8,10 @@ import { WorkspaceStateService } from '../../features/pages/workspace-state.serv
 describe('DeploymentSettingsPageComponent', () => {
   let fixture: ComponentFixture<DeploymentSettingsPageComponent>;
   let state: WorkspaceStateService;
+  let resolveUpdateSelectedSite: (() => void) | null;
 
   beforeEach(async () => {
+    resolveUpdateSelectedSite = null;
     const selectedSite = {
       id: 'site-example',
       name: 'Example Site',
@@ -31,7 +33,13 @@ describe('DeploymentSettingsPageComponent', () => {
     state = {
       selectedSite: jasmine.createSpy('selectedSite').and.returnValue(selectedSite),
       error: jasmine.createSpy('error').and.returnValue(null),
-      updateSelectedSite: jasmine.createSpy('updateSelectedSite').and.resolveTo(),
+      clearError: jasmine.createSpy('clearError'),
+      updateSelectedSite: jasmine.createSpy('updateSelectedSite').and.callFake(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveUpdateSelectedSite = resolve;
+          }),
+      ),
       reportError: jasmine.createSpy('reportError'),
     } as unknown as WorkspaceStateService;
 
@@ -52,6 +60,13 @@ describe('DeploymentSettingsPageComponent', () => {
 
     const submitButton = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement | null;
     submitButton?.click();
+    fixture.detectChanges();
+
+    expect(submitButton?.disabled).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Saving deployment settings...');
+
+    resolveUpdateSelectedSite?.();
+
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -98,5 +113,6 @@ describe('DeploymentSettingsPageComponent', () => {
         2,
       ),
     });
+    expect(fixture.nativeElement.textContent).toContain('Deployment settings saved successfully.');
   });
 });

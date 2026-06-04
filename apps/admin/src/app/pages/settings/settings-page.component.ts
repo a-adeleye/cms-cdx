@@ -20,6 +20,7 @@ export class SettingsPageComponent {
       links: [
         { label: 'Sites', path: '/settings/sites' },
         { label: 'Site settings', path: '/settings/site-settings' },
+        { label: 'Templates', path: '/settings/templates' },
         { label: 'Landing page editor', path: '/landing-page-editor' },
       ],
     },

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { createPageActionFeedback } from '../../features/pages/page-feedback';
 import { ArticleStatus } from '../../features/pages/pages.model';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 
@@ -23,7 +24,7 @@ export class ArticleEditorPageComponent {
   readonly uploadingCoverImage = signal(false);
   readonly coverImageFileName = signal('');
   readonly coverImageError = signal<string | null>(null);
-  readonly formError = signal<string | null>(null);
+  readonly feedback = createPageActionFeedback();
 
   readonly articleForm = this.fb.nonNullable.group({
     id: [''],
@@ -66,6 +67,7 @@ export class ArticleEditorPageComponent {
         this.coverImageMode.set('url');
         this.coverImageFileName.set('');
         this.coverImageError.set(null);
+        this.feedback.clear();
         return;
       }
 
@@ -90,6 +92,7 @@ export class ArticleEditorPageComponent {
       this.coverImageMode.set(article.coverImageUrl ? 'url' : 'upload');
       this.coverImageFileName.set('');
       this.coverImageError.set(null);
+      this.feedback.clear();
     });
   }
 
@@ -139,13 +142,13 @@ export class ArticleEditorPageComponent {
   async saveArticle(): Promise<void> {
     if (this.articleForm.invalid) {
       this.articleForm.markAllAsTouched();
-      this.formError.set('Please fix the highlighted fields before saving.');
+      this.feedback.error('Please fix the highlighted fields before saving.');
       return;
     }
 
     const value = this.articleForm.getRawValue();
     try {
-      this.formError.set(null);
+      this.feedback.loading('Saving article...');
       this.state.clearError();
       const article = await this.state.saveArticle({
         id: value.id,
@@ -170,8 +173,7 @@ export class ArticleEditorPageComponent {
       });
       this.state.clearError();
     } catch (error) {
-      const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
-      this.state.reportError(`Unable to save article.${detail}`);
+      this.feedback.error(this.buildErrorMessage('Unable to save article.', error));
     }
   }
 
@@ -185,5 +187,10 @@ export class ArticleEditorPageComponent {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
+  }
+
+  private buildErrorMessage(message: string, error: unknown): string {
+    const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
+    return `${message}${detail}`;
   }
 }

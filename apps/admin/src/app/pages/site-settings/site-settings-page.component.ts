@@ -1,9 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { createPageActionFeedback } from '../../features/pages/page-feedback';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
-import { DEPLOY_PROVIDER_OPTIONS, TEMPLATE_OPTIONS } from '../../features/pages/site-config-options';
+import {
+  DEFAULT_TEMPLATE_SLUG,
+  DEPLOY_PROVIDER_OPTIONS,
+  templateSelectOptions,
+} from '../../features/pages/site-config-options';
 
 @Component({
   selector: 'app-site-settings-page',
@@ -16,6 +21,7 @@ import { DEPLOY_PROVIDER_OPTIONS, TEMPLATE_OPTIONS } from '../../features/pages/
 export class SiteSettingsPageComponent {
   private readonly fb = inject(FormBuilder);
   readonly state = inject(WorkspaceStateService);
+  readonly feedback = createPageActionFeedback();
 
   readonly siteSettingsForm = this.fb.nonNullable.group({
     templateKey: ['default-blog', [Validators.required]],
@@ -24,7 +30,9 @@ export class SiteSettingsPageComponent {
     previewDeployProvider: ['none', [Validators.required]],
   });
 
-  readonly templateOptions = TEMPLATE_OPTIONS;
+  readonly templateOptions = computed(() =>
+    templateSelectOptions(this.state.templates(), this.state.selectedSite().templateKey),
+  );
   readonly deployProviderOptions = DEPLOY_PROVIDER_OPTIONS;
 
   constructor() {
@@ -36,7 +44,7 @@ export class SiteSettingsPageComponent {
 
       this.siteSettingsForm.reset(
         {
-          templateKey: site.templateKey || 'default-blog',
+          templateKey: site.templateKey || this.templateOptions()[0]?.value || DEFAULT_TEMPLATE_SLUG,
           themeConfig: site.themeConfig,
           deployProvider: site.deployProvider || 'none',
           previewDeployProvider: site.previewDeployProvider || 'none',
@@ -49,6 +57,7 @@ export class SiteSettingsPageComponent {
   async saveSiteSettings(): Promise<void> {
     if (this.siteSettingsForm.invalid) {
       this.siteSettingsForm.markAllAsTouched();
+      this.feedback.error('Fix the highlighted fields to save the site settings.');
       return;
     }
 
@@ -59,15 +68,22 @@ export class SiteSettingsPageComponent {
       previewDeployProvider,
     } = this.siteSettingsForm.getRawValue();
     try {
+      this.state.clearError();
+      this.feedback.loading('Saving site settings...');
       await this.state.updateSelectedSite({
         templateKey,
         themeConfig,
         deployProvider,
         previewDeployProvider,
       });
+      this.feedback.success('Site settings saved successfully.');
     } catch (error) {
-      const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
-      this.state.reportError(`Unable to save site settings.${detail}`);
+      this.feedback.error(this.buildErrorMessage('Unable to save site settings.', error));
     }
+  }
+
+  private buildErrorMessage(message: string, error: unknown): string {
+    const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
+    return `${message}${detail}`;
   }
 }

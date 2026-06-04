@@ -1,0 +1,49 @@
+---
+import Avatar from './Avatar.astro';
+
+const { article = {}, compact = false, showMeta = true } = Astro.props;
+
+const title = article.title ?? 'Untitled article';
+const excerpt = article.excerpt ?? article.summary ?? '';
+const category = article.category ?? article.categoryName ?? 'Privacy Basics';
+const href = article.href ?? (article.slug ? `${article.hrefBase ?? '/articles'}/${article.slug}/` : '#');
+const date = article.publishedAt ?? article.date ?? 'Jan 24, 2026';
+const readTime = article.readTime ?? '4 min read';
+const author = article.authorName ?? article.author ?? 'Rene Carter';
+const artVariant = article.artVariant ?? 'lock';
+const thumbClass = compact ? 'anonime-article-art is-compact' : 'anonime-article-art';
+---
+
+<article class={`anonime-card anonime-article-card${compact ? ' is-compact' : ''}`}>
+  <a href={href} aria-label={title}>
+    <div class={thumbClass} data-art={artVariant} aria-hidden="true">
+      {article.image && <img src={article.image} alt="" />}
+    </div>
+  </a>
+
+  <div class="anonime-article-copy">
+    <p class="anonime-article-category">{category}</p>
+    <h3 class="anonime-article-title">
+      <a href={href}>{title}</a>
+    </h3>
+    {!compact && excerpt && <p class="anonime-article-excerpt">{excerpt}</p>}
+
+    {showMeta && (
+      <div class="anonime-article-footer">
+        <Avatar name={author} src={article.authorAvatar} alt={author} />
+        <span>{author}</span>
+        <span class="anonime-meta-separator" aria-hidden="true"></span>
+        <span>{date}</span>
+        <span class="anonime-meta-separator" aria-hidden="true"></span>
+        <span>{readTime}</span>
+        {!compact && (
+          <a class="anonime-article-arrow" href={href} aria-label={`Open ${title}`}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+              <path d="M7 12h10m0 0-4-4m4 4-4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </a>
+        )}
+      </div>
+    )}
+  </div>
+</article>

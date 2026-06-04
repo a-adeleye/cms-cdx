@@ -25,6 +25,7 @@ type workspaceResponse struct {
 	SelectedSiteID    string               `json:"selectedSiteId"`
 	SelectedArticleID string               `json:"selectedArticleId"`
 	Sites             []siteResponse       `json:"sites"`
+	Templates         []templateResponse   `json:"templates"`
 	LandingSections   []landingSectionResp `json:"landingSections"`
 	Articles          []articleResponse    `json:"articles"`
 	Authors           []authorResponse     `json:"authors"`
@@ -35,22 +36,29 @@ type workspaceResponse struct {
 }
 
 type siteResponse struct {
-	ID                    string `json:"id"`
-	Name                  string `json:"name"`
-	Slug                  string `json:"slug"`
-	Domain                string `json:"domain"`
-	BlogPath              string `json:"blogPath"`
-	Status                string `json:"status"`
-	TemplateKey           string `json:"templateKey"`
-	ThemeConfig           string `json:"themeConfig"`
-	DeployProvider        string `json:"deployProvider"`
-	DeployConfig          string `json:"deployConfig"`
-	PreviewDeployProvider string `json:"previewDeployProvider"`
-	PreviewDeployConfig   string `json:"previewDeployConfig"`
-	AIConfig              string `json:"aiConfig"`
-	StorageConfig         string `json:"storageConfig"`
+	ID                    string   `json:"id"`
+	Name                  string   `json:"name"`
+	Slug                  string   `json:"slug"`
+	Domain                string   `json:"domain"`
+	BlogPath              string   `json:"blogPath"`
+	Status                string   `json:"status"`
+	TemplateKey           string   `json:"templateKey"`
+	ThemeConfig           string   `json:"themeConfig"`
+	DeployProvider        string   `json:"deployProvider"`
+	DeployConfig          string   `json:"deployConfig"`
+	PreviewDeployProvider string   `json:"previewDeployProvider"`
+	PreviewDeployConfig   string   `json:"previewDeployConfig"`
+	AIConfig              string   `json:"aiConfig"`
+	StorageConfig         string   `json:"storageConfig"`
 	DeploymentWarnings    []string `json:"deploymentWarnings,omitempty"`
-	UpdatedAt             string `json:"updatedAt"`
+	UpdatedAt             string   `json:"updatedAt"`
+}
+
+type templateResponse struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Slug      string `json:"slug"`
+	UpdatedAt string `json:"updatedAt"`
 }
 
 type landingSectionResp struct {
@@ -109,6 +117,11 @@ type tagResponse struct {
 	SiteID string `json:"siteId"`
 	Name   string `json:"name"`
 	Slug   string `json:"slug"`
+}
+
+type templateUpsertRequest struct {
+	Name string `json:"name"`
+	Slug string `json:"slug"`
 }
 
 type mediaAssetResponse struct {
@@ -242,6 +255,45 @@ func (a *API) workspace(w http.ResponseWriter, r *http.Request) {
 	}
 	response.User = toUserResponse(*user)
 	writeJSON(w, http.StatusOK, response)
+}
+
+func (a *API) templates(w http.ResponseWriter, r *http.Request) {
+	if a.Services.DB == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database unavailable"})
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		items, err := a.listTemplates(r.Context())
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to load templates"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"items": items})
+	case http.MethodPost:
+		var payload templateUpsertRequest
+		if err := decodeJSON(r, &payload); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid template payload"})
+			return
+		}
+		template, err := a.createTemplate(r.Context(), payload)
+		if err != nil {
+			if errors.Is(err, errValidation) {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+				return
+			}
+			if isUniqueViolation(err) {
+				writeJSON(w, http.StatusConflict, map[string]string{"error": "template slug already exists"})
+				return
+			}
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to create template"})
+			return
+		}
+		writeJSON(w, http.StatusCreated, template)
+	default:
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+	}
 }
 
 func (a *API) sites(w http.ResponseWriter, r *http.Request) {
@@ -916,6 +968,10 @@ func (a *API) loadWorkspace(ctx context.Context, userID, selectedSiteID string) 
 	if err != nil {
 		return workspaceResponse{}, err
 	}
+	templates, err := a.listTemplates(ctx)
+	if err != nil {
+		return workspaceResponse{}, err
+	}
 
 	if selectedSiteID == "" && len(sites) > 0 {
 		selectedSiteID = sites[0].ID
@@ -959,6 +1015,7 @@ func (a *API) loadWorkspace(ctx context.Context, userID, selectedSiteID string) 
 		SelectedSiteID:    selectedSiteID,
 		SelectedArticleID: selectedArticleID,
 		Sites:             sites,
+		Templates:         templates,
 		LandingSections:   landingSections,
 		Articles:          articles,
 		Authors:           authors,
@@ -1042,8 +1099,58 @@ func (a *API) getSite(ctx context.Context, siteID string) (siteResponse, error) 
 	return site, nil
 }
 
+func (a *API) listTemplates(ctx context.Context) ([]templateResponse, error) {
+	rows, err := a.Services.DB.QueryContext(ctx, `
+		SELECT id::text, name, slug, updated_at
+		FROM templates
+		ORDER BY name ASC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]templateResponse, 0)
+	for rows.Next() {
+		var item templateResponse
+		var updatedAt time.Time
+		if err := rows.Scan(&item.ID, &item.Name, &item.Slug, &updatedAt); err != nil {
+			return nil, err
+		}
+		item.UpdatedAt = updatedAt.Format(time.RFC3339)
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (a *API) createTemplate(ctx context.Context, payload templateUpsertRequest) (templateResponse, error) {
+	name := strings.TrimSpace(payload.Name)
+	slug := strings.TrimSpace(payload.Slug)
+	if name == "" || slug == "" {
+		return templateResponse{}, fmt.Errorf("%w: template name and slug are required", errValidation)
+	}
+	if !templateSlugPattern.MatchString(slug) {
+		return templateResponse{}, fmt.Errorf("%w: template slug must use lowercase letters, numbers, and hyphens only", errValidation)
+	}
+
+	var item templateResponse
+	var updatedAt time.Time
+	if err := a.Services.DB.QueryRowContext(ctx, `
+		INSERT INTO templates (name, slug)
+		VALUES ($1, $2)
+		RETURNING id::text, name, slug, updated_at
+	`, name, slug).Scan(&item.ID, &item.Name, &item.Slug, &updatedAt); err != nil {
+		return templateResponse{}, err
+	}
+	item.UpdatedAt = updatedAt.Format(time.RFC3339)
+	return item, nil
+}
+
 func (a *API) createSite(ctx context.Context, payload siteUpsertRequest) (siteResponse, error) {
 	if err := validateSitePayload(payload); err != nil {
+		return siteResponse{}, err
+	}
+	if err := a.templateExists(ctx, fallbackString(payload.TemplateKey, "default-blog")); err != nil {
 		return siteResponse{}, err
 	}
 
@@ -1085,6 +1192,9 @@ func (a *API) updateSite(ctx context.Context, siteID string, payload siteUpsertR
 	if err := validateSitePayload(payload); err != nil {
 		return siteResponse{}, err
 	}
+	if err := a.templateExists(ctx, fallbackString(payload.TemplateKey, "default-blog")); err != nil {
+		return siteResponse{}, err
+	}
 
 	result, err := a.Services.DB.ExecContext(ctx, `
 		UPDATE sites
@@ -1117,6 +1227,25 @@ func (a *API) updateSite(ctx context.Context, siteID string, payload siteUpsertR
 func validateSitePayload(payload siteUpsertRequest) error {
 	if strings.TrimSpace(payload.Name) == "" || strings.TrimSpace(payload.Slug) == "" {
 		return fmt.Errorf("%w: name and slug are required", errValidation)
+	}
+	return nil
+}
+
+var templateSlugPattern = regexp.MustCompile(`^[a-z0-9-]+$`)
+
+func (a *API) templateExists(ctx context.Context, slug string) error {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return fmt.Errorf("%w: template key is required", errValidation)
+	}
+
+	var existing string
+	err := a.Services.DB.QueryRowContext(ctx, `SELECT slug FROM templates WHERE slug = $1`, slug).Scan(&existing)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("%w: unknown template %q", errValidation, slug)
+		}
+		return err
 	}
 	return nil
 }

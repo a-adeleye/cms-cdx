@@ -16,14 +16,32 @@
     <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
   }
 
+  @if (feedback.state(); as feedbackState) {
+    @if (feedbackState.kind !== 'idle' && feedbackState.message) {
+      <p
+        class="page-status"
+        [class.page-status--loading]="feedbackState.kind === 'loading'"
+        [class.page-status--success]="feedbackState.kind === 'success'"
+        [class.page-status--error]="feedbackState.kind === 'error'"
+        [attr.role]="feedbackState.kind === 'error' ? 'alert' : 'status'"
+        [attr.aria-live]="feedbackState.kind === 'error' ? 'assertive' : 'polite'"
+      >
+        @if (feedbackState.kind === 'loading') {
+          <span class="page-status__spinner" aria-hidden="true"></span>
+        }
+        <span class="page-status__message">{{ feedbackState.message }}</span>
+      </p>
+    }
+  }
+
   <section class="two-column">
     <article class="panel">
       <h2>Update site settings</h2>
-      <form class="form-grid" [formGroup]="siteSettingsForm" (ngSubmit)="saveSiteSettings()">
+      <form class="form-grid" [formGroup]="siteSettingsForm" (ngSubmit)="saveSiteSettings()" [attr.aria-busy]="feedback.isBusy()">
         <label>
           <span>Template</span>
           <select formControlName="templateKey">
-            @for (option of templateOptions; track option.value) {
+            @for (option of templateOptions(); track option.value) {
               <option [value]="option.value">{{ option.label }}</option>
             }
           </select>
@@ -50,7 +68,9 @@
           </select>
           <small class="field-help">Configure the selected provider on the deployment settings page.</small>
         </label>
-        <button class="button button-primary" type="submit">Save settings</button>
+        <button class="button button-primary" type="submit" [disabled]="feedback.isBusy()">
+          {{ feedback.isBusy() ? 'Saving...' : 'Save settings' }}
+        </button>
       </form>
     </article>
 

@@ -3,7 +3,10 @@ import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { TEMPLATE_OPTIONS } from '../../features/pages/site-config-options';
+import {
+  DEFAULT_TEMPLATE_SLUG,
+  templateSelectOptions,
+} from '../../features/pages/site-config-options';
 import { SiteRecord } from '../../features/pages/pages.model';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 
@@ -22,7 +25,6 @@ export class SitesPageComponent {
   private readonly fb = inject(FormBuilder);
   readonly state = inject(WorkspaceStateService);
   private siteDialogReturnFocus: HTMLElement | null = null;
-  readonly templateOptions = TEMPLATE_OPTIONS;
 
   readonly siteDialogMode = signal<'create' | 'edit' | null>(null);
   readonly editingSiteId = signal<string | null>(null);
@@ -42,6 +44,14 @@ export class SitesPageComponent {
     templateKey: ['default-blog', [Validators.required]],
     status: ['active' as 'active' | 'inactive', [Validators.required]],
   });
+  readonly templateOptions = computed(() =>
+    templateSelectOptions(
+      this.state.templates(),
+      this.siteDialogMode() === 'edit'
+        ? this.state.sites().find((site) => site.id === this.editingSiteId())?.templateKey ?? ''
+        : this.siteCreateForm.controls.templateKey.value,
+    ),
+  );
 
   readonly sites = computed(() => this.state.sites());
 
@@ -188,7 +198,7 @@ export class SitesPageComponent {
       slug: '',
       domain: '',
       blogPath: '/articles',
-      templateKey: 'default-blog',
+      templateKey: this.templateOptions()[0]?.value || DEFAULT_TEMPLATE_SLUG,
     });
   }
 

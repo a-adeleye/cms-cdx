@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
+import { createPageActionFeedback } from '../../features/pages/page-feedback';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 
 @Component({
@@ -15,7 +16,7 @@ export class ArticleDetailsPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly state = inject(WorkspaceStateService);
-  readonly successMessage = signal<string | null>(null);
+  readonly feedback = createPageActionFeedback();
 
   async ngOnInit(): Promise<void> {
     const articleId = this.route.snapshot.paramMap.get('articleId')?.trim();
@@ -26,7 +27,7 @@ export class ArticleDetailsPageComponent implements OnInit {
 
     const flashMessage = window.history.state?.flashMessage;
     if (typeof flashMessage === 'string' && flashMessage.trim()) {
-      this.successMessage.set(flashMessage);
+      this.feedback.success(flashMessage);
     }
 
     await this.state.selectArticle(articleId);
@@ -46,14 +47,14 @@ export class ArticleDetailsPageComponent implements OnInit {
     }
 
     try {
+      this.feedback.loading('Deleting article...');
       this.state.clearError();
       await this.state.deleteArticle(article.id);
       void this.router.navigate(['/articles'], {
         state: { flashMessage: 'Article deleted successfully.' },
       });
     } catch (error) {
-      const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
-      this.state.reportError(`Unable to delete article.${detail}`);
+      this.feedback.error(this.buildErrorMessage('Unable to delete article.', error));
     }
   }
 
@@ -77,5 +78,10 @@ export class ArticleDetailsPageComponent implements OnInit {
 
   tagName(tagId: string): string {
     return this.state.tags().find((tag) => tag.id === tagId)?.name ?? tagId;
+  }
+
+  private buildErrorMessage(message: string, error: unknown): string {
+    const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
+    return `${message}${detail}`;
   }
 }

@@ -87,7 +87,7 @@
             <label>
               <span>Template</span>
               <select formControlName="templateKey">
-                @for (option of templateOptions; track option.value) {
+                @for (option of templateOptions(); track option.value) {
                   <option [value]="option.value">{{ option.label }}</option>
                 }
               </select>
@@ -144,7 +144,7 @@
             <label>
               <span>Template</span>
               <select formControlName="templateKey">
-                @for (option of templateOptions; track option.value) {
+                @for (option of templateOptions(); track option.value) {
                   <option [value]="option.value">{{ option.label }}</option>
                 }
               </select>

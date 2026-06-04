@@ -10,6 +10,7 @@ import {
   LandingSectionRecord,
   MediaAssetRecord,
   SiteRecord,
+  TemplateRecord,
   TagRecord,
 } from './pages.model';
 import { AuthTokenService } from './auth-token.service';
@@ -31,6 +32,7 @@ interface WorkspaceResponse {
   selectedSiteId: string;
   selectedArticleId: string | null;
   sites: SiteRecord[];
+  templates: TemplateRecord[];
   landingSections: LandingSectionRecord[];
   articles: ArticleRecord[];
   authors: Array<{ id: string; siteId: string; name: string; slug: string; bio: string }>;
@@ -75,6 +77,11 @@ interface SiteUpsertPayload {
   previewDeployConfig: string;
   aiConfig: string;
   storageConfig: string;
+}
+
+interface TemplateUpsertPayload {
+  name: string;
+  slug: string;
 }
 
 interface LandingOrderPayload {
@@ -138,6 +145,14 @@ export class AdminApiService {
   async loadWorkspace(siteId?: string): Promise<WorkspaceResponse> {
     const url = siteId ? `${this.baseUrl}/workspace?siteId=${encodeURIComponent(siteId)}` : `${this.baseUrl}/workspace`;
     return firstValueFrom(this.http.get<WorkspaceResponse>(url, { headers: this.headers() }));
+  }
+
+  async listTemplates(): Promise<ItemsResponse<TemplateRecord>> {
+    return firstValueFrom(this.http.get<ItemsResponse<TemplateRecord>>(`${this.baseUrl}/templates`, { headers: this.headers() }));
+  }
+
+  async createTemplate(payload: TemplateUpsertPayload): Promise<TemplateRecord> {
+    return firstValueFrom(this.http.post<TemplateRecord>(`${this.baseUrl}/templates`, payload, { headers: this.headers() }));
   }
 
   async createSite(payload: SiteUpsertPayload): Promise<SiteRecord> {

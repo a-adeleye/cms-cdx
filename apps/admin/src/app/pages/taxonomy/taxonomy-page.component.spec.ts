@@ -108,6 +108,7 @@ describe('TaxonomyPageComponent', () => {
       fixture.componentInstance.form.controls.name.setValue('Editorial');
       fixture.componentInstance.form.controls.description.setValue('Editorial content');
       await fixture.componentInstance.save();
+      fixture.detectChanges();
 
       expect(state.clearError).toHaveBeenCalled();
       expect(state.saveCategory).toHaveBeenCalledWith({
@@ -115,6 +116,7 @@ describe('TaxonomyPageComponent', () => {
         name: 'Editorial',
         description: 'Editorial content',
       });
+      expect(fixture.nativeElement.textContent).toContain('Categories saved successfully.');
 
       fixture.componentInstance.edit(category);
       fixture.detectChanges();
@@ -122,8 +124,10 @@ describe('TaxonomyPageComponent', () => {
 
       spyOn(window, 'confirm').and.returnValue(true);
       await fixture.componentInstance.remove(category);
+      fixture.detectChanges();
 
       expect(state.deleteCategory).toHaveBeenCalledWith('category-1');
+      expect(fixture.nativeElement.textContent).toContain('Categories deleted successfully.');
     });
   });
 
@@ -153,17 +157,21 @@ describe('TaxonomyPageComponent', () => {
 
       fixture.componentInstance.form.controls.name.setValue('Launch');
       await fixture.componentInstance.save();
+      fixture.detectChanges();
 
       expect(state.clearError).toHaveBeenCalled();
       expect(state.saveTag).toHaveBeenCalledWith({
         id: undefined,
         name: 'Launch',
       });
+      expect(fixture.nativeElement.textContent).toContain('Tags saved successfully.');
 
       spyOn(window, 'confirm').and.returnValue(true);
       await fixture.componentInstance.remove(tag);
+      fixture.detectChanges();
 
       expect(state.deleteTag).toHaveBeenCalledWith('tag-1');
+      expect(fixture.nativeElement.textContent).toContain('Tags deleted successfully.');
     });
   });
 });

@@ -8,6 +8,7 @@ import { WorkspaceStateService } from '../../features/pages/workspace-state.serv
 describe('ArticleEditorPageComponent', () => {
   let fixture: ComponentFixture<ArticleEditorPageComponent>;
   let router: Router;
+  let resolveSaveArticle: ((value: { id: string }) => void) | null;
 
   const fakeState = {
     selectedArticle: () => ({
@@ -42,7 +43,12 @@ describe('ArticleEditorPageComponent', () => {
     ],
     reportError: jasmine.createSpy('reportError'),
     clearError: jasmine.createSpy('clearError'),
-    saveArticle: jasmine.createSpy('saveArticle').and.resolveTo({ id: 'article-1' }),
+    saveArticle: jasmine.createSpy('saveArticle').and.callFake(
+      () =>
+        new Promise<{ id: string }>((resolve) => {
+          resolveSaveArticle = resolve;
+        }),
+    ),
     selectArticle: jasmine.createSpy('selectArticle').and.resolveTo(),
     uploadMediaFile: jasmine.createSpy('uploadMediaFile').and.resolveTo({
       id: 'media-1',
@@ -58,6 +64,7 @@ describe('ArticleEditorPageComponent', () => {
   };
 
   beforeEach(async () => {
+    resolveSaveArticle = null;
     await TestBed.configureTestingModule({
       imports: [CommonModule, RouterModule, RouterTestingModule, ArticleEditorPageComponent],
       providers: [{ provide: WorkspaceStateService, useValue: fakeState }],
@@ -98,6 +105,12 @@ describe('ArticleEditorPageComponent', () => {
     fixture.componentInstance.articleForm.controls.contentMarkdown.setValue('# Example article\n\nBody text for the save test.');
     const saveButton = fixture.nativeElement.querySelector('.hero-actions .button-primary') as HTMLButtonElement | null;
     saveButton?.click();
+    fixture.detectChanges();
+
+    expect(saveButton?.disabled).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Saving article...');
+
+    resolveSaveArticle?.({ id: 'article-1' });
 
     await fixture.whenStable();
 

@@ -1,0 +1,74 @@
+---
+const { blogPath = '/articles' } = Astro.props;
+---
+
+<footer class="anonime-footer">
+  <section class="anonime-footer-brand">
+    <a class="anonime-brand" href="/">
+      <span class="anonime-brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+          <path d="M12 2.5 20 6.8v6.8c0 4.6-3.4 7.7-8 8.9-4.6-1.2-8-4.3-8-8.9V6.8L12 2.5Z" fill="currentColor" />
+          <path d="M9.2 12.2a2.8 2.8 0 1 1 5.6 0c0 1.1-.6 2.1-1.5 2.6l.3 2.3h-3.2l.3-2.3a2.8 2.8 0 0 1-1.5-2.6Z" fill="#fff" opacity=".92" />
+        </svg>
+      </span>
+      <span>anonime</span>
+    </a>
+    <p>Private communication without permanent trails.</p>
+
+    <div class="anonime-social-row" aria-label="Social links">
+      <a class="anonime-social-link" href="#" aria-label="X">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+          <path d="M17.5 4.5 13.4 9l5.9 10.5h-4.2L10.9 12.8l-4.7 6.7H2.4l4.4-6.1L1 4.5h4.3l4.7 8.6 5.9-8.6h1.6Z" fill="currentColor" />
+        </svg>
+      </a>
+      <a class="anonime-social-link" href="#" aria-label="LinkedIn">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+          <path d="M6.8 8.6H3.7V20h3.1V8.6ZM5.2 3.8A1.8 1.8 0 1 0 5.2 7a1.8 1.8 0 0 0 0-3.2ZM20.3 20h-3.1v-5.8c0-1.4 0-3.2-2-3.2s-2.3 1.6-2.3 3.1V20h-3.1V8.6h3v1.6h.1c.4-.8 1.4-1.8 3-1.8 3.2 0 3.8 2.1 3.8 4.8V20Z" fill="currentColor" />
+        </svg>
+      </a>
+      <a class="anonime-social-link" href="#" aria-label="GitHub">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+          <path d="M12 2.3a9.7 9.7 0 0 0-3 .5 9.8 9.8 0 0 0-1 .4 10 10 0 0 0-5.8 9.1c0 4.2 2.6 7.9 6.5 9.3.5.1.7-.2.7-.5v-1.8c-2.7.6-3.3-1.1-3.3-1.1-.4-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 0 1.6 1 1.6 1 .9 1.5 2.4 1.1 3 .8.1-.7.4-1.1.7-1.3-2.1-.2-4.3-1-4.3-4.5 0-1 .4-1.8 1-2.5-.1-.3-.4-1.2.1-2.5 0 0 .8-.2 2.6 1a8.8 8.8 0 0 1 4.8 0c1.8-1.2 2.6-1 2.6-1 .5 1.3.2 2.2.1 2.5.6.7 1 1.5 1 2.5 0 3.6-2.2 4.3-4.3 4.5.5.4.8 1 .8 2.1v3.1c0 .3.2.6.8.5a10 10 0 0 0 6.4-9.3 10 10 0 0 0-5.9-9.1 9.8 9.8 0 0 0-1-.4 9.7 9.7 0 0 0-3-.5Z" fill="currentColor" />
+        </svg>
+      </a>
+    </div>
+    <p class="anonime-footer-note">© 2026 Anonime. Your identity, your rules.</p>
+  </section>
+
+  <nav class="anonime-footer-links" aria-label="Footer navigation">
+    <div>
+      <h3>Product</h3>
+      <ul>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#nyns">Nyns</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Resources</h3>
+      <ul>
+        <li><a href={blogPath}>Blog</a></li>
+        <li><a href="#guides">Guides</a></li>
+        <li><a href="#help-center">Help Center</a></li>
+        <li><a href="#status">Status</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Company</h3>
+      <ul>
+        <li><a href="#about">About</a></li>
+        <li><a href="#privacy">Privacy</a></li>
+        <li><a href="#terms">Terms</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <aside class="anonime-footer-card">
+    <div class="anonime-badge anonime-badge-ghost">One platform</div>
+    <h3>One platform. Separate lives.</h3>
+    <p>Take control of your privacy with end-to-end encrypted communication.</p>
+    <a class="anonime-button anonime-button-primary" href="#get-started">Get Started</a>
+  </aside>
+</footer>

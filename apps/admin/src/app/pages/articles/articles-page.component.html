@@ -8,7 +8,7 @@
       </div>
 
       <div class="hero-actions">
-        <button class="button button-primary" type="button" (click)="startArticle()">New article</button>
+        <button class="button button-primary" type="button" [disabled]="feedback.isBusy()" (click)="startArticle()">New article</button>
       </div>
     </div>
   </header>
@@ -17,8 +17,22 @@
     <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
   }
 
-  @if (successMessage()) {
-    <p class="page-error" role="status" aria-live="polite">{{ successMessage() }}</p>
+  @if (feedback.state(); as feedbackState) {
+    @if (feedbackState.kind !== 'idle' && feedbackState.message) {
+      <p
+        class="page-status"
+        [class.page-status--loading]="feedbackState.kind === 'loading'"
+        [class.page-status--success]="feedbackState.kind === 'success'"
+        [class.page-status--error]="feedbackState.kind === 'error'"
+        [attr.role]="feedbackState.kind === 'error' ? 'alert' : 'status'"
+        [attr.aria-live]="feedbackState.kind === 'error' ? 'assertive' : 'polite'"
+      >
+        @if (feedbackState.kind === 'loading') {
+          <span class="page-status__spinner" aria-hidden="true"></span>
+        }
+        <span class="page-status__message">{{ feedbackState.message }}</span>
+      </p>
+    }
   }
 
   <section class="panel">
@@ -48,12 +62,12 @@
               <small>{{ article.status }} - {{ article.updatedAt | date: 'mediumDate' }}</small>
             </div>
             <div class="inline-actions">
-              <button type="button" class="button button-secondary" (click)="openArticle(article.id)">Edit</button>
-              <button type="button" class="button button-secondary" (click)="toggleFeatured(article.id)">
+              <button type="button" class="button button-secondary" [disabled]="feedback.isBusy()" (click)="openArticle(article.id)">Edit</button>
+              <button type="button" class="button button-secondary" [disabled]="feedback.isBusy()" (click)="toggleFeatured(article.id)">
                 {{ article.isFeatured ? 'Unfeature' : 'Feature' }}
               </button>
-              <button type="button" class="button button-secondary" (click)="setStatus(article.id, 'review')">Review</button>
-              <button type="button" class="button button-secondary" (click)="setStatus(article.id, 'published')">Publish</button>
+              <button type="button" class="button button-secondary" [disabled]="feedback.isBusy()" (click)="setStatus(article.id, 'review')">Review</button>
+              <button type="button" class="button button-secondary" [disabled]="feedback.isBusy()" (click)="setStatus(article.id, 'published')">Publish</button>
             </div>
           </article>
         }

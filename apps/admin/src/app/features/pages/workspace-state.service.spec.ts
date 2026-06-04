@@ -63,6 +63,20 @@ describe('WorkspaceStateService', () => {
           updatedAt: '2026-05-23T00:00:00.000Z',
         },
       ],
+      templates: [
+        {
+          id: 'template-default',
+          name: 'Default Blog',
+          slug: 'default-blog',
+          updatedAt: '2026-05-23T00:00:00.000Z',
+        },
+        {
+          id: 'template-premium',
+          name: 'Premium SaaS',
+          slug: 'premium-saas',
+          updatedAt: '2026-05-23T00:00:00.000Z',
+        },
+      ],
       landingSections: [],
       articles: [
         {

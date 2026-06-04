@@ -249,6 +249,26 @@ func themeForSite(site models.Site) themeVariant {
 	brand := themeString(site.ThemeConfig, "brand", site.Name)
 	_ = brand
 	switch strings.ToLower(strings.TrimSpace(site.TemplateKey)) {
+	case "anonime":
+		return themeVariant{
+			Name:                   "anonime",
+			Background:             "#f7fbfa",
+			Surface:                "rgba(255, 255, 255, 0.92)",
+			SurfaceStrong:          "#ffffff",
+			Text:                   "#0f1728",
+			Muted:                  "#5b6474",
+			Accent:                 "#10b26c",
+			AccentContrast:         "#ffffff",
+			Border:                 "rgba(18, 28, 43, 0.1)",
+			LayoutClass:            "anonime-layout",
+			CardClass:              "anonime-card",
+			HeroClass:              "anonime-hero",
+			ArticleAsideClass:      "anonime-aside",
+			ArticleBodyClass:       "anonime-body",
+			ArticleGridColumns:     "repeat(2, minmax(0, 1fr))",
+			SecondaryAccent:        "#059669",
+			FeatureBadgeBackground: "rgba(16, 178, 108, 0.1)",
+		}
 	case "premium-saas":
 		return themeVariant{
 			Name:                   "premium-saas",
@@ -310,6 +330,15 @@ func writeFile(path, contents string) error {
 }
 
 func renderHomePage(site renderedSite) string {
+	switch site.Theme.Name {
+	case "anonime":
+		return renderAnonimeHomePage(site)
+	default:
+		return renderDefaultHomePage(site)
+	}
+}
+
+func renderDefaultHomePage(site renderedSite) string {
 	var body strings.Builder
 	body.WriteString(`<section class="hero">`)
 	body.WriteString(`<p class="eyebrow">`)
@@ -381,6 +410,15 @@ func renderHomePage(site renderedSite) string {
 }
 
 func renderArticlesPage(site renderedSite) string {
+	switch site.Theme.Name {
+	case "anonime":
+		return renderAnonimeArticlesPage(site)
+	default:
+		return renderDefaultArticlesPage(site)
+	}
+}
+
+func renderDefaultArticlesPage(site renderedSite) string {
 	var body strings.Builder
 	body.WriteString(`<section class="hero compact">`)
 	body.WriteString(`<p class="eyebrow">ARTICLES</p>`)
@@ -404,6 +442,15 @@ func renderArticlesPage(site renderedSite) string {
 }
 
 func renderArticlePage(site renderedSite, article ArticleContent) string {
+	switch site.Theme.Name {
+	case "anonime":
+		return renderAnonimeArticlePage(site, article)
+	default:
+		return renderDefaultArticlePage(site, article)
+	}
+}
+
+func renderDefaultArticlePage(site renderedSite, article ArticleContent) string {
 	var body strings.Builder
 	body.WriteString(`<article class="article-layout">`)
 	body.WriteString(`<header class="article-hero">`)
@@ -545,7 +592,7 @@ func pageTitle(site renderedSite, title string) string {
 }
 
 func renderStyles(theme themeVariant) string {
-	return strings.NewReplacer(
+	styles := strings.NewReplacer(
 		"{{background}}", theme.Background,
 		"{{surface}}", theme.Surface,
 		"{{surfaceStrong}}", theme.SurfaceStrong,
@@ -557,6 +604,10 @@ func renderStyles(theme themeVariant) string {
 		"{{secondaryAccent}}", theme.SecondaryAccent,
 		"{{featureBadgeBackground}}", theme.FeatureBadgeBackground,
 	).Replace(baseStyles())
+	if theme.Name == "anonime" {
+		styles += anonimeStyles()
+	}
+	return styles
 }
 
 func baseStyles() string {

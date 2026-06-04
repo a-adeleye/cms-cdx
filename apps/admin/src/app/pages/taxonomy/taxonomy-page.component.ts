@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { createPageActionFeedback } from '../../features/pages/page-feedback';
 import { CategoryRecord, TagRecord } from '../../features/pages/pages.model';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 
@@ -19,6 +20,7 @@ type TaxonomyRecord = CategoryRecord | TagRecord;
 export class TaxonomyPageComponent {
   readonly kind = input.required<TaxonomyKind>();
   readonly state = inject(WorkspaceStateService);
+  readonly feedback = createPageActionFeedback();
 
   private readonly fb = inject(FormBuilder);
 
@@ -37,11 +39,13 @@ export class TaxonomyPageComponent {
 
   startCreate(): void {
     this.state.clearError();
+    this.feedback.clear();
     this.resetForm();
   }
 
   edit(record: TaxonomyRecord): void {
     this.state.clearError();
+    this.feedback.clear();
     this.editingId.set(record.id);
     this.form.reset(
       {
@@ -56,20 +60,23 @@ export class TaxonomyPageComponent {
   async save(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.feedback.error(`Fix the highlighted fields to save the ${this.singularLabel()}.`);
       return;
     }
 
     const { id, name, description } = this.form.getRawValue();
     try {
       this.state.clearError();
+      this.feedback.loading(`Saving ${this.singularLabel()}...`);
       if (this.isCategoryPage()) {
         await this.state.saveCategory({ id: id.trim() || undefined, name, description });
       } else {
         await this.state.saveTag({ id: id.trim() || undefined, name });
       }
+      this.feedback.success(`${this.pageTitle()} saved successfully.`);
       this.resetForm();
     } catch (error) {
-      this.reportActionError(`Unable to save ${this.singularLabel()}.`, error);
+      this.feedback.error(this.buildErrorMessage(`Unable to save ${this.singularLabel()}.`, error));
     }
   }
 
@@ -81,16 +88,18 @@ export class TaxonomyPageComponent {
 
     try {
       this.state.clearError();
+      this.feedback.loading(`Deleting ${this.singularLabel()}...`);
       if (this.isCategoryPage()) {
         await this.state.deleteCategory(record.id);
       } else {
         await this.state.deleteTag(record.id);
       }
+      this.feedback.success(`${this.pageTitle()} deleted successfully.`);
       if (this.editingId() === record.id) {
         this.resetForm();
       }
     } catch (error) {
-      this.reportActionError(`Unable to delete ${this.singularLabel()}.`, error);
+      this.feedback.error(this.buildErrorMessage(`Unable to delete ${this.singularLabel()}.`, error));
     }
   }
 
@@ -114,8 +123,8 @@ export class TaxonomyPageComponent {
     return globalThis.confirm(`Delete ${record.name}? This cannot be undone.`);
   }
 
-  private reportActionError(message: string, error: unknown): void {
+  private buildErrorMessage(message: string, error: unknown): string {
     const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
-    this.state.reportError(`${message}${detail}`);
+    return `${message}${detail}`;
   }
 }

@@ -11,6 +11,7 @@ import { ArticleEditorPageComponent } from '../../pages/article-editor/article-e
 import { ArticleDetailsPageComponent } from '../../pages/article-details/article-details-page.component';
 import { PublishingPageComponent } from '../../pages/publishing/publishing-page.component';
 import { DeploymentSettingsPageComponent } from '../../pages/deployment-settings/deployment-settings-page.component';
+import { TemplatesPageComponent } from '../../pages/templates/templates-page.component';
 
 const pageRoutes: Routes = WORKSPACE_PAGES.filter(
   (page) =>
@@ -45,6 +46,10 @@ const routes: Routes = [
       {
         path: 'site-settings',
         component: SiteSettingsPageComponent,
+      },
+      {
+        path: 'templates',
+        component: TemplatesPageComponent,
       },
       {
         path: 'deployment-settings',
@@ -109,6 +114,11 @@ const routes: Routes = [
   {
     path: 'deployment-settings',
     redirectTo: 'settings/deployment-settings',
+    pathMatch: 'full',
+  },
+  {
+    path: 'templates',
+    redirectTo: 'settings/templates',
     pathMatch: 'full',
   },
   {

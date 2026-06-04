@@ -30,6 +30,10 @@ describe('SitesPageComponent', () => {
   beforeEach(async () => {
     fakeState = {
       selectedSite: jasmine.createSpy('selectedSite').and.returnValue(selectedSite),
+      templates: jasmine.createSpy('templates').and.returnValue([
+        { id: 'template-default', name: 'Default Blog', slug: 'default-blog', updatedAt: '2026-05-23T00:00:00.000Z' },
+        { id: 'template-premium', name: 'Premium SaaS', slug: 'premium-saas', updatedAt: '2026-05-23T00:00:00.000Z' },
+      ]),
       sites: jasmine.createSpy('sites').and.returnValue([selectedSite]),
       selectedSiteId: jasmine.createSpy('selectedSiteId').and.returnValue('site-example'),
       createSite: jasmine.createSpy('createSite').and.resolveTo(selectedSite),

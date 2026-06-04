@@ -1,7 +1,11 @@
-export const TEMPLATE_OPTIONS = [
-  { value: 'default-blog', label: 'Default Blog' },
-  { value: 'premium-saas', label: 'Premium SaaS' },
-];
+import { TemplateRecord } from './pages.model';
+
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
+export const DEFAULT_TEMPLATE_SLUG = 'default-blog';
 
 export const DEPLOY_PROVIDER_OPTIONS = [
   { value: 'none', label: 'None' },
@@ -10,6 +14,23 @@ export const DEPLOY_PROVIDER_OPTIONS = [
   { value: 'firebase', label: 'Firebase' },
   { value: 's3', label: 'S3 / MinIO' },
 ];
+
+export function templateSelectOptions(templates: TemplateRecord[], currentValue = ''): SelectOption[] {
+  const options = templates.map((template) => ({
+    value: template.slug,
+    label: template.name,
+  }));
+
+  const fallbackValue = currentValue.trim() || DEFAULT_TEMPLATE_SLUG;
+  if (!options.some((option) => option.value === fallbackValue)) {
+    options.unshift({
+      value: fallbackValue,
+      label: humanizeTemplateSlug(fallbackValue),
+    });
+  }
+
+  return options;
+}
 
 const DEPLOY_CONFIG_TEMPLATES: Record<string, Record<string, string>> = {
   none: {
@@ -96,4 +117,12 @@ function matchesTemplate(parsed: Record<string, unknown>, template: Record<strin
     return false;
   }
   return templateKeys.every((key) => parsed[key] === template[key]);
+}
+
+function humanizeTemplateSlug(value: string): string {
+  return value
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }

@@ -10,6 +10,8 @@
   },
   "deploy_provider": "none",
   "deploy_config": {},
+  "preview_deploy_provider": "none",
+  "preview_deploy_config": {},
   "ai_config": {
     "provider": "none",
     "model": "",
@@ -20,4 +22,3 @@
     "provider": "s3"
   }
 }
-

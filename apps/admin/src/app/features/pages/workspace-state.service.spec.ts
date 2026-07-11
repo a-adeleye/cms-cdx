@@ -26,10 +26,13 @@ describe('WorkspaceStateService', () => {
       'createTag',
       'updateTag',
       'deleteTag',
+      'deleteArticle',
+      'updateArticle',
       'updateLandingSection',
       'reorderLandingSections',
       'createBuild',
       'createMediaAsset',
+      'uploadMediaFile',
     ]);
 
     api.loadWorkspace.and.callFake(async (siteId?: string) => ({
@@ -53,13 +56,53 @@ describe('WorkspaceStateService', () => {
           themeConfig: '{}',
           deployProvider: '',
           deployConfig: '{}',
+          previewDeployProvider: '',
+          previewDeployConfig: '{}',
           aiConfig: '{}',
           storageConfig: '{}',
           updatedAt: '2026-05-23T00:00:00.000Z',
         },
       ],
+      templates: [
+        {
+          id: 'template-default',
+          name: 'Default Blog',
+          slug: 'default-blog',
+          updatedAt: '2026-05-23T00:00:00.000Z',
+        },
+        {
+          id: 'template-premium',
+          name: 'Premium SaaS',
+          slug: 'premium-saas',
+          updatedAt: '2026-05-23T00:00:00.000Z',
+        },
+      ],
       landingSections: [],
-      articles: [],
+      articles: [
+        {
+          id: 'article-1',
+          siteId: siteId === 'site-new' ? 'site-new' : 'site-example',
+          authorId: 'author-1',
+          categoryId: 'category-1',
+          title: 'Saved article',
+          slug: 'saved-article',
+          excerpt: 'A short test article.',
+          contentMarkdown: '# Saved article\n\nBody copy for the test article.',
+          coverImageUrl: '',
+          status: 'draft',
+          isFeatured: false,
+          publishedAt: null,
+          seoTitle: 'Saved article',
+          seoDescription: 'A test article for the CMS builder.',
+          canonicalUrl: 'https://example.test/articles/saved-article/',
+          generatedByAi: false,
+          humanReviewed: false,
+          aiPrompt: '',
+          aiModel: '',
+          tagIds: [],
+          updatedAt: '2026-05-23T00:00:00.000Z',
+        },
+      ],
       authors: [],
       categories: [],
       tags: [],
@@ -97,6 +140,8 @@ describe('WorkspaceStateService', () => {
       themeConfig: '{}',
       deployProvider: '',
       deployConfig: '{}',
+      previewDeployProvider: '',
+      previewDeployConfig: '{}',
       aiConfig: '{}',
       storageConfig: '{}',
       updatedAt: '2026-05-23T00:00:00.000Z',
@@ -153,6 +198,41 @@ describe('WorkspaceStateService', () => {
       slug: 'updated-tag',
     });
     api.deleteTag.and.resolveTo();
+    api.deleteArticle.and.resolveTo();
+    api.updateArticle.and.resolveTo({
+      id: 'article-1',
+      siteId: 'site-example',
+      authorId: 'author-1',
+      categoryId: 'category-1',
+      title: 'Saved article',
+      slug: 'saved-article',
+      excerpt: 'A short test article.',
+      contentMarkdown: '# Saved article\n\nBody copy for the test article.',
+      coverImageUrl: '',
+      status: 'draft',
+      isFeatured: false,
+      publishedAt: null,
+      seoTitle: 'Saved article',
+      seoDescription: 'A test article for the CMS builder.',
+      canonicalUrl: 'https://example.test/articles/saved-article/',
+      generatedByAi: false,
+      humanReviewed: false,
+      aiPrompt: '',
+      aiModel: '',
+      tagIds: [],
+      updatedAt: '2026-05-23T00:00:00.000Z',
+    });
+    api.uploadMediaFile.and.resolveTo({
+      id: 'media-new',
+      siteId: 'site-example',
+      fileName: 'cover.jpg',
+      fileUrl: 'https://cdn.example/cover.jpg',
+      mimeType: 'image/jpeg',
+      sizeBytes: 1024,
+      storageProvider: 'minio',
+      storageKey: 'site-example/cover.jpg',
+      altText: 'Cover image',
+    });
 
     await TestBed.configureTestingModule({
       providers: [
@@ -231,5 +311,38 @@ describe('WorkspaceStateService', () => {
     });
     expect(api.deleteTag).toHaveBeenCalledWith('site-example', 'tag-1');
     expect(api.loadWorkspace).toHaveBeenCalledTimes(7);
+  });
+
+  it('uploads media without reloading the workspace', async () => {
+    await service.login('admin@example.com', 'admin123');
+    const before = api.loadWorkspace.calls.count();
+
+    const file = new File(['fake-image'], 'cover.jpg', { type: 'image/jpeg' });
+    const media = await service.uploadMediaFile(file, 'Cover image');
+
+    expect(api.uploadMediaFile).toHaveBeenCalledWith('site-example', file, 'Cover image');
+    expect(api.loadWorkspace.calls.count()).toBe(before);
+    expect(media.id).toBe('media-new');
+    expect(service.mediaAssets().some((asset) => asset.id === 'media-new')).toBeTrue();
+  });
+
+  it('deletes articles through the API and refreshes the workspace', async () => {
+    await service.login('admin@example.com', 'admin123');
+    const before = api.loadWorkspace.calls.count();
+
+    await service.deleteArticle('article-1');
+
+    expect(api.deleteArticle).toHaveBeenCalledWith('article-1');
+    expect(api.loadWorkspace.calls.count()).toBe(before + 1);
+  });
+
+  it('updates article status and featured state through the dedicated patch path', async () => {
+    await service.login('admin@example.com', 'admin123');
+
+    await service.setArticleStatus('article-1', 'review');
+    await service.toggleFeatured('article-1');
+
+    expect(api.updateArticle).toHaveBeenCalledWith('article-1', jasmine.objectContaining({ status: 'review' }));
+    expect(api.updateArticle).toHaveBeenCalledWith('article-1', jasmine.objectContaining({ isFeatured: true }));
   });
 });

@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -14,6 +16,7 @@ import (
 	"cms-builder/api/internal/builder"
 	"cms-builder/api/internal/middleware"
 	"cms-builder/api/internal/models"
+	"cms-builder/api/internal/storage"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -22,6 +25,7 @@ type workspaceResponse struct {
 	SelectedSiteID    string               `json:"selectedSiteId"`
 	SelectedArticleID string               `json:"selectedArticleId"`
 	Sites             []siteResponse       `json:"sites"`
+	Templates         []templateResponse   `json:"templates"`
 	LandingSections   []landingSectionResp `json:"landingSections"`
 	Articles          []articleResponse    `json:"articles"`
 	Authors           []authorResponse     `json:"authors"`
@@ -32,19 +36,29 @@ type workspaceResponse struct {
 }
 
 type siteResponse struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Slug           string `json:"slug"`
-	Domain         string `json:"domain"`
-	BlogPath       string `json:"blogPath"`
-	Status         string `json:"status"`
-	TemplateKey    string `json:"templateKey"`
-	ThemeConfig    string `json:"themeConfig"`
-	DeployProvider string `json:"deployProvider"`
-	DeployConfig   string `json:"deployConfig"`
-	AIConfig       string `json:"aiConfig"`
-	StorageConfig  string `json:"storageConfig"`
-	UpdatedAt      string `json:"updatedAt"`
+	ID                    string   `json:"id"`
+	Name                  string   `json:"name"`
+	Slug                  string   `json:"slug"`
+	Domain                string   `json:"domain"`
+	BlogPath              string   `json:"blogPath"`
+	Status                string   `json:"status"`
+	TemplateKey           string   `json:"templateKey"`
+	ThemeConfig           string   `json:"themeConfig"`
+	DeployProvider        string   `json:"deployProvider"`
+	DeployConfig          string   `json:"deployConfig"`
+	PreviewDeployProvider string   `json:"previewDeployProvider"`
+	PreviewDeployConfig   string   `json:"previewDeployConfig"`
+	AIConfig              string   `json:"aiConfig"`
+	StorageConfig         string   `json:"storageConfig"`
+	DeploymentWarnings    []string `json:"deploymentWarnings,omitempty"`
+	UpdatedAt             string   `json:"updatedAt"`
+}
+
+type templateResponse struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Slug      string `json:"slug"`
+	UpdatedAt string `json:"updatedAt"`
 }
 
 type landingSectionResp struct {
@@ -105,6 +119,11 @@ type tagResponse struct {
 	Slug   string `json:"slug"`
 }
 
+type templateUpsertRequest struct {
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+}
+
 type mediaAssetResponse struct {
 	ID              string `json:"id"`
 	SiteID          string `json:"siteId"`
@@ -132,17 +151,19 @@ type buildResponse struct {
 }
 
 type siteUpsertRequest struct {
-	Name           string `json:"name"`
-	Slug           string `json:"slug"`
-	Domain         string `json:"domain"`
-	BlogPath       string `json:"blogPath"`
-	Status         string `json:"status"`
-	TemplateKey    string `json:"templateKey"`
-	ThemeConfig    string `json:"themeConfig"`
-	DeployProvider string `json:"deployProvider"`
-	DeployConfig   string `json:"deployConfig"`
-	AIConfig       string `json:"aiConfig"`
-	StorageConfig  string `json:"storageConfig"`
+	Name                  string `json:"name"`
+	Slug                  string `json:"slug"`
+	Domain                string `json:"domain"`
+	BlogPath              string `json:"blogPath"`
+	Status                string `json:"status"`
+	TemplateKey           string `json:"templateKey"`
+	ThemeConfig           string `json:"themeConfig"`
+	DeployProvider        string `json:"deployProvider"`
+	DeployConfig          string `json:"deployConfig"`
+	PreviewDeployProvider string `json:"previewDeployProvider"`
+	PreviewDeployConfig   string `json:"previewDeployConfig"`
+	AIConfig              string `json:"aiConfig"`
+	StorageConfig         string `json:"storageConfig"`
 }
 
 type articleUpsertRequest struct {
@@ -165,6 +186,11 @@ type articleUpsertRequest struct {
 type categoryUpsertRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
+}
+
+type authorUpsertRequest struct {
+	Name string `json:"name"`
+	Bio  string `json:"bio"`
 }
 
 type tagUpsertRequest struct {
@@ -191,7 +217,8 @@ type mediaUpsertRequest struct {
 }
 
 type buildCreateRequest struct {
-	BuildType string `json:"buildType"`
+	BuildType  string   `json:"buildType"`
+	ArticleIDs []string `json:"articleIds"`
 }
 
 func (a *API) workspace(w http.ResponseWriter, r *http.Request) {
@@ -228,6 +255,45 @@ func (a *API) workspace(w http.ResponseWriter, r *http.Request) {
 	}
 	response.User = toUserResponse(*user)
 	writeJSON(w, http.StatusOK, response)
+}
+
+func (a *API) templates(w http.ResponseWriter, r *http.Request) {
+	if a.Services.DB == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database unavailable"})
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		items, err := a.listTemplates(r.Context())
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to load templates"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"items": items})
+	case http.MethodPost:
+		var payload templateUpsertRequest
+		if err := decodeJSON(r, &payload); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid template payload"})
+			return
+		}
+		template, err := a.createTemplate(r.Context(), payload)
+		if err != nil {
+			if errors.Is(err, errValidation) {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+				return
+			}
+			if isUniqueViolation(err) {
+				writeJSON(w, http.StatusConflict, map[string]string{"error": "template slug already exists"})
+				return
+			}
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to create template"})
+			return
+		}
+		writeJSON(w, http.StatusCreated, template)
+	default:
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+	}
 }
 
 func (a *API) sites(w http.ResponseWriter, r *http.Request) {
@@ -336,6 +402,8 @@ func (a *API) siteSubroutes(w http.ResponseWriter, r *http.Request) {
 		a.handleLandingSectionRoutes(w, r, siteID, parts[2:])
 	case "articles":
 		a.handleSiteArticleRoutes(w, r, siteID, parts[2:])
+	case "authors":
+		a.handleSiteAuthorRoutes(w, r, siteID, parts[2:])
 	case "categories":
 		a.handleSiteCategoryRoutes(w, r, siteID, parts[2:])
 	case "tags":
@@ -375,6 +443,16 @@ func (a *API) articleSubroutes(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJSON(w, http.StatusOK, article)
+	case http.MethodDelete:
+		if err := a.deleteArticle(r.Context(), articleID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				http.NotFound(w, r)
+				return
+			}
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to delete article"})
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	case http.MethodPatch:
 		var payload articleUpsertRequest
 		if err := decodeJSON(r, &payload); err != nil {
@@ -521,6 +599,75 @@ func (a *API) handleSiteArticleRoutes(w http.ResponseWriter, r *http.Request, si
 		}
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (a *API) handleSiteAuthorRoutes(w http.ResponseWriter, r *http.Request, siteID string, parts []string) {
+	switch {
+	case len(parts) == 0 || parts[0] == "":
+		switch r.Method {
+		case http.MethodGet:
+			authors, err := a.listAuthors(r.Context(), siteID)
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to load authors"})
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]any{"items": authors})
+		case http.MethodPost:
+			var payload authorUpsertRequest
+			if err := decodeJSON(r, &payload); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
+				return
+			}
+			author, err := a.createAuthor(r.Context(), siteID, payload)
+			if err != nil {
+				if errors.Is(err, errValidation) {
+					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to create author"})
+				return
+			}
+			writeJSON(w, http.StatusCreated, author)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	default:
+		authorID := parts[0]
+		switch r.Method {
+		case http.MethodPatch:
+			var payload authorUpsertRequest
+			if err := decodeJSON(r, &payload); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
+				return
+			}
+			author, err := a.updateAuthor(r.Context(), siteID, authorID, payload)
+			if err != nil {
+				if errors.Is(err, errValidation) {
+					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+					return
+				}
+				if errors.Is(err, sql.ErrNoRows) {
+					http.NotFound(w, r)
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to update author"})
+				return
+			}
+			writeJSON(w, http.StatusOK, author)
+		case http.MethodDelete:
+			if err := a.deleteAuthor(r.Context(), siteID, authorID); err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					http.NotFound(w, r)
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to delete author"})
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
 	}
 }
 
@@ -686,7 +833,7 @@ func (a *API) handleBuildRoutes(w http.ResponseWriter, r *http.Request, siteID s
 				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 				return
 			}
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to create build"})
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("unable to create build: %v", err)})
 			return
 		}
 		writeJSON(w, http.StatusCreated, build)
@@ -705,6 +852,57 @@ func (a *API) handleMediaRoutes(w http.ResponseWriter, r *http.Request, siteID s
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"items": media})
 	case http.MethodPost:
+		if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+			r.Body = http.MaxBytesReader(w, r.Body, 12<<20)
+			if err := r.ParseMultipartForm(12 << 20); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid multipart payload"})
+				return
+			}
+
+			file, header, err := r.FormFile("file")
+			if err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file is required"})
+				return
+			}
+			defer file.Close()
+
+			contents, err := io.ReadAll(io.LimitReader(file, 12<<20+1))
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to read uploaded file"})
+				return
+			}
+			if len(contents) > 12<<20 {
+				writeJSON(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "file is too large"})
+				return
+			}
+			if len(contents) == 0 {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file is empty"})
+				return
+			}
+
+			mimeType := strings.TrimSpace(header.Header.Get("Content-Type"))
+			if mimeType == "" {
+				mimeType = http.DetectContentType(contents)
+			}
+			if !strings.HasPrefix(mimeType, "image/") {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "only image uploads are supported"})
+				return
+			}
+
+			altText := strings.TrimSpace(r.FormValue("altText"))
+			media, err := a.uploadMediaAsset(r.Context(), siteID, header.Filename, contents, mimeType, altText)
+			if err != nil {
+				if errors.Is(err, errValidation) {
+					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to upload media asset"})
+				return
+			}
+			writeJSON(w, http.StatusCreated, media)
+			return
+		}
+
 		var payload mediaUpsertRequest
 		if err := decodeJSON(r, &payload); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
@@ -779,6 +977,10 @@ func (a *API) loadWorkspace(ctx context.Context, userID, selectedSiteID string) 
 	if err != nil {
 		return workspaceResponse{}, err
 	}
+	templates, err := a.listTemplates(ctx)
+	if err != nil {
+		return workspaceResponse{}, err
+	}
 
 	if selectedSiteID == "" && len(sites) > 0 {
 		selectedSiteID = sites[0].ID
@@ -822,6 +1024,7 @@ func (a *API) loadWorkspace(ctx context.Context, userID, selectedSiteID string) 
 		SelectedSiteID:    selectedSiteID,
 		SelectedArticleID: selectedArticleID,
 		Sites:             sites,
+		Templates:         templates,
 		LandingSections:   landingSections,
 		Articles:          articles,
 		Authors:           authors,
@@ -845,6 +1048,8 @@ func (a *API) listSites(ctx context.Context) ([]siteResponse, error) {
 			COALESCE(theme_config::text, '{}'),
 			COALESCE(deploy_provider, ''),
 			COALESCE(deploy_config::text, '{}'),
+			COALESCE(preview_deploy_provider, ''),
+			COALESCE(preview_deploy_config::text, '{}'),
 			COALESCE(ai_config::text, '{}'),
 			COALESCE(storage_config::text, '{}'),
 			updated_at
@@ -860,10 +1065,11 @@ func (a *API) listSites(ctx context.Context) ([]siteResponse, error) {
 	for rows.Next() {
 		var site siteResponse
 		var updatedAt time.Time
-		if err := rows.Scan(&site.ID, &site.Name, &site.Slug, &site.Domain, &site.BlogPath, &site.Status, &site.TemplateKey, &site.ThemeConfig, &site.DeployProvider, &site.DeployConfig, &site.AIConfig, &site.StorageConfig, &updatedAt); err != nil {
+		if err := rows.Scan(&site.ID, &site.Name, &site.Slug, &site.Domain, &site.BlogPath, &site.Status, &site.TemplateKey, &site.ThemeConfig, &site.DeployProvider, &site.DeployConfig, &site.PreviewDeployProvider, &site.PreviewDeployConfig, &site.AIConfig, &site.StorageConfig, &updatedAt); err != nil {
 			return nil, err
 		}
 		site.UpdatedAt = updatedAt.Format(time.RFC3339)
+		site.DeploymentWarnings = deploymentWarningsForSite(site)
 		sites = append(sites, site)
 	}
 
@@ -883,6 +1089,8 @@ func (a *API) getSite(ctx context.Context, siteID string) (siteResponse, error) 
 			COALESCE(theme_config::text, '{}'),
 			COALESCE(deploy_provider, ''),
 			COALESCE(deploy_config::text, '{}'),
+			COALESCE(preview_deploy_provider, ''),
+			COALESCE(preview_deploy_config::text, '{}'),
 			COALESCE(ai_config::text, '{}'),
 			COALESCE(storage_config::text, '{}'),
 			updated_at
@@ -892,15 +1100,66 @@ func (a *API) getSite(ctx context.Context, siteID string) (siteResponse, error) 
 
 	var site siteResponse
 	var updatedAt time.Time
-	if err := row.Scan(&site.ID, &site.Name, &site.Slug, &site.Domain, &site.BlogPath, &site.Status, &site.TemplateKey, &site.ThemeConfig, &site.DeployProvider, &site.DeployConfig, &site.AIConfig, &site.StorageConfig, &updatedAt); err != nil {
+	if err := row.Scan(&site.ID, &site.Name, &site.Slug, &site.Domain, &site.BlogPath, &site.Status, &site.TemplateKey, &site.ThemeConfig, &site.DeployProvider, &site.DeployConfig, &site.PreviewDeployProvider, &site.PreviewDeployConfig, &site.AIConfig, &site.StorageConfig, &updatedAt); err != nil {
 		return siteResponse{}, err
 	}
 	site.UpdatedAt = updatedAt.Format(time.RFC3339)
+	site.DeploymentWarnings = deploymentWarningsForSite(site)
 	return site, nil
+}
+
+func (a *API) listTemplates(ctx context.Context) ([]templateResponse, error) {
+	rows, err := a.Services.DB.QueryContext(ctx, `
+		SELECT id::text, name, slug, updated_at
+		FROM templates
+		ORDER BY name ASC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]templateResponse, 0)
+	for rows.Next() {
+		var item templateResponse
+		var updatedAt time.Time
+		if err := rows.Scan(&item.ID, &item.Name, &item.Slug, &updatedAt); err != nil {
+			return nil, err
+		}
+		item.UpdatedAt = updatedAt.Format(time.RFC3339)
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (a *API) createTemplate(ctx context.Context, payload templateUpsertRequest) (templateResponse, error) {
+	name := strings.TrimSpace(payload.Name)
+	slug := strings.TrimSpace(payload.Slug)
+	if name == "" || slug == "" {
+		return templateResponse{}, fmt.Errorf("%w: template name and slug are required", errValidation)
+	}
+	if !templateSlugPattern.MatchString(slug) {
+		return templateResponse{}, fmt.Errorf("%w: template slug must use lowercase letters, numbers, and hyphens only", errValidation)
+	}
+
+	var item templateResponse
+	var updatedAt time.Time
+	if err := a.Services.DB.QueryRowContext(ctx, `
+		INSERT INTO templates (name, slug)
+		VALUES ($1, $2)
+		RETURNING id::text, name, slug, updated_at
+	`, name, slug).Scan(&item.ID, &item.Name, &item.Slug, &updatedAt); err != nil {
+		return templateResponse{}, err
+	}
+	item.UpdatedAt = updatedAt.Format(time.RFC3339)
+	return item, nil
 }
 
 func (a *API) createSite(ctx context.Context, payload siteUpsertRequest) (siteResponse, error) {
 	if err := validateSitePayload(payload); err != nil {
+		return siteResponse{}, err
+	}
+	if err := a.templateExists(ctx, fallbackString(payload.TemplateKey, "default-blog")); err != nil {
 		return siteResponse{}, err
 	}
 
@@ -918,11 +1177,11 @@ func (a *API) createSite(ctx context.Context, payload siteUpsertRequest) (siteRe
 	var updatedAt time.Time
 	err = tx.QueryRowContext(ctx, `
 		INSERT INTO sites (
-			name, slug, domain, blog_path, status, template_key, theme_config, deploy_provider, deploy_config, ai_config, storage_config
+			name, slug, domain, blog_path, status, template_key, theme_config, deploy_provider, deploy_config, preview_deploy_provider, preview_deploy_config, ai_config, storage_config
 		)
-		VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7::jsonb, NULLIF($8, ''), $9::jsonb, $10::jsonb, $11::jsonb)
+		VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7::jsonb, NULLIF($8, ''), $9::jsonb, NULLIF($10, ''), $11::jsonb, $12::jsonb, $13::jsonb)
 		RETURNING id::text, updated_at
-	`, payload.Name, payload.Slug, payload.Domain, fallbackString(payload.BlogPath, "/articles"), fallbackString(payload.Status, "active"), fallbackString(payload.TemplateKey, "default-blog"), fallbackJSON(payload.ThemeConfig, `{"tone":"professional"}`), payload.DeployProvider, fallbackJSON(payload.DeployConfig, `{}`), fallbackJSON(payload.AIConfig, `{}`), fallbackJSON(payload.StorageConfig, `{}`)).Scan(&siteID, &updatedAt)
+	`, payload.Name, payload.Slug, payload.Domain, fallbackString(payload.BlogPath, "/articles"), fallbackString(payload.Status, "active"), fallbackString(payload.TemplateKey, "default-blog"), fallbackJSON(payload.ThemeConfig, `{"tone":"professional"}`), payload.DeployProvider, fallbackJSON(payload.DeployConfig, `{}`), payload.PreviewDeployProvider, fallbackJSON(payload.PreviewDeployConfig, `{}`), fallbackJSON(payload.AIConfig, `{}`), fallbackJSON(payload.StorageConfig, `{}`)).Scan(&siteID, &updatedAt)
 	if err != nil {
 		return siteResponse{}, err
 	}
@@ -942,6 +1201,9 @@ func (a *API) updateSite(ctx context.Context, siteID string, payload siteUpsertR
 	if err := validateSitePayload(payload); err != nil {
 		return siteResponse{}, err
 	}
+	if err := a.templateExists(ctx, fallbackString(payload.TemplateKey, "default-blog")); err != nil {
+		return siteResponse{}, err
+	}
 
 	result, err := a.Services.DB.ExecContext(ctx, `
 		UPDATE sites
@@ -955,11 +1217,13 @@ func (a *API) updateSite(ctx context.Context, siteID string, payload siteUpsertR
 			theme_config = $8::jsonb,
 			deploy_provider = NULLIF($9, ''),
 			deploy_config = $10::jsonb,
-			ai_config = $11::jsonb,
-			storage_config = $12::jsonb,
+			preview_deploy_provider = NULLIF($11, ''),
+			preview_deploy_config = $12::jsonb,
+			ai_config = $13::jsonb,
+			storage_config = $14::jsonb,
 			updated_at = NOW()
 		WHERE id = $1
-	`, siteID, payload.Name, payload.Slug, payload.Domain, fallbackString(payload.BlogPath, "/articles"), fallbackString(payload.Status, "active"), fallbackString(payload.TemplateKey, "default-blog"), fallbackJSON(payload.ThemeConfig, `{}`), payload.DeployProvider, fallbackJSON(payload.DeployConfig, `{}`), fallbackJSON(payload.AIConfig, `{}`), fallbackJSON(payload.StorageConfig, `{}`))
+	`, siteID, payload.Name, payload.Slug, payload.Domain, fallbackString(payload.BlogPath, "/articles"), fallbackString(payload.Status, "active"), fallbackString(payload.TemplateKey, "default-blog"), fallbackJSON(payload.ThemeConfig, `{}`), payload.DeployProvider, fallbackJSON(payload.DeployConfig, `{}`), payload.PreviewDeployProvider, fallbackJSON(payload.PreviewDeployConfig, `{}`), fallbackJSON(payload.AIConfig, `{}`), fallbackJSON(payload.StorageConfig, `{}`))
 	if err != nil {
 		return siteResponse{}, err
 	}
@@ -1012,6 +1276,25 @@ func requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 }
 
 var cloudflareProjectName = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,58}[a-z0-9]$|^[a-z0-9]$`)
+
+var templateSlugPattern = regexp.MustCompile(`^[a-z0-9-]+$`)
+
+func (a *API) templateExists(ctx context.Context, slug string) error {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return fmt.Errorf("%w: template key is required", errValidation)
+	}
+
+	var existing string
+	err := a.Services.DB.QueryRowContext(ctx, `SELECT slug FROM templates WHERE slug = $1`, slug).Scan(&existing)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("%w: unknown template %q", errValidation, slug)
+		}
+		return err
+	}
+	return nil
+}
 
 func (a *API) listLandingSections(ctx context.Context, siteID string) ([]landingSectionResp, error) {
 	rows, err := a.Services.DB.QueryContext(ctx, `
@@ -1322,6 +1605,37 @@ func (a *API) upsertArticle(ctx context.Context, payload articleUpsertRequest, s
 	return a.getArticle(ctx, articleID)
 }
 
+func (a *API) deleteArticle(ctx context.Context, articleID string) error {
+	tx, err := a.Services.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	var existingID string
+	if err = tx.QueryRowContext(ctx, `
+		SELECT id::text
+		FROM articles
+		WHERE id = $1
+	`, articleID).Scan(&existingID); err != nil {
+		return err
+	}
+
+	if _, err = tx.ExecContext(ctx, `DELETE FROM article_tags WHERE article_id = $1`, articleID); err != nil {
+		return err
+	}
+
+	if _, err = tx.ExecContext(ctx, `DELETE FROM articles WHERE id = $1`, articleID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 func validateArticlePayload(payload articleUpsertRequest) error {
 	if strings.TrimSpace(payload.Title) == "" || strings.TrimSpace(payload.Slug) == "" || strings.TrimSpace(payload.ContentMarkdown) == "" {
 		return fmt.Errorf("%w: title, slug and content are required", errValidation)
@@ -1615,6 +1929,10 @@ func (a *API) uniqueCategorySlug(ctx context.Context, siteID, categoryID, name s
 	return a.uniqueSlug(ctx, "categories", siteID, categoryID, name)
 }
 
+func (a *API) uniqueAuthorSlug(ctx context.Context, siteID, authorID, name string) (string, error) {
+	return a.uniqueSlug(ctx, "authors", siteID, authorID, name)
+}
+
 func (a *API) uniqueTagSlug(ctx context.Context, siteID, tagID, name string) (string, error) {
 	return a.uniqueSlug(ctx, "tags", siteID, tagID, name)
 }
@@ -1703,11 +2021,153 @@ func (a *API) listMediaAssets(ctx context.Context, siteID string) ([]mediaAssetR
 	return items, rows.Err()
 }
 
+func (a *API) getAuthor(ctx context.Context, siteID, authorID string) (authorResponse, error) {
+	row := a.Services.DB.QueryRowContext(ctx, `
+		SELECT id::text, site_id::text, name, slug, COALESCE(bio, '')
+		FROM authors
+		WHERE site_id = $1 AND id = $2
+	`, siteID, authorID)
+
+	var item authorResponse
+	if err := row.Scan(&item.ID, &item.SiteID, &item.Name, &item.Slug, &item.Bio); err != nil {
+		return authorResponse{}, err
+	}
+	return item, nil
+}
+
+func (a *API) createAuthor(ctx context.Context, siteID string, payload authorUpsertRequest) (authorResponse, error) {
+	name := strings.TrimSpace(payload.Name)
+	if name == "" {
+		return authorResponse{}, fmt.Errorf("%w: author name is required", errValidation)
+	}
+
+	slug, err := a.uniqueAuthorSlug(ctx, siteID, "", name)
+	if err != nil {
+		return authorResponse{}, err
+	}
+
+	var item authorResponse
+	err = a.Services.DB.QueryRowContext(ctx, `
+		INSERT INTO authors (site_id, name, slug, bio)
+		VALUES ($1, $2, $3, NULLIF($4, ''))
+		RETURNING id::text, site_id::text, name, slug, COALESCE(bio, '')
+	`, siteID, name, slug, strings.TrimSpace(payload.Bio)).Scan(&item.ID, &item.SiteID, &item.Name, &item.Slug, &item.Bio)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return authorResponse{}, fmt.Errorf("%w: author slug already exists", errValidation)
+		}
+		return authorResponse{}, err
+	}
+	return item, nil
+}
+
+func (a *API) updateAuthor(ctx context.Context, siteID, authorID string, payload authorUpsertRequest) (authorResponse, error) {
+	name := strings.TrimSpace(payload.Name)
+	if name == "" {
+		return authorResponse{}, fmt.Errorf("%w: author name is required", errValidation)
+	}
+
+	slug, err := a.uniqueAuthorSlug(ctx, siteID, authorID, name)
+	if err != nil {
+		return authorResponse{}, err
+	}
+
+	result, err := a.Services.DB.ExecContext(ctx, `
+		UPDATE authors
+		SET name = $3, slug = $4, bio = NULLIF($5, ''), updated_at = NOW()
+		WHERE id = $1 AND site_id = $2
+	`, authorID, siteID, name, slug, strings.TrimSpace(payload.Bio))
+	if err != nil {
+		if isUniqueViolation(err) {
+			return authorResponse{}, fmt.Errorf("%w: author slug already exists", errValidation)
+		}
+		return authorResponse{}, err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return authorResponse{}, sql.ErrNoRows
+	}
+	return a.getAuthor(ctx, siteID, authorID)
+}
+
+func (a *API) deleteAuthor(ctx context.Context, siteID, authorID string) error {
+	tx, err := a.Services.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	var existingID string
+	if err = tx.QueryRowContext(ctx, `
+		SELECT id::text
+		FROM authors
+		WHERE id = $1 AND site_id = $2
+	`, authorID, siteID).Scan(&existingID); err != nil {
+		return err
+	}
+
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE articles
+		SET author_id = NULL, updated_at = NOW()
+		WHERE site_id = $1 AND author_id = $2
+	`, siteID, authorID); err != nil {
+		return err
+	}
+
+	if _, err = tx.ExecContext(ctx, `
+		DELETE FROM authors
+		WHERE id = $1 AND site_id = $2
+	`, authorID, siteID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 func (a *API) createMediaAsset(ctx context.Context, siteID string, payload mediaUpsertRequest) (mediaAssetResponse, error) {
 	if strings.TrimSpace(payload.FileName) == "" || strings.TrimSpace(payload.FileURL) == "" {
 		return mediaAssetResponse{}, fmt.Errorf("%w: file name and URL are required", errValidation)
 	}
 
+	return a.persistMediaAsset(ctx, siteID, payload)
+}
+
+func (a *API) uploadMediaAsset(ctx context.Context, siteID, fileName string, contents []byte, mimeType, altText string) (mediaAssetResponse, error) {
+	if strings.TrimSpace(fileName) == "" {
+		return mediaAssetResponse{}, fmt.Errorf("%w: file name is required", errValidation)
+	}
+	if len(contents) == 0 {
+		return mediaAssetResponse{}, fmt.Errorf("%w: file contents are required", errValidation)
+	}
+
+	stored, err := a.Services.Storage.Upload(ctx, storage.UploadFile{
+		FileName: fileName,
+		Contents: contents,
+		MimeType: mimeType,
+		SiteID:   siteID,
+	})
+	if err != nil {
+		return mediaAssetResponse{}, err
+	}
+	if stored == nil || strings.TrimSpace(stored.PublicURL) == "" {
+		return mediaAssetResponse{}, fmt.Errorf("%w: storage did not return a public URL", errValidation)
+	}
+
+	return a.persistMediaAsset(ctx, siteID, mediaUpsertRequest{
+		FileName:        fileName,
+		FileURL:         stored.PublicURL,
+		MimeType:        mimeType,
+		SizeBytes:       int64(len(contents)),
+		StorageProvider: a.storageProviderName(),
+		StorageKey:      stored.Key,
+		AltText:         altText,
+	})
+}
+
+func (a *API) persistMediaAsset(ctx context.Context, siteID string, payload mediaUpsertRequest) (mediaAssetResponse, error) {
 	var item mediaAssetResponse
 	err := a.Services.DB.QueryRowContext(ctx, `
 		INSERT INTO media_assets (
@@ -1720,6 +2180,21 @@ func (a *API) createMediaAsset(ctx context.Context, siteID string, payload media
 		return mediaAssetResponse{}, err
 	}
 	return item, nil
+}
+
+func (a *API) storageProviderName() string {
+	endpoint := strings.ToLower(strings.TrimSpace(a.Config.S3Endpoint))
+	publicURL := strings.ToLower(strings.TrimSpace(a.Config.S3PublicURL))
+	switch {
+	case strings.Contains(endpoint, "minio") || strings.Contains(publicURL, "localhost:9002"):
+		return "minio"
+	case strings.Contains(endpoint, "r2") || strings.Contains(publicURL, "r2"):
+		return "r2"
+	case endpoint != "":
+		return "s3"
+	default:
+		return "s3"
+	}
 }
 
 func (a *API) listBuilds(ctx context.Context, siteID string) ([]buildResponse, error) {
@@ -1802,127 +2277,362 @@ func (a *API) getBuild(ctx context.Context, buildID string) (buildResponse, erro
 }
 
 func (a *API) createBuild(ctx context.Context, siteID string, payload buildCreateRequest) (buildResponse, error) {
-	operationCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Minute)
-	defer cancel()
-
 	buildType := fallbackString(payload.BuildType, "published")
 	if buildType != "preview" && buildType != "published" {
 		return buildResponse{}, fmt.Errorf("%w: invalid build type", errValidation)
 	}
 
-	siteResponse, err := a.getSite(operationCtx, siteID)
+	site, err := a.getSiteModel(ctx, siteID)
 	if err != nil {
 		return buildResponse{}, err
 	}
-	site, err := deploymentSite(siteResponse)
-	if err != nil {
-		return buildResponse{}, fmt.Errorf("%w: invalid deployment configuration", errValidation)
-	}
 
-	buildID, err := a.createPendingBuild(operationCtx, siteID, buildType, site.DeployProvider)
-	if err != nil {
-		return buildResponse{}, err
-	}
-	build := models.Build{ID: buildID, SiteID: siteID, BuildType: buildType}
-	buildData, err := a.buildData(operationCtx, siteID, siteResponse, buildType)
-	if err != nil {
-		return a.failBuild(buildID, "load CMS content", err)
-	}
-	outputPath, err := a.Services.Builder.GenerateSite(operationCtx, site, buildOptions(siteID, buildID, buildType, buildData))
-	if err != nil {
-		return a.failBuild(buildID, "generate static site", err)
-	}
-	deployment, err := a.Services.Deploy.Deploy(operationCtx, site, build, outputPath)
-	if err != nil {
-		return a.failBuild(buildID, "deploy static site", err)
-	}
-
-	deployStatus := "skipped"
-	if deployment.Provider != "none" {
-		deployStatus = "deployed"
-	}
-	if _, err := a.Services.DB.ExecContext(operationCtx, `
-		UPDATE builds
-		SET status = 'success', logs = $2, output_path = $3, deploy_provider = $4, deploy_status = $5, deploy_url = $6, finished_at = NOW()
-		WHERE id = $1
-	`, buildID, deployment.Message, outputPath, deployment.Provider, deployStatus, deployment.URL); err != nil {
-		return buildResponse{}, err
-	}
-	return a.getBuild(operationCtx, buildID)
-}
-
-func buildOptions(siteID, buildID, buildType string, data []byte) builder.GenerateOptions {
-	return builder.GenerateOptions{SiteID: siteID, BuildID: buildID, Preview: buildType == "preview", BuildData: data}
-}
-
-func (a *API) createPendingBuild(ctx context.Context, siteID, buildType, provider string) (string, error) {
-	var buildID string
-	err := a.Services.DB.QueryRowContext(ctx, `
-		INSERT INTO builds (site_id, status, build_type, logs, deploy_provider, deploy_status, started_at)
-		VALUES ($1, 'running', $2, 'Build started.', $3, 'pending', NOW())
-		RETURNING id::text
-	`, siteID, buildType, provider).Scan(&buildID)
-	return buildID, err
-}
-
-func (a *API) failBuild(buildID, stage string, cause error) (buildResponse, error) {
-	failureCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	message := fmt.Sprintf("%s failed: %v", stage, cause)
-	if _, err := a.Services.DB.ExecContext(failureCtx, `
-		UPDATE builds SET status = 'failed', logs = $2, deploy_status = 'failed', finished_at = NOW() WHERE id = $1
-	`, buildID, message); err != nil {
-		return buildResponse{}, err
-	}
-	return buildResponse{}, fmt.Errorf("%s", message)
-}
-
-func (a *API) buildData(ctx context.Context, siteID string, site siteResponse, buildType string) ([]byte, error) {
-	sections, err := a.listLandingSections(ctx, siteID)
-	if err != nil {
-		return nil, err
-	}
-	articles, err := a.listArticles(ctx, siteID)
-	if err != nil {
-		return nil, err
-	}
-	published := make([]articleResponse, 0, len(articles))
-	for _, article := range articles {
-		if buildType == "preview" || article.Status == "published" {
-			published = append(published, article)
+	if buildType == "published" && len(payload.ArticleIDs) > 0 {
+		if err := a.publishArticles(ctx, siteID, payload.ArticleIDs); err != nil {
+			return buildResponse{}, err
 		}
 	}
-	return json.Marshal(struct {
-		Site struct {
-			Name     string `json:"name"`
-			Domain   string `json:"domain"`
-			BlogPath string `json:"blogPath"`
-		} `json:"site"`
-		Articles []articleResponse    `json:"articles"`
-		Sections []landingSectionResp `json:"sections"`
-	}{
-		Site: struct {
-			Name     string `json:"name"`
-			Domain   string `json:"domain"`
-			BlogPath string `json:"blogPath"`
-		}{Name: site.Name, Domain: site.Domain, BlogPath: site.BlogPath},
-		Articles: published,
-		Sections: sections,
+
+	content, err := a.siteBuildContent(ctx, siteID, buildType == "published")
+	if err != nil {
+		return buildResponse{}, err
+	}
+
+	buildSite := site
+	if buildType == "preview" {
+		buildSite.DeployProvider = fallbackString(site.PreviewDeployProvider, site.DeployProvider)
+		buildSite.DeployConfig = site.PreviewDeployConfig
+	}
+
+	outputPath, err := a.Services.Builder.GenerateSite(ctx, content, builder.GenerateOptions{
+		SiteID:     siteID,
+		Preview:    buildType == "preview",
+		ArticleIDs: payload.ArticleIDs,
 	})
+	if err != nil {
+		return buildResponse{}, err
+	}
+
+	build := models.Build{
+		SiteID:     siteID,
+		Status:     "success",
+		BuildType:  buildType,
+		Logs:       buildLogs(buildType, buildArticleCount(buildType, len(payload.ArticleIDs), len(content.Articles))),
+		OutputPath: outputPath,
+	}
+	deployResult, err := a.Services.Deploy.Deploy(ctx, buildSite, build, outputPath)
+	if err != nil {
+		return buildResponse{}, err
+	}
+
+	deployProvider := fallbackString(buildSite.DeployProvider, "none")
+	deployStatus := "deployed"
+	deployURL := ""
+	if deployResult != nil {
+		deployProvider = fallbackString(deployResult.Provider, deployProvider)
+		deployStatus = "deployed"
+		deployURL = strings.TrimSpace(deployResult.URL)
+		if message := strings.TrimSpace(deployResult.Message); message != "" {
+			build.Logs = strings.TrimSpace(build.Logs + " " + message)
+		}
+	}
+
+	var item buildResponse
+	now := time.Now().UTC().Format(time.RFC3339)
+	var startedAt sql.NullTime
+	var finishedAt sql.NullTime
+	err = a.Services.DB.QueryRowContext(ctx, `
+		INSERT INTO builds (
+			site_id, status, build_type, logs, output_path, deploy_provider, deploy_status, deploy_url, started_at, finished_at
+		)
+		VALUES ($1, 'success', $2, $3, $4, $5, $6, $7, NOW(), NOW())
+		RETURNING id::text, site_id::text, status, build_type, logs, output_path, COALESCE(deploy_provider, ''), COALESCE(deploy_status, ''), COALESCE(deploy_url, ''), started_at, finished_at
+	`, siteID, buildType, build.Logs, outputPath, deployProvider, deployStatus, deployURL).Scan(&item.ID, &item.SiteID, &item.Status, &item.BuildType, &item.Logs, &item.OutputPath, &item.DeployProvider, &item.DeployStatus, &item.DeployURL, &startedAt, &finishedAt)
+	if err != nil {
+		return buildResponse{}, err
+	}
+	item.DeployProvider = deployProvider
+	item.DeployStatus = deployStatus
+	item.DeployURL = deployURL
+	item.Logs = build.Logs
+	if startedAt.Valid {
+		value := startedAt.Time.UTC().Format(time.RFC3339)
+		item.StartedAt = &value
+	} else {
+		item.StartedAt = &now
+	}
+	if finishedAt.Valid {
+		value := finishedAt.Time.UTC().Format(time.RFC3339)
+		item.FinishedAt = &value
+	} else {
+		item.FinishedAt = &now
+	}
+	return item, nil
 }
 
-func deploymentSite(site siteResponse) (models.Site, error) {
-	if site.DeployProvider == "cloudflare_pages" && site.BlogPath != "/articles" {
-		return models.Site{}, fmt.Errorf("Cloudflare Pages builds require blogPath /articles")
+func buildLogs(buildType string, articleCount int) string {
+	if buildType == "preview" {
+		return fmt.Sprintf("Preview build completed successfully for %d articles.", articleCount)
 	}
-	var deployConfig map[string]any
-	if err := json.Unmarshal([]byte(site.DeployConfig), &deployConfig); err != nil {
+	return fmt.Sprintf("Published build completed successfully for %d published articles.", articleCount)
+}
+
+func buildArticleCount(buildType string, selectedCount, contentCount int) int {
+	if buildType == "preview" && selectedCount > 0 {
+		return selectedCount
+	}
+	return contentCount
+}
+
+func (a *API) publishArticles(ctx context.Context, siteID string, articleIDs []string) error {
+	if len(articleIDs) == 0 {
+		return nil
+	}
+
+	tx, err := a.Services.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	for _, articleID := range articleIDs {
+		articleID = strings.TrimSpace(articleID)
+		if articleID == "" {
+			continue
+		}
+
+		result, err := tx.ExecContext(ctx, `
+			UPDATE articles
+			SET
+				status = 'published',
+				published_at = COALESCE(published_at, NOW()),
+				human_reviewed = TRUE,
+				updated_at = NOW()
+			WHERE id = $1 AND site_id = $2
+		`, articleID, siteID)
+		if err != nil {
+			return err
+		}
+		if affected, _ := result.RowsAffected(); affected == 0 {
+			return sql.ErrNoRows
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *API) siteBuildContent(ctx context.Context, siteID string, publishedOnly bool) (builder.SiteContent, error) {
+	site, err := a.getSiteModel(ctx, siteID)
+	if err != nil {
+		return builder.SiteContent{}, err
+	}
+
+	articles, err := a.listArticles(ctx, siteID)
+	if err != nil {
+		return builder.SiteContent{}, err
+	}
+	if publishedOnly {
+		filtered := make([]articleResponse, 0, len(articles))
+		for _, article := range articles {
+			if article.Status == "published" {
+				filtered = append(filtered, article)
+			}
+		}
+		articles = filtered
+	}
+
+	authors, err := a.listAuthors(ctx, siteID)
+	if err != nil {
+		return builder.SiteContent{}, err
+	}
+	categories, err := a.listCategories(ctx, siteID)
+	if err != nil {
+		return builder.SiteContent{}, err
+	}
+	tags, err := a.listTags(ctx, siteID)
+	if err != nil {
+		return builder.SiteContent{}, err
+	}
+	sections, err := a.listLandingSections(ctx, siteID)
+	if err != nil {
+		return builder.SiteContent{}, err
+	}
+
+	authorNames := make(map[string]authorResponse, len(authors))
+	for _, author := range authors {
+		authorNames[author.ID] = author
+	}
+	categoryNames := make(map[string]categoryResponse, len(categories))
+	for _, category := range categories {
+		categoryNames[category.ID] = category
+	}
+	tagNames := make(map[string]tagResponse, len(tags))
+	for _, tag := range tags {
+		tagNames[tag.ID] = tag
+	}
+
+	content := builder.SiteContent{
+		Site:            site,
+		LandingSections: make([]builder.LandingSectionContent, 0, len(sections)),
+		Articles:        make([]builder.ArticleContent, 0, len(articles)),
+	}
+
+	for _, section := range sections {
+		content.LandingSections = append(content.LandingSections, builder.LandingSectionContent{
+			SectionKey:   section.SectionKey,
+			Title:        section.Title,
+			Subtitle:     section.Subtitle,
+			ContentJSON:  parseJSONMap(section.ContentJSON),
+			DisplayOrder: section.DisplayOrder,
+			IsEnabled:    section.IsEnabled,
+		})
+	}
+
+	for _, article := range articles {
+		articleContent := builder.ArticleContent{
+			ID:              article.ID,
+			Title:           article.Title,
+			Slug:            article.Slug,
+			Excerpt:         article.Excerpt,
+			ContentMarkdown: article.ContentMarkdown,
+			CoverImageURL:   article.CoverImageURL,
+			Status:          article.Status,
+			IsFeatured:      article.IsFeatured,
+			PublishedAt:     fallbackStringPtr(article.PublishedAt),
+			UpdatedAt:       article.UpdatedAt,
+			SEOTitle:        article.SEOTitle,
+			SEODescription:  article.SEODescription,
+			CanonicalURL:    article.CanonicalURL,
+		}
+
+		if author, ok := authorNames[article.AuthorID]; ok {
+			articleContent.AuthorName = author.Name
+			articleContent.AuthorSlug = author.Slug
+		}
+		if category, ok := categoryNames[article.CategoryID]; ok {
+			articleContent.CategoryName = category.Name
+			articleContent.CategorySlug = category.Slug
+		}
+		for _, tagID := range article.TagIDs {
+			if tag, ok := tagNames[tagID]; ok {
+				articleContent.Tags = append(articleContent.Tags, builder.TagContent{Name: tag.Name, Slug: tag.Slug})
+			}
+		}
+		content.Articles = append(content.Articles, articleContent)
+	}
+
+	return content, nil
+}
+
+func fallbackStringPtr(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return strings.TrimSpace(*value)
+}
+
+func (a *API) getSiteModel(ctx context.Context, siteID string) (models.Site, error) {
+	row := a.Services.DB.QueryRowContext(ctx, `
+		SELECT
+			id::text,
+			name,
+			slug,
+			COALESCE(domain, ''),
+			blog_path,
+			status,
+			template_key,
+			COALESCE(theme_config::text, '{}'),
+			COALESCE(deploy_provider, ''),
+			COALESCE(deploy_config::text, '{}'),
+			COALESCE(preview_deploy_provider, ''),
+			COALESCE(preview_deploy_config::text, '{}'),
+			COALESCE(ai_config::text, '{}'),
+			COALESCE(storage_config::text, '{}'),
+			created_at,
+			updated_at
+		FROM sites
+		WHERE id = $1
+	`, siteID)
+
+	var site models.Site
+	var themeConfig string
+	var deployConfig string
+	var previewDeployConfig string
+	var aiConfig string
+	var storageConfig string
+	if err := row.Scan(&site.ID, &site.Name, &site.Slug, &site.Domain, &site.BlogPath, &site.Status, &site.TemplateKey, &themeConfig, &site.DeployProvider, &deployConfig, &site.PreviewDeployProvider, &previewDeployConfig, &aiConfig, &storageConfig, &site.CreatedAt, &site.UpdatedAt); err != nil {
 		return models.Site{}, err
 	}
-	return models.Site{
-		ID: site.ID, Name: site.Name, Slug: site.Slug, Domain: site.Domain, BlogPath: site.BlogPath,
-		DeployProvider: site.DeployProvider, DeployConfig: deployConfig,
-	}, nil
+	site.ThemeConfig = parseJSONMap(themeConfig)
+	site.DeployConfig = parseJSONMap(deployConfig)
+	site.PreviewDeployConfig = parseJSONMap(previewDeployConfig)
+	site.AIConfig = parseJSONMap(aiConfig)
+	site.StorageConfig = parseJSONMap(storageConfig)
+	return site, nil
+}
+
+func parseJSONMap(raw string) map[string]any {
+	if strings.TrimSpace(raw) == "" {
+		return map[string]any{}
+	}
+
+	var value map[string]any
+	if err := json.Unmarshal([]byte(raw), &value); err != nil {
+		return map[string]any{}
+	}
+	if value == nil {
+		return map[string]any{}
+	}
+	return value
+}
+
+func deploymentWarningsForSite(site siteResponse) []string {
+	warnings := make([]string, 0, 2)
+	warnings = append(warnings, firebaseDeploymentWarnings("production", site.DeployProvider, site.DeployConfig)...)
+	warnings = append(warnings, firebaseDeploymentWarnings("preview", site.PreviewDeployProvider, site.PreviewDeployConfig)...)
+	return warnings
+}
+
+func firebaseDeploymentWarnings(channel, provider, rawConfig string) []string {
+	values := parseJSONMap(rawConfig)
+	resolvedProvider := strings.TrimSpace(provider)
+	if resolvedProvider == "" {
+		resolvedProvider = strings.TrimSpace(configValue(values, "provider"))
+	}
+	if resolvedProvider != "firebase" {
+		return nil
+	}
+
+	secretRef := strings.TrimSpace(configValue(values, "serviceAccountSecretRef"))
+	if secretRef == "" {
+		secretRef = strings.TrimSpace(configValue(values, "tokenSecretRef"))
+	}
+	if secretRef == "" {
+		return []string{fmt.Sprintf("Firebase %s deployment config is missing serviceAccountSecretRef.", channel)}
+	}
+	if strings.TrimSpace(os.Getenv(secretRef)) == "" {
+		return []string{fmt.Sprintf("Firebase %s deploy secret %s is not set on the API server.", channel, secretRef)}
+	}
+	return nil
+}
+
+func configValue(values map[string]any, key string) string {
+	raw, ok := values[key]
+	if !ok || raw == nil {
+		return ""
+	}
+	text, ok := raw.(string)
+	if !ok {
+		return ""
+	}
+	return text
 }
 
 func seedSiteDefaults(ctx context.Context, tx *sql.Tx, siteID string) error {

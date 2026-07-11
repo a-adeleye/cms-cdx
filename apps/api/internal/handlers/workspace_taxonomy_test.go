@@ -147,3 +147,72 @@ func TestTagCRUDCascadesArticleTagLinksWhenDeleted(t *testing.T) {
 		t.Fatalf("expected deleted tag to cascade from article_tags, got %d links", linkCount)
 	}
 }
+
+func TestAuthorCRUDClearsArticleAuthorWhenDeleted(t *testing.T) {
+	db := openTestDatabase(t)
+	ctx := context.Background()
+	api := &API{Services: services.Services{DB: db}}
+
+	siteID := mustQueryText(t, db, ctx, `SELECT id::text FROM sites ORDER BY updated_at DESC LIMIT 1`)
+	categoryID := mustQueryText(t, db, ctx, `SELECT id::text FROM categories WHERE site_id = $1 ORDER BY name ASC LIMIT 1`, siteID)
+
+	author, err := api.createAuthor(ctx, siteID, authorUpsertRequest{
+		Name: "Test Author",
+		Bio:  "Used by regression tests.",
+	})
+	if err != nil {
+		t.Fatalf("createAuthor returned error: %v", err)
+	}
+	if author.ID == "" {
+		t.Fatal("expected created author ID")
+	}
+	if author.Slug == "" {
+		t.Fatal("expected created author slug")
+	}
+
+	updatedAuthor, err := api.updateAuthor(ctx, siteID, author.ID, authorUpsertRequest{
+		Name: "Updated Author",
+		Bio:  "Updated author bio.",
+	})
+	if err != nil {
+		t.Fatalf("updateAuthor returned error: %v", err)
+	}
+	if updatedAuthor.Name != "Updated Author" {
+		t.Fatalf("expected updated author name, got %q", updatedAuthor.Name)
+	}
+	if updatedAuthor.Slug == "" {
+		t.Fatal("expected updated author slug")
+	}
+
+	article, err := api.upsertArticleWithSite(ctx, siteID, articleUpsertRequest{
+		Title:           "Author regression article",
+		Slug:            "author-regression-article",
+		Excerpt:         "An article used to verify author cleanup.",
+		ContentMarkdown: "This article references the created author.",
+		AuthorID:        updatedAuthor.ID,
+		CategoryID:      categoryID,
+		IsFeatured:      false,
+		Status:          "draft",
+	})
+	if err != nil {
+		t.Fatalf("upsertArticleWithSite returned error: %v", err)
+	}
+
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM articles WHERE id = $1`, article.ID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM authors WHERE id = $1`, updatedAuthor.ID)
+		_ = db.Close()
+	})
+
+	if err := api.deleteAuthor(ctx, siteID, updatedAuthor.ID); err != nil {
+		t.Fatalf("deleteAuthor returned error: %v", err)
+	}
+
+	var authorID sql.NullString
+	if err := db.QueryRowContext(ctx, `SELECT author_id::text FROM articles WHERE id = $1`, article.ID).Scan(&authorID); err != nil {
+		t.Fatalf("query article author failed: %v", err)
+	}
+	if authorID.Valid {
+		t.Fatalf("expected deleted author to be cleared from article, got %q", authorID.String)
+	}
+}

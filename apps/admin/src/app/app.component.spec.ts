@@ -27,6 +27,27 @@ class DashboardRouteStubComponent {}
 })
 class SettingsRouteStubComponent {}
 
+@Component({
+  selector: 'app-sites-route-stub',
+  standalone: false,
+  template: '<p>Sites route is active</p>',
+})
+class SitesRouteStubComponent {}
+
+@Component({
+  selector: 'app-articles-route-stub',
+  standalone: false,
+  template: '<p>Articles route is active</p>',
+})
+class ArticlesRouteStubComponent {}
+
+@Component({
+  selector: 'app-publishing-route-stub',
+  standalone: false,
+  template: '<p>Publishing route is active</p>',
+})
+class PublishingRouteStubComponent {}
+
 describe('AppComponent', () => {
   let fixture: ComponentFixture<AppComponent>;
   let location: Location;
@@ -39,6 +60,8 @@ describe('AppComponent', () => {
         id: 'site-example',
         name: 'Example Site',
         domain: 'https://example.test',
+        previewDeployProvider: 'none',
+        previewDeployConfig: '{}',
       },
     ],
     selectedSite: () => ({
@@ -47,6 +70,9 @@ describe('AppComponent', () => {
       domain: 'https://example.test',
       blogPath: '/articles',
       templateKey: 'default-blog',
+      deployProvider: 'netlify',
+      previewDeployProvider: 'none',
+      previewDeployConfig: '{}',
     }),
     authSession: () => ({
       email: 'admin@example.com',
@@ -60,13 +86,31 @@ describe('AppComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [AppComponent, LoginRouteStubComponent, DashboardRouteStubComponent, SettingsRouteStubComponent],
+      declarations: [
+        AppComponent,
+        LoginRouteStubComponent,
+        DashboardRouteStubComponent,
+        SettingsRouteStubComponent,
+        SitesRouteStubComponent,
+        ArticlesRouteStubComponent,
+        PublishingRouteStubComponent,
+      ],
       imports: [
         RouterTestingModule.withRoutes([
           { path: '', pathMatch: 'full', redirectTo: 'login' },
           { path: 'login', component: LoginRouteStubComponent },
           { path: 'dashboard', component: DashboardRouteStubComponent },
-          { path: 'settings', component: SettingsRouteStubComponent },
+          { path: 'publishing', component: PublishingRouteStubComponent },
+          {
+            path: 'settings',
+            component: SettingsRouteStubComponent,
+            children: [{ path: 'sites', component: SitesRouteStubComponent }],
+          },
+          {
+            path: 'articles',
+            component: ArticlesRouteStubComponent,
+            children: [{ path: 'editor', component: ArticlesRouteStubComponent }],
+          },
         ]),
       ],
       providers: [{ provide: WorkspaceStateService, useValue: fakeState }],
@@ -105,7 +149,7 @@ describe('AppComponent', () => {
     await fixture.whenStable();
 
     const links = Array.from(fixture.nativeElement.querySelectorAll('nav a')) as HTMLAnchorElement[];
-    expect(links.map((link) => link.textContent?.trim())).toEqual(['Dashboard', 'Articles', 'Settings']);
+    expect(links.map((link) => link.textContent?.trim())).toEqual(['Dashboard', 'Articles', 'Publishing', 'Settings']);
 
     const dashboardLink = links.find((link) => link.textContent?.includes('Dashboard'));
     const settingsLink = links.find((link) => link.textContent?.includes('Settings'));
@@ -123,6 +167,51 @@ describe('AppComponent', () => {
     expect(location.path()).toBe('/dashboard');
     expect(fixture.nativeElement.textContent).toContain('Dashboard route is active');
     expect(fakeState.selectSite).toHaveBeenCalledWith('site-example');
+  });
+
+  it('keeps settings active on nested settings routes', async () => {
+    await router.navigate(['/settings/sites']);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const settingsLink = Array.from(
+      fixture.nativeElement.querySelectorAll('nav a') as NodeListOf<HTMLAnchorElement>,
+    ).find((link) => link.textContent?.includes('Settings'));
+
+    expect(location.path()).toBe('/settings/sites');
+    expect(settingsLink?.classList.contains('is-active')).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Settings route is active');
+  });
+
+  it('keeps articles active on nested article routes', async () => {
+    await router.navigate(['/articles/editor']);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const articlesLink = Array.from(
+      fixture.nativeElement.querySelectorAll('nav a') as NodeListOf<HTMLAnchorElement>,
+    ).find((link) => link.textContent?.includes('Articles'));
+
+    expect(location.path()).toBe('/articles/editor');
+    expect(articlesLink?.classList.contains('is-active')).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Articles route is active');
+  });
+
+  it('keeps publishing active on the publishing route', async () => {
+    await router.navigate(['/publishing']);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const publishingLink = Array.from(
+      fixture.nativeElement.querySelectorAll('nav a') as NodeListOf<HTMLAnchorElement>,
+    ).find((link) => link.textContent?.includes('Publishing'));
+
+    expect(location.path()).toBe('/publishing');
+    expect(publishingLink?.classList.contains('is-active')).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Publishing route is active');
   });
 
   it('shows the sign out action in the sidebar and returns to login when clicked', async () => {

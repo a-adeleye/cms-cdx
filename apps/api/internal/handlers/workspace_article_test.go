@@ -89,6 +89,55 @@ func TestUpsertArticleReturnsValidationErrorForInvalidTagIds(t *testing.T) {
 	_ = db.Close()
 }
 
+func TestDeleteArticleRemovesArticleAndTags(t *testing.T) {
+	db := openTestDatabase(t)
+	ctx := context.Background()
+	api := &API{Services: services.Services{DB: db}}
+
+	siteID := mustQueryText(t, db, ctx, `SELECT id::text FROM sites ORDER BY updated_at DESC LIMIT 1`)
+	authorID := mustQueryText(t, db, ctx, `SELECT id::text FROM authors WHERE site_id = $1 ORDER BY name ASC LIMIT 1`, siteID)
+	categoryID := mustQueryText(t, db, ctx, `SELECT id::text FROM categories WHERE site_id = $1 ORDER BY name ASC LIMIT 1`, siteID)
+	tagID := mustQueryText(t, db, ctx, `SELECT id::text FROM tags WHERE site_id = $1 ORDER BY name ASC LIMIT 1`, siteID)
+
+	article, err := api.upsertArticleWithSite(ctx, siteID, articleUpsertRequest{
+		Title:           "Delete test article",
+		Slug:            "delete-test-article",
+		Excerpt:         "A short article to delete",
+		ContentMarkdown: "This article exists for deletion testing.",
+		AuthorID:        authorID,
+		CategoryID:      categoryID,
+		TagIDs:          []string{tagID},
+		IsFeatured:      false,
+		Status:          "draft",
+	})
+	if err != nil {
+		t.Fatalf("upsertArticleWithSite returned error: %v", err)
+	}
+
+	if err := api.deleteArticle(ctx, article.ID); err != nil {
+		t.Fatalf("deleteArticle returned error: %v", err)
+	}
+
+	var count int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM articles WHERE id = $1`, article.ID).Scan(&count); err != nil {
+		t.Fatalf("count query failed: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected article to be deleted, found %d rows", count)
+	}
+
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM article_tags WHERE article_id = $1`, article.ID).Scan(&count); err != nil {
+		t.Fatalf("tag count query failed: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected article tags to be deleted, found %d rows", count)
+	}
+
+	t.Cleanup(func() {
+		_ = db.Close()
+	})
+}
+
 func openTestDatabase(t *testing.T) *sql.DB {
 	t.Helper()
 

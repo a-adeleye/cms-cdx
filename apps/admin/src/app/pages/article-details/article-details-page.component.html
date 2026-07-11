@@ -1,0 +1,112 @@
+<section class="page article-details-page">
+  <header class="hero">
+    <p class="eyebrow">Writing</p>
+    <div class="hero-row">
+      <div>
+        <h1>{{ state.selectedArticle()?.title || 'Article details' }}</h1>
+        <p class="muted">{{ state.selectedArticle()?.excerpt }}</p>
+      </div>
+
+      <div class="hero-actions">
+        <a class="button button-secondary" routerLink="/articles">Back to articles</a>
+        <button class="button button-primary" type="button" [disabled]="feedback.isBusy()" (click)="editArticle()">
+          Edit article
+        </button>
+        <button class="button button-secondary" type="button" [disabled]="feedback.isBusy()" (click)="deleteArticle()">
+          {{ feedback.isBusy() ? 'Deleting...' : 'Delete article' }}
+        </button>
+      </div>
+    </div>
+  </header>
+
+  @if (feedback.state(); as feedbackState) {
+    @if (feedbackState.kind !== 'idle' && feedbackState.message) {
+      <p
+        class="page-status"
+        [class.page-status--loading]="feedbackState.kind === 'loading'"
+        [class.page-status--success]="feedbackState.kind === 'success'"
+        [class.page-status--error]="feedbackState.kind === 'error'"
+        [attr.role]="feedbackState.kind === 'error' ? 'alert' : 'status'"
+        [attr.aria-live]="feedbackState.kind === 'error' ? 'assertive' : 'polite'"
+      >
+        @if (feedbackState.kind === 'loading') {
+          <span class="page-status__spinner" aria-hidden="true"></span>
+        }
+        <span class="page-status__message">{{ feedbackState.message }}</span>
+      </p>
+    }
+  }
+
+  @if (state.error()) {
+    <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
+  }
+
+  @if (state.selectedArticle(); as article) {
+    <section class="two-column">
+      <article class="panel">
+        <h2>Details</h2>
+        <dl class="definition-list">
+          <div>
+            <dt>Status</dt>
+            <dd>{{ article.status }}</dd>
+          </div>
+          <div>
+            <dt>Updated</dt>
+            <dd>{{ article.updatedAt | date: 'medium' }}</dd>
+          </div>
+          <div>
+            <dt>SEO title</dt>
+            <dd>{{ article.seoTitle || '—' }}</dd>
+          </div>
+          <div>
+            <dt>SEO description</dt>
+            <dd>{{ article.seoDescription || '—' }}</dd>
+          </div>
+          <div>
+            <dt>Canonical URL</dt>
+            <dd>{{ article.canonicalUrl || '—' }}</dd>
+          </div>
+        </dl>
+      </article>
+
+      <article class="panel">
+        <h2>Metadata</h2>
+        <dl class="definition-list">
+          <div>
+            <dt>Author</dt>
+            <dd>{{ authorName(article.authorId) }}</dd>
+          </div>
+          <div>
+            <dt>Category</dt>
+            <dd>{{ categoryName(article.categoryId) }}</dd>
+          </div>
+          <div>
+            <dt>Tags</dt>
+            <dd>
+              @if (article.tagIds.length > 0) {
+                <div class="chip-group">
+                  @for (tagId of article.tagIds; track tagId) {
+                    <span class="chip is-active-chip">
+                      {{ tagName(tagId) }}
+                    </span>
+                  }
+                </div>
+              } @else {
+                —
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>Featured</dt>
+            <dd>{{ article.isFeatured ? 'Yes' : 'No' }}</dd>
+          </div>
+        </dl>
+      </article>
+    </section>
+
+    <article class="panel">
+      <h2>Markdown body</h2>
+      <pre class="code-block">{{ article.contentMarkdown }}</pre>
+    </article>
+  }
+</section>

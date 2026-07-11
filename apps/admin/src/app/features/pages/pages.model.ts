@@ -2,18 +2,12 @@ export type WorkspacePageKind =
   | 'login'
   | 'dashboard'
   | 'settings'
-  | 'sites'
-  | 'site-settings'
   | 'landing-page-editor'
   | 'articles'
-  | 'article-editor'
-  | 'authors'
-  | 'categories'
-  | 'tags'
   | 'media-library'
   | 'ai-assistant'
   | 'builds'
-  | 'deployment-settings';
+  | 'publishing';
 
 export interface WorkspacePageConfig {
   path: string;
@@ -54,8 +48,18 @@ export interface SiteRecord {
   themeConfig: string;
   deployProvider: string;
   deployConfig: string;
+  previewDeployProvider: string;
+  previewDeployConfig: string;
   aiConfig: string;
   storageConfig: string;
+  deploymentWarnings?: string[];
+  updatedAt: string;
+}
+
+export interface TemplateRecord {
+  id: string;
+  name: string;
+  slug: string;
   updatedAt: string;
 }
 
@@ -148,6 +152,7 @@ export interface AdminStateSnapshot {
   selectedSiteId: string;
   selectedArticleId: string | null;
   sites: SiteRecord[];
+  templates: TemplateRecord[];
   landingSections: LandingSectionRecord[];
   articles: ArticleRecord[];
   authors: AuthorRecord[];

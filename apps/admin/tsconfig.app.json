@@ -4,7 +4,9 @@
     "outDir": "./out-tsc/app",
     "types": []
   },
-  "files": ["src/main.ts"],
+  "files": [
+    "src/main.ts",
+    "src/app/pages/deployment-settings/deployment-settings-page.component.ts"
+  ],
   "include": ["src/**/*.d.ts"]
 }
-

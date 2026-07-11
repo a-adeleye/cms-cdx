@@ -1,0 +1,203 @@
+<section class="page article-editor-page">
+  <header class="hero">
+    <p class="eyebrow">Writing</p>
+    <div class="hero-row">
+      <div>
+        <h1>Article editor</h1>
+      </div>
+
+      <div class="hero-actions">
+        <a class="button button-secondary" routerLink="/articles">Back to articles</a>
+        <button class="button button-secondary" type="button" (click)="setPreviewOpen(!previewOpen())">
+          Preview {{ previewOpen() ? 'On' : 'Off' }}
+        </button>
+        <button class="button button-primary" type="button" [disabled]="feedback.isBusy()" (click)="saveArticle()">
+          {{ feedback.isBusy() ? 'Saving...' : 'Save draft' }}
+        </button>
+      </div>
+    </div>
+  </header>
+
+  @if (state.error()) {
+    <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
+  }
+
+  @if (feedback.state(); as feedbackState) {
+    @if (feedbackState.kind !== 'idle' && feedbackState.message) {
+      <p
+        class="page-status"
+        [class.page-status--loading]="feedbackState.kind === 'loading'"
+        [class.page-status--success]="feedbackState.kind === 'success'"
+        [class.page-status--error]="feedbackState.kind === 'error'"
+        [attr.role]="feedbackState.kind === 'error' ? 'alert' : 'status'"
+        [attr.aria-live]="feedbackState.kind === 'error' ? 'assertive' : 'polite'"
+      >
+        @if (feedbackState.kind === 'loading') {
+          <span class="page-status__spinner" aria-hidden="true"></span>
+        }
+        <span class="page-status__message">{{ feedbackState.message }}</span>
+      </p>
+    }
+  }
+
+  <section class="article-layout">
+    <article class="panel">
+      <div class="toolbar">
+        <h2>Article details</h2>
+      </div>
+
+      <form class="article-form-grid" [formGroup]="articleForm" [attr.aria-busy]="feedback.isBusy()">
+        <input type="hidden" formControlName="id" />
+
+        <label>
+          <span>Title</span>
+          <input type="text" formControlName="title" />
+          @if (controlHasError(articleForm.controls.title, 'required')) {
+            <span class="field-error">Title is required.</span>
+          } @else if (controlHasError(articleForm.controls.title, 'minlength')) {
+            <span class="field-error">Title must be at least 3 characters.</span>
+          }
+        </label>
+
+        <label>
+          <span>Excerpt</span>
+          <textarea rows="3" formControlName="excerpt"></textarea>
+          @if (controlHasError(articleForm.controls.excerpt, 'required')) {
+            <span class="field-error">Excerpt is required.</span>
+          } @else if (controlHasError(articleForm.controls.excerpt, 'minlength')) {
+            <span class="field-error">Excerpt must be at least 12 characters.</span>
+          }
+        </label>
+
+        <div class="cover-field article-span-2">
+          <span>Cover image</span>
+          <div class="cover-field-row">
+            <div class="chip-group cover-image-mode">
+              <button type="button" class="chip" [class.is-active-chip]="coverImageMode() === 'url'" (click)="setCoverImageMode('url')">
+                URL
+              </button>
+              <button type="button" class="chip" [class.is-active-chip]="coverImageMode() === 'upload'" (click)="setCoverImageMode('upload')">
+                Upload
+              </button>
+            </div>
+
+            @if (coverImageMode() === 'url') {
+              <input type="url" formControlName="coverImageUrl" placeholder="https://images.example/cover.jpg" />
+            } @else {
+              <input type="file" accept="image/*" (change)="onCoverImageSelected($event)" />
+            }
+          </div>
+
+          <div class="cover-field-support">
+            <p class="field-help">Uploads go to S3-compatible storage and work with MinIO or R2.</p>
+            @if (coverImageFileName()) {
+              <p class="field-help">Selected file: {{ coverImageFileName() }}</p>
+            }
+            @if (uploadingCoverImage()) {
+              <p class="field-help">Uploading cover image...</p>
+            }
+            @if (coverImageError()) {
+              <p class="field-error">{{ coverImageError() }}</p>
+            }
+            @if (articleForm.controls.coverImageUrl.value) {
+              <img class="cover-preview" [src]="articleForm.controls.coverImageUrl.value" alt="" />
+            }
+          </div>
+        </div>
+
+        <label>
+          <span>SEO title</span>
+          <input type="text" formControlName="seoTitle" />
+          @if (controlHasError(articleForm.controls.seoTitle, 'required')) {
+            <span class="field-error">SEO title is required.</span>
+          }
+        </label>
+
+        <label>
+          <span>SEO description</span>
+          <textarea rows="3" formControlName="seoDescription"></textarea>
+          @if (controlHasError(articleForm.controls.seoDescription, 'required')) {
+            <span class="field-error">SEO description is required.</span>
+          }
+        </label>
+
+        <label>
+          <span>Canonical URL</span>
+          <input type="url" formControlName="canonicalUrl" />
+        </label>
+
+        <div class="article-meta-row article-span-2">
+          <label>
+            <span>Status</span>
+            <select formControlName="status">
+              <option value="draft">Draft</option>
+              <option value="review">Review</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Author</span>
+            <select formControlName="authorId">
+              @for (author of state.authors(); track author.id) {
+                <option [value]="author.id">{{ author.name }}</option>
+              }
+            </select>
+            @if (controlHasError(articleForm.controls.authorId, 'required')) {
+              <span class="field-error">Author is required.</span>
+            }
+          </label>
+          <label>
+            <span>Category</span>
+            <select formControlName="categoryId">
+              @for (category of state.categories(); track category.id) {
+                <option [value]="category.id">{{ category.name }}</option>
+              }
+            </select>
+            @if (controlHasError(articleForm.controls.categoryId, 'required')) {
+              <span class="field-error">Category is required.</span>
+            }
+          </label>
+
+          <label>
+            <span>Tags</span>
+            <select formControlName="tagIds" multiple size="5">
+              @for (tag of state.tags(); track tag.id) {
+                <option [value]="tag.id">{{ tag.name }}</option>
+              }
+            </select>
+            <span class="field-help">Hold Ctrl or Cmd to select multiple tags.</span>
+          </label>
+
+          <label class="checkbox-row feature-field">
+            <input type="checkbox" formControlName="isFeatured" />
+            <span>Featured article</span>
+          </label>
+        </div>
+
+        <label class="article-markdown article-span-2">
+          <span>Markdown body</span>
+          <textarea rows="22" formControlName="contentMarkdown"></textarea>
+          @if (controlHasError(articleForm.controls.contentMarkdown, 'required')) {
+            <span class="field-error">Markdown body is required.</span>
+          } @else if (controlHasError(articleForm.controls.contentMarkdown, 'minlength')) {
+            <span class="field-error">Markdown body must be at least 20 characters.</span>
+          }
+        </label>
+      </form>
+    </article>
+
+    @if (previewOpen()) {
+      <article class="panel preview-drawer">
+        <h2>Preview</h2>
+        <p class="preview-title">{{ articleForm.controls.title.value || 'Untitled article' }}</p>
+        <p class="muted">{{ articleForm.controls.excerpt.value }}</p>
+        @if (articleForm.controls.coverImageUrl.value) {
+          <img class="cover-preview" [src]="articleForm.controls.coverImageUrl.value" alt="" />
+        }
+        <pre class="code-block">{{ articleForm.controls.contentMarkdown.value }}</pre>
+      </article>
+    }
+  </section>
+</section>

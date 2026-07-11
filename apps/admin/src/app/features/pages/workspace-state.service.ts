@@ -4,12 +4,14 @@ import {
   ArticleRecord,
   ArticleStatus,
   AuthSession,
+  AuthorRecord,
   BuildRecord,
   BuildType,
   CategoryRecord,
   LandingSectionRecord,
   MediaAssetRecord,
   SiteRecord,
+  TemplateRecord,
   TagRecord,
 } from './pages.model';
 import { INITIAL_STATE } from './pages.seed';
@@ -41,10 +43,21 @@ interface SiteDraftInput {
   templateKey: string;
 }
 
+interface TemplateDraftInput {
+  name: string;
+  slug: string;
+}
+
 interface CategoryDraftInput {
   id?: string;
   name: string;
   description: string;
+}
+
+interface AuthorDraftInput {
+  id?: string;
+  name: string;
+  bio: string;
 }
 
 interface TagDraftInput {
@@ -63,6 +76,8 @@ const EMPTY_SITE: SiteRecord = {
   themeConfig: '{}',
   deployProvider: '',
   deployConfig: '{}',
+  previewDeployProvider: '',
+  previewDeployConfig: '{}',
   aiConfig: '{}',
   storageConfig: '{}',
   updatedAt: '',
@@ -74,6 +89,7 @@ const EMPTY_STATE: AdminStateSnapshot = {
   selectedSiteId: '',
   selectedArticleId: null,
   sites: [],
+  templates: [],
   landingSections: [],
   articles: [],
   authors: [],
@@ -98,6 +114,7 @@ export class WorkspaceStateService {
   readonly loading = computed(() => this.loadingState());
   readonly error = computed(() => this.errorState());
   readonly sites = computed(() => this.state().sites.slice().sort((left, right) => left.name.localeCompare(right.name)));
+  readonly templates = computed(() => this.state().templates.slice().sort((left, right) => left.name.localeCompare(right.name)));
   readonly selectedSiteId = computed(() => this.state().selectedSiteId);
   readonly selectedSite = computed(() => this.findSite(this.state().selectedSiteId) ?? this.state().sites[0] ?? EMPTY_SITE);
   readonly landingSections = computed(() =>
@@ -222,12 +239,24 @@ export class WorkspaceStateService {
       themeConfig: '{"tone":"professional"}',
       deployProvider: '',
       deployConfig: '{}',
+      previewDeployProvider: '',
+      previewDeployConfig: '{}',
       aiConfig: '{}',
       storageConfig: '{}',
     });
 
     await this.loadWorkspace(site.id);
     return site;
+  }
+
+  async createTemplate(input: TemplateDraftInput): Promise<TemplateRecord> {
+    const template = await this.api.createTemplate({
+      name: input.name,
+      slug: input.slug,
+    });
+
+    await this.loadWorkspace(this.selectedSiteId() || undefined);
+    return template;
   }
 
   async updateSite(siteId: string, patch: Partial<SiteRecord>): Promise<SiteRecord> {
@@ -242,6 +271,8 @@ export class WorkspaceStateService {
       themeConfig: patch.themeConfig ?? current.themeConfig,
       deployProvider: patch.deployProvider ?? current.deployProvider,
       deployConfig: patch.deployConfig ?? current.deployConfig,
+      previewDeployProvider: patch.previewDeployProvider ?? current.previewDeployProvider,
+      previewDeployConfig: patch.previewDeployConfig ?? current.previewDeployConfig,
       aiConfig: patch.aiConfig ?? current.aiConfig,
       storageConfig: patch.storageConfig ?? current.storageConfig,
     });
@@ -300,6 +331,36 @@ export class WorkspaceStateService {
 
     await this.loadWorkspace(site.id);
     return category;
+  }
+
+  async saveAuthor(input: AuthorDraftInput): Promise<AuthorRecord> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    const author = input.id
+      ? await this.api.updateAuthor(site.id, input.id, {
+          name: input.name,
+          bio: input.bio,
+        })
+      : await this.api.createAuthor(site.id, {
+          name: input.name,
+          bio: input.bio,
+        });
+
+    await this.loadWorkspace(site.id);
+    return author;
+  }
+
+  async deleteAuthor(authorId: string): Promise<void> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    await this.api.deleteAuthor(site.id, authorId);
+    await this.loadWorkspace(site.id);
   }
 
   async deleteCategory(categoryId: string): Promise<void> {
@@ -364,6 +425,20 @@ export class WorkspaceStateService {
     return article;
   }
 
+  async deleteArticle(articleId: string): Promise<void> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    await this.api.deleteArticle(articleId);
+    await this.loadWorkspace(site.id);
+    this.state.update((state) => ({
+      ...state,
+      selectedArticleId: state.selectedArticleId === articleId ? null : state.selectedArticleId,
+    }));
+  }
+
   async selectArticle(articleId: string): Promise<void> {
     if (!this.articles().some((article) => article.id === articleId)) {
       return;
@@ -388,7 +463,7 @@ export class WorkspaceStateService {
       return;
     }
 
-    await this.saveArticle({
+    await this.updateArticle(article, {
       id: article.id,
       title: article.title,
       slug: article.slug,
@@ -412,7 +487,7 @@ export class WorkspaceStateService {
       return;
     }
 
-    await this.saveArticle({
+    await this.updateArticle(article, {
       id: article.id,
       title: article.title,
       slug: article.slug,
@@ -428,6 +503,27 @@ export class WorkspaceStateService {
       isFeatured: !article.isFeatured,
       status: article.status,
     });
+  }
+
+  private async updateArticle(article: ArticleRecord, input: ArticleDraftInput): Promise<void> {
+    await this.api.updateArticle(article.id, {
+      id: input.id?.trim() || undefined,
+      title: input.title,
+      slug: input.slug,
+      excerpt: input.excerpt,
+      contentMarkdown: input.contentMarkdown,
+      coverImageUrl: input.coverImageUrl,
+      seoTitle: input.seoTitle,
+      seoDescription: input.seoDescription,
+      canonicalUrl: input.canonicalUrl,
+      authorId: input.authorId,
+      categoryId: input.categoryId,
+      tagIds: input.tagIds,
+      isFeatured: input.isFeatured,
+      status: input.status,
+    });
+
+    await this.loadWorkspace(this.selectedSite().id);
   }
 
   async toggleLandingSection(sectionId: string): Promise<void> {
@@ -456,9 +552,9 @@ export class WorkspaceStateService {
     await this.loadWorkspace(site.id);
   }
 
-  async triggerBuild(buildType: BuildType): Promise<BuildRecord> {
+  async triggerBuild(buildType: BuildType, articleIds: string[] = []): Promise<BuildRecord> {
     const site = this.selectedSite();
-    const build = await this.api.createBuild(site.id, buildType);
+    const build = await this.api.createBuild(site.id, buildType, articleIds);
     await this.loadWorkspace(site.id);
     return build;
   }
@@ -470,11 +566,25 @@ export class WorkspaceStateService {
       fileUrl,
       mimeType: 'image/jpeg',
       sizeBytes: 180_000,
-      storageProvider: site.storageConfig.includes('r2') ? 'r2' : 'minio',
+      storageProvider: (site.storageConfig ?? '').includes('r2') ? 'r2' : 'minio',
       storageKey: `${site.slug || 'site'}/${fileName}`,
       altText,
     });
     await this.loadWorkspace(site.id);
+    return media;
+  }
+
+  async uploadMediaFile(file: File, altText: string): Promise<MediaAssetRecord> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    const media = await this.api.uploadMediaFile(site.id, file, altText);
+    this.state.update((state) => ({
+      ...state,
+      mediaAssets: [media, ...state.mediaAssets.filter((asset) => asset.id !== media.id)],
+    }));
     return media;
   }
 
@@ -498,6 +608,7 @@ export class WorkspaceStateService {
       selectedSiteId: workspace.selectedSiteId,
       selectedArticleId: workspace.selectedArticleId || null,
       sites: workspace.sites,
+      templates: workspace.templates,
       landingSections: workspace.landingSections,
       articles: workspace.articles,
       authors: workspace.authors,

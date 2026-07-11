@@ -17,6 +17,7 @@ WORKDIR /app
 COPY --from=build /out/api /app/api
 COPY --from=node-dependencies /workspace/node_modules /app/node_modules
 COPY --from=node-dependencies /workspace/apps/builder /app/builder
+COPY --from=build /src/migrations /app/migrations
 RUN mkdir -p /var/lib/cms-builder/builds
 ENV BUILDER_DIRECTORY=/app/builder
 ENV BUILD_OUTPUT_ROOT=/var/lib/cms-builder/builds

@@ -4,11 +4,13 @@ import { firstValueFrom } from 'rxjs';
 import {
   ArticleRecord,
   AuthSession,
+  AuthorRecord,
   BuildRecord,
   CategoryRecord,
   LandingSectionRecord,
   MediaAssetRecord,
   SiteRecord,
+  TemplateRecord,
   TagRecord,
 } from './pages.model';
 import { AuthTokenService } from './auth-token.service';
@@ -30,6 +32,7 @@ interface WorkspaceResponse {
   selectedSiteId: string;
   selectedArticleId: string | null;
   sites: SiteRecord[];
+  templates: TemplateRecord[];
   landingSections: LandingSectionRecord[];
   articles: ArticleRecord[];
   authors: Array<{ id: string; siteId: string; name: string; slug: string; bio: string }>;
@@ -70,8 +73,15 @@ interface SiteUpsertPayload {
   themeConfig: string;
   deployProvider: string;
   deployConfig: string;
+  previewDeployProvider: string;
+  previewDeployConfig: string;
   aiConfig: string;
   storageConfig: string;
+}
+
+interface TemplateUpsertPayload {
+  name: string;
+  slug: string;
 }
 
 interface LandingOrderPayload {
@@ -85,6 +95,7 @@ interface LandingUpdatePayload {
 
 interface BuildCreatePayload {
   buildType: 'preview' | 'published';
+  articleIds?: string[];
 }
 
 interface MediaCreatePayload {
@@ -100,6 +111,11 @@ interface MediaCreatePayload {
 interface CategoryUpsertPayload {
   name: string;
   description: string;
+}
+
+interface AuthorUpsertPayload {
+  name: string;
+  bio: string;
 }
 
 interface TagUpsertPayload {
@@ -131,6 +147,14 @@ export class AdminApiService {
     return firstValueFrom(this.http.get<WorkspaceResponse>(url, { headers: this.headers() }));
   }
 
+  async listTemplates(): Promise<ItemsResponse<TemplateRecord>> {
+    return firstValueFrom(this.http.get<ItemsResponse<TemplateRecord>>(`${this.baseUrl}/templates`, { headers: this.headers() }));
+  }
+
+  async createTemplate(payload: TemplateUpsertPayload): Promise<TemplateRecord> {
+    return firstValueFrom(this.http.post<TemplateRecord>(`${this.baseUrl}/templates`, payload, { headers: this.headers() }));
+  }
+
   async createSite(payload: SiteUpsertPayload): Promise<SiteRecord> {
     return firstValueFrom(this.http.post<SiteRecord>(`${this.baseUrl}/sites`, payload, { headers: this.headers() }));
   }
@@ -145,6 +169,34 @@ export class AdminApiService {
 
   async listArticles(siteId: string): Promise<ItemsResponse<ArticleRecord>> {
     return firstValueFrom(this.http.get<ItemsResponse<ArticleRecord>>(`${this.baseUrl}/sites/${siteId}/articles`, { headers: this.headers() }));
+  }
+
+  async createAuthor(siteId: string, payload: AuthorUpsertPayload): Promise<AuthorRecord> {
+    try {
+      return await firstValueFrom(
+        this.http.post<AuthorRecord>(`${this.baseUrl}/sites/${siteId}/authors`, payload, { headers: this.headers() }),
+      );
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
+
+  async updateAuthor(siteId: string, authorId: string, payload: AuthorUpsertPayload): Promise<AuthorRecord> {
+    try {
+      return await firstValueFrom(
+        this.http.patch<AuthorRecord>(`${this.baseUrl}/sites/${siteId}/authors/${authorId}`, payload, { headers: this.headers() }),
+      );
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
+
+  async deleteAuthor(siteId: string, authorId: string): Promise<void> {
+    try {
+      await firstValueFrom(this.http.delete(`${this.baseUrl}/sites/${siteId}/authors/${authorId}`, { headers: this.headers() }));
+    } catch (error) {
+      throw this.toError(error);
+    }
   }
 
   async createCategory(siteId: string, payload: CategoryUpsertPayload): Promise<CategoryRecord> {
@@ -209,11 +261,29 @@ export class AdminApiService {
 
   async upsertArticle(siteId: string, payload: ArticleUpsertPayload): Promise<ArticleRecord> {
     try {
-      if (payload.id) {
-        return await firstValueFrom(this.http.patch<ArticleRecord>(`${this.baseUrl}/articles/${payload.id}`, payload, { headers: this.headers() }));
-      }
+      // Temporarily disable update semantics while we trace the editor/article ID flow.
+      // Always create a new article so PATCH cannot be triggered from the client.
+      const createPayload = { ...payload };
+      delete createPayload.id;
+      return await firstValueFrom(this.http.post<ArticleRecord>(`${this.baseUrl}/sites/${siteId}/articles`, createPayload, { headers: this.headers() }));
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
 
-      return await firstValueFrom(this.http.post<ArticleRecord>(`${this.baseUrl}/sites/${siteId}/articles`, payload, { headers: this.headers() }));
+  async updateArticle(articleId: string, payload: ArticleUpsertPayload): Promise<ArticleRecord> {
+    try {
+      return await firstValueFrom(
+        this.http.patch<ArticleRecord>(`${this.baseUrl}/articles/${articleId}`, payload, { headers: this.headers() }),
+      );
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
+
+  async deleteArticle(articleId: string): Promise<void> {
+    try {
+      await firstValueFrom(this.http.delete(`${this.baseUrl}/articles/${articleId}`, { headers: this.headers() }));
     } catch (error) {
       throw this.toError(error);
     }
@@ -243,16 +313,27 @@ export class AdminApiService {
     );
   }
 
-  async createBuild(siteId: string, buildType: 'preview' | 'published'): Promise<BuildRecord> {
+  async createBuild(siteId: string, buildType: 'preview' | 'published', articleIds: string[] = []): Promise<BuildRecord> {
     return firstValueFrom(
-      this.http.post<BuildRecord>(`${this.baseUrl}/sites/${siteId}/builds`, { buildType } satisfies BuildCreatePayload, {
-        headers: this.headers(),
-      }),
+      this.http.post<BuildRecord>(
+        `${this.baseUrl}/sites/${siteId}/builds`,
+        { buildType, articleIds } satisfies BuildCreatePayload,
+        {
+          headers: this.headers(),
+        },
+      ),
     );
   }
 
   async createMediaAsset(siteId: string, payload: MediaCreatePayload): Promise<MediaAssetRecord> {
     return firstValueFrom(this.http.post<MediaAssetRecord>(`${this.baseUrl}/sites/${siteId}/media`, payload, { headers: this.headers() }));
+  }
+
+  async uploadMediaFile(siteId: string, file: File, altText: string): Promise<MediaAssetRecord> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    formData.append('altText', altText);
+    return firstValueFrom(this.http.post<MediaAssetRecord>(`${this.baseUrl}/sites/${siteId}/media`, formData, { headers: this.headers() }));
   }
 
   private headers(): HttpHeaders {

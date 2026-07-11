@@ -1,33 +1,66 @@
 package builder
 
 import (
+	"context"
+	"path/filepath"
 	"testing"
 
 	"cms-builder/api/internal/models"
 )
 
-func TestSiteURLUsesConfiguredDomain(t *testing.T) {
-	url := siteURL(models.Site{Domain: "blog.example.com"})
-	if url != "https://blog.example.com" {
-		t.Fatalf("expected https://blog.example.com, got %q", url)
+func TestNormalizedBlogPathEnsuresALeadingSlashAndTrimsTrailingSlashes(t *testing.T) {
+	if got := normalizedBlogPath("articles/"); got != "/articles" {
+		t.Fatalf("expected /articles, got %q", got)
+	}
+
+	if got := normalizedBlogPath(""); got != "/articles" {
+		t.Fatalf("expected empty blog path to fall back to /articles, got %q", got)
 	}
 }
 
-func TestSiteURLUsesPagesDomainWhenSiteDomainIsEmpty(t *testing.T) {
-	url := siteURL(models.Site{Slug: "example-site"})
-	if url != "https://example-site.pages.dev" {
-		t.Fatalf("expected Pages fallback URL, got %q", url)
+func TestBuildOutputPathUsesPreviewDirectoryForPreviewBuilds(t *testing.T) {
+	site := models.Site{Slug: "Anonime Blog"}
+
+	if got := buildOutputPath("dist/builds", site, false); got != filepath.Join("dist", "builds", "sites", "anonime-blog") {
+		t.Fatalf("expected published build path to use the site slug, got %q", got)
+	}
+
+	if got := buildOutputPath("dist/builds", site, true); got != filepath.Join("dist", "builds", "preview", "site") {
+		t.Fatalf("expected preview build path to use the preview directory, got %q", got)
 	}
 }
 
-func TestBuildEnvironmentDoesNotInheritAPISecrets(t *testing.T) {
-	t.Setenv("JWT_SECRET", "jwt-secret")
-	t.Setenv("PATH", "test-path")
+func TestThemeForSiteUsesAnonimePalette(t *testing.T) {
+	theme := themeForSite(models.Site{TemplateKey: "anonime", Name: "Anonime"})
 
-	environment := buildEnvironment("data.json", "output", "https://example.com")
-	for _, value := range environment {
-		if value == "JWT_SECRET=jwt-secret" {
-			t.Fatal("expected unrelated API secret to be excluded from builder environment")
-		}
+	if theme.Name != "anonime" {
+		t.Fatalf("expected anonime theme, got %q", theme.Name)
+	}
+	if theme.LayoutClass != "anonime-layout" {
+		t.Fatalf("expected anonime layout class, got %q", theme.LayoutClass)
+	}
+	if theme.Accent != "#10b26c" {
+		t.Fatalf("expected anonime accent color, got %q", theme.Accent)
+	}
+}
+
+func TestNoopBuilderUsesPublishedAndPreviewDestinations(t *testing.T) {
+	builder := NoopBuilder{}
+	content := SiteContent{Site: models.Site{Slug: "anonime-blog"}}
+
+	publishedPath, err := builder.GenerateSite(context.Background(), content, GenerateOptions{})
+	if err != nil {
+		t.Fatalf("GenerateSite returned error for published build: %v", err)
+	}
+	if publishedPath != "dist/sites/anonime-blog" {
+		t.Fatalf("expected published build path, got %q", publishedPath)
+	}
+
+	previewPath, err := builder.GenerateSite(context.Background(), content, GenerateOptions{Preview: true})
+	if err != nil {
+		t.Fatalf("GenerateSite returned error for preview build: %v", err)
+	}
+	if previewPath != "dist/preview/site" {
+		t.Fatalf("expected preview build path, got %q", previewPath)
 	}
 }

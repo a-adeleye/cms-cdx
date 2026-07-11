@@ -5,6 +5,7 @@ build
 coverage
 .DS_Store
 *.log
+.env
 
 apps/api/bin
 apps/admin/dist

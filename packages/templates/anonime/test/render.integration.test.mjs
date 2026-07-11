@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,6 +19,7 @@ test('Astro renders formatting while keeping hostile Markdown inert', () => {
     recursive: true,
     filter: (source) => !['.astro', 'dist', 'node_modules'].includes(basename(source)),
   });
+  symlinkSync(join(repositoryRoot, 'node_modules'), join(isolatedTemplate, 'node_modules'), 'junction');
   const isolatedFixture = join(isolatedTemplate, 'test', 'fixture');
 
   try {

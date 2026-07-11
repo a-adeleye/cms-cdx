@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
+import { RouterTestingModule } from '@angular/router/testing';
 import { TaxonomyPageComponent } from './taxonomy-page.component';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 
@@ -37,6 +38,8 @@ describe('TaxonomyPageComponent', () => {
       themeConfig: '{}',
       deployProvider: 'netlify',
       deployConfig: '{}',
+      previewDeployProvider: 'cloudflare',
+      previewDeployConfig: '{}',
       aiConfig: '{}',
       storageConfig: '{}',
       updatedAt: '2026-05-23T00:00:00.000Z',
@@ -84,7 +87,7 @@ describe('TaxonomyPageComponent', () => {
       state = createState();
 
       await TestBed.configureTestingModule({
-        imports: [CommonModule, ReactiveFormsModule, TaxonomyPageComponent],
+        imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, TaxonomyPageComponent],
         providers: [{ provide: WorkspaceStateService, useValue: state }],
       }).compileComponents();
 
@@ -97,12 +100,15 @@ describe('TaxonomyPageComponent', () => {
 
     it('renders the category description field and uses category CRUD actions', async () => {
       expect(fixture.nativeElement.textContent).toContain('Categories');
+      expect(fixture.nativeElement.textContent).toContain('New category');
       expect(fixture.nativeElement.textContent).toContain('Description');
       expect(fixture.nativeElement.querySelector('textarea[formcontrolname="description"]')).toBeTruthy();
+      expect(fixture.nativeElement.querySelectorAll('.table-row').length).toBe(1);
 
       fixture.componentInstance.form.controls.name.setValue('Editorial');
       fixture.componentInstance.form.controls.description.setValue('Editorial content');
       await fixture.componentInstance.save();
+      fixture.detectChanges();
 
       expect(state.clearError).toHaveBeenCalled();
       expect(state.saveCategory).toHaveBeenCalledWith({
@@ -110,6 +116,7 @@ describe('TaxonomyPageComponent', () => {
         name: 'Editorial',
         description: 'Editorial content',
       });
+      expect(fixture.nativeElement.textContent).toContain('Categories saved successfully.');
 
       fixture.componentInstance.edit(category);
       fixture.detectChanges();
@@ -117,8 +124,10 @@ describe('TaxonomyPageComponent', () => {
 
       spyOn(window, 'confirm').and.returnValue(true);
       await fixture.componentInstance.remove(category);
+      fixture.detectChanges();
 
       expect(state.deleteCategory).toHaveBeenCalledWith('category-1');
+      expect(fixture.nativeElement.textContent).toContain('Categories deleted successfully.');
     });
   });
 
@@ -129,7 +138,7 @@ describe('TaxonomyPageComponent', () => {
       state = createState();
 
       await TestBed.configureTestingModule({
-        imports: [CommonModule, ReactiveFormsModule, TaxonomyPageComponent],
+        imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, TaxonomyPageComponent],
         providers: [{ provide: WorkspaceStateService, useValue: state }],
       }).compileComponents();
 
@@ -142,21 +151,27 @@ describe('TaxonomyPageComponent', () => {
 
     it('hides the description field and uses tag CRUD actions', async () => {
       expect(fixture.nativeElement.textContent).toContain('Tags');
+      expect(fixture.nativeElement.textContent).not.toContain('New tag');
       expect(fixture.nativeElement.querySelector('textarea[formcontrolname="description"]')).toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('.table-row').length).toBe(1);
 
       fixture.componentInstance.form.controls.name.setValue('Launch');
       await fixture.componentInstance.save();
+      fixture.detectChanges();
 
       expect(state.clearError).toHaveBeenCalled();
       expect(state.saveTag).toHaveBeenCalledWith({
         id: undefined,
         name: 'Launch',
       });
+      expect(fixture.nativeElement.textContent).toContain('Tags saved successfully.');
 
       spyOn(window, 'confirm').and.returnValue(true);
       await fixture.componentInstance.remove(tag);
+      fixture.detectChanges();
 
       expect(state.deleteTag).toHaveBeenCalledWith('tag-1');
+      expect(fixture.nativeElement.textContent).toContain('Tags deleted successfully.');
     });
   });
 });

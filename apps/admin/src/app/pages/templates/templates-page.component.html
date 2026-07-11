@@ -1,0 +1,85 @@
+<section class="page">
+  <header class="hero">
+    <p class="eyebrow">Configuration</p>
+    <div class="hero-row">
+      <div>
+        <h1>Templates</h1>
+        <p class="page-description">Register a template folder slug so sites can select it in site settings.</p>
+      </div>
+
+      <div class="hero-actions">
+        <a class="button button-secondary" routerLink="/settings">Back to settings</a>
+      </div>
+    </div>
+  </header>
+
+  @if (state.error()) {
+    <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
+  }
+
+  @if (feedback.state(); as feedbackState) {
+    @if (feedbackState.kind !== 'idle' && feedbackState.message) {
+      <p
+        class="page-status"
+        [class.page-status--loading]="feedbackState.kind === 'loading'"
+        [class.page-status--success]="feedbackState.kind === 'success'"
+        [class.page-status--error]="feedbackState.kind === 'error'"
+        [attr.role]="feedbackState.kind === 'error' ? 'alert' : 'status'"
+        [attr.aria-live]="feedbackState.kind === 'error' ? 'assertive' : 'polite'"
+      >
+        @if (feedbackState.kind === 'loading') {
+          <span class="page-status__spinner" aria-hidden="true"></span>
+        }
+        <span class="page-status__message">{{ feedbackState.message }}</span>
+      </p>
+    }
+  }
+
+  <section class="two-column">
+    <article class="panel">
+      <h2>Add template</h2>
+      <p class="muted">The slug must match the folder name under `packages/templates`.</p>
+
+      <form class="form-grid" [formGroup]="templateForm" (ngSubmit)="saveTemplate()" [attr.aria-busy]="feedback.isBusy()">
+        <label>
+          <span>Name</span>
+          <input type="text" formControlName="name" />
+        </label>
+
+        <label>
+          <span>Slug</span>
+          <input type="text" formControlName="slug" />
+          <small class="field-help">Use lowercase letters, numbers, and hyphens only.</small>
+        </label>
+
+        @if (templateForm.invalid && templateForm.touched) {
+          <p class="field-error" role="alert">Fix the highlighted fields to save the template.</p>
+        }
+
+        <button class="button button-primary" type="submit" [disabled]="feedback.isBusy()">
+          {{ feedback.isBusy() ? 'Saving...' : 'Save template' }}
+        </button>
+      </form>
+    </article>
+
+    <article class="panel">
+      <div class="toolbar">
+        <div>
+          <h2>Registered templates</h2>
+          <p class="muted">{{ templates().length }} available template options</p>
+        </div>
+      </div>
+
+      <div class="stack">
+        @for (template of templates(); track template.slug) {
+          <article class="list-card">
+            <strong>{{ template.name }}</strong>
+            <span>{{ template.slug }}</span>
+          </article>
+        } @empty {
+          <p class="muted">No templates have been registered yet.</p>
+        }
+      </div>
+    </article>
+  </section>
+</section>

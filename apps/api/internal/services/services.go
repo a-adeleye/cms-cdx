@@ -25,31 +25,25 @@ type Services struct {
 
 func New(db *sql.DB, cfg config.Config) Services {
 	return Services{
-		DB:     db,
-		Config: cfg,
-		AI:     ai.NoopProvider{},
-		Builder: builder.AstroBuilder{
-			Directory:  cfg.BuilderDirectory,
-			OutputRoot: cfg.BuildOutputRoot,
-			NPMCommand: cfg.NPMCommand,
-		},
-		Deploy: deploy.CloudflarePagesAdapter{
-			APIToken:  cfg.CloudflareAPIToken,
-			AccountID: cfg.CloudflareAccountID,
-			Command:   cfg.WranglerCommand,
-		},
-		Storage: storage.NoopStorage{},
+		DB:      db,
+		Config:  cfg,
+		AI:      ai.NoopProvider{},
+		Builder: builder.NewLocalBuilder(""),
+		Deploy:  deploy.NewAdapter(""),
+		Storage: storage.NewFromConfig(cfg),
 		Sites:   repositories.NoopSites{},
 	}
 }
 
 func (s Services) ExampleSite() models.Site {
 	return models.Site{
-		Name:        "Example Site",
-		Slug:        "example",
-		Domain:      "http://localhost:4321",
-		BlogPath:    "/articles",
-		Status:      "active",
-		TemplateKey: "default-blog",
+		Name:                  "Example Site",
+		Slug:                  "example",
+		Domain:                "http://localhost:4321",
+		BlogPath:              "/articles",
+		Status:                "active",
+		TemplateKey:           "default-blog",
+		DeployProvider:        "none",
+		PreviewDeployProvider: "none",
 	}
 }

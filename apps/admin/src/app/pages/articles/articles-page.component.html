@@ -1,0 +1,79 @@
+<section class="page">
+  <header class="hero">
+    <p class="eyebrow">Editorial</p>
+    <div class="hero-row">
+      <div>
+        <h1>Articles</h1>
+        <p class="muted">Manage drafts, review items, and published content.</p>
+      </div>
+
+      <div class="hero-actions">
+        <button class="button button-primary" type="button" [disabled]="feedback.isBusy()" (click)="startArticle()">New article</button>
+      </div>
+    </div>
+  </header>
+
+  @if (state.error()) {
+    <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
+  }
+
+  @if (feedback.state(); as feedbackState) {
+    @if (feedbackState.kind !== 'idle' && feedbackState.message) {
+      <p
+        class="page-status"
+        [class.page-status--loading]="feedbackState.kind === 'loading'"
+        [class.page-status--success]="feedbackState.kind === 'success'"
+        [class.page-status--error]="feedbackState.kind === 'error'"
+        [attr.role]="feedbackState.kind === 'error' ? 'alert' : 'status'"
+        [attr.aria-live]="feedbackState.kind === 'error' ? 'assertive' : 'polite'"
+      >
+        @if (feedbackState.kind === 'loading') {
+          <span class="page-status__spinner" aria-hidden="true"></span>
+        }
+        <span class="page-status__message">{{ feedbackState.message }}</span>
+      </p>
+    }
+  }
+
+  <section class="panel">
+    <div class="toolbar">
+      <div class="chip-group">
+        @for (filter of articleFilterOptions; track filter.value) {
+          <button
+            type="button"
+            class="chip"
+            [class.is-active-chip]="articleFilter() === filter.value"
+            (click)="onArticleFilterChange(filter.value)"
+          >
+            {{ filter.label }}
+          </button>
+        }
+      </div>
+      <p class="muted">{{ filteredArticles().length }} articles</p>
+    </div>
+
+    @if (filteredArticles().length > 0) {
+      <div class="stack">
+        @for (article of filteredArticles(); track article.id) {
+          <article class="list-card">
+            <div>
+              <strong>{{ article.title }}</strong>
+              <p>{{ article.excerpt }}</p>
+              <small>{{ article.status }} - {{ article.updatedAt | date: 'mediumDate' }}</small>
+            </div>
+            <div class="inline-actions">
+              <button type="button" class="button button-secondary" [disabled]="feedback.isBusy()" (click)="openArticle(article.id)">Edit</button>
+              <button type="button" class="button button-secondary" [disabled]="feedback.isBusy()" (click)="toggleFeatured(article.id)">
+                {{ article.isFeatured ? 'Unfeature' : 'Feature' }}
+              </button>
+              <button type="button" class="button button-secondary" [disabled]="feedback.isBusy()" (click)="setStatus(article.id, 'review')">Review</button>
+              <button type="button" class="button button-secondary" [disabled]="feedback.isBusy()" (click)="setStatus(article.id, 'published')">Publish</button>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <p class="muted">No articles yet. Create the first one with the button above.</p>
+    }
+  </section>
+</section>

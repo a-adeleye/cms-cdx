@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"cms-builder/api/internal/builder"
 	"cms-builder/api/internal/middleware"
 	"cms-builder/api/internal/models"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -243,6 +245,9 @@ func (a *API) sites(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"items": sites})
 	case http.MethodPost:
+		if !requireAdmin(w, r) {
+			return
+		}
 		var payload siteUpsertRequest
 		if err := decodeJSON(r, &payload); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
@@ -291,6 +296,9 @@ func (a *API) siteSubroutes(w http.ResponseWriter, r *http.Request) {
 			}
 			writeJSON(w, http.StatusOK, site)
 		case http.MethodPatch:
+			if !requireAdmin(w, r) {
+				return
+			}
 			var payload siteUpsertRequest
 			if err := decodeJSON(r, &payload); err != nil {
 				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
@@ -664,6 +672,9 @@ func (a *API) handleBuildRoutes(w http.ResponseWriter, r *http.Request, siteID s
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"items": builds})
 	case http.MethodPost:
+		if !requireAdmin(w, r) {
+			return
+		}
 		var payload buildCreateRequest
 		if err := decodeJSON(r, &payload); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
@@ -962,8 +973,45 @@ func validateSitePayload(payload siteUpsertRequest) error {
 	if strings.TrimSpace(payload.Name) == "" || strings.TrimSpace(payload.Slug) == "" {
 		return fmt.Errorf("%w: name and slug are required", errValidation)
 	}
+	if strings.TrimSpace(payload.DeployProvider) != "cloudflare_pages" {
+		return nil
+	}
+	if blogPath := fallbackString(payload.BlogPath, "/articles"); blogPath != "/articles" {
+		return fmt.Errorf("%w: Cloudflare Pages builds currently require blogPath /articles", errValidation)
+	}
+
+	var deployConfig map[string]any
+	if err := json.Unmarshal([]byte(fallbackJSON(payload.DeployConfig, `{}`)), &deployConfig); err != nil {
+		return fmt.Errorf("%w: deployment config must be JSON", errValidation)
+	}
+	for key := range deployConfig {
+		if key != "projectName" && key != "productionBranch" {
+			return fmt.Errorf("%w: Cloudflare deployment config only supports projectName and productionBranch", errValidation)
+		}
+	}
+	projectName, _ := deployConfig["projectName"].(string)
+	if !cloudflareProjectName.MatchString(strings.TrimSpace(projectName)) {
+		return fmt.Errorf("%w: Cloudflare deployment config requires a valid projectName", errValidation)
+	}
+	if branch, ok := deployConfig["productionBranch"]; ok {
+		value, isString := branch.(string)
+		if !isString || strings.ContainsAny(value, "\r\n") {
+			return fmt.Errorf("%w: Cloudflare deployment config has an invalid productionBranch", errValidation)
+		}
+	}
 	return nil
 }
+
+func requireAdmin(w http.ResponseWriter, r *http.Request) bool {
+	claims := middleware.ClaimsFromContext(r.Context())
+	if claims == nil || claims.Role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "administrator access is required"})
+		return false
+	}
+	return true
+}
+
+var cloudflareProjectName = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,58}[a-z0-9]$|^[a-z0-9]$`)
 
 func (a *API) listLandingSections(ctx context.Context, siteID string) ([]landingSectionResp, error) {
 	rows, err := a.Services.DB.QueryContext(ctx, `
@@ -1754,45 +1802,127 @@ func (a *API) getBuild(ctx context.Context, buildID string) (buildResponse, erro
 }
 
 func (a *API) createBuild(ctx context.Context, siteID string, payload buildCreateRequest) (buildResponse, error) {
+	operationCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Minute)
+	defer cancel()
+
 	buildType := fallbackString(payload.BuildType, "published")
 	if buildType != "preview" && buildType != "published" {
 		return buildResponse{}, fmt.Errorf("%w: invalid build type", errValidation)
 	}
 
-	logs := "Published build completed successfully."
-	outputPath := fmt.Sprintf("dist/sites/%s", siteID)
-	if buildType == "preview" {
-		logs = "Preview build completed successfully."
-		outputPath = "dist/preview/site"
-	}
-
-	var item buildResponse
-	now := time.Now().UTC().Format(time.RFC3339)
-	var startedAt sql.NullTime
-	var finishedAt sql.NullTime
-	err := a.Services.DB.QueryRowContext(ctx, `
-		INSERT INTO builds (
-			site_id, status, build_type, logs, output_path, deploy_provider, deploy_status, deploy_url, started_at, finished_at
-		)
-		VALUES ($1, 'success', $2, $3, $4, '', 'deployed', '', NOW(), NOW())
-		RETURNING id::text, site_id::text, status, build_type, logs, output_path, COALESCE(deploy_provider, ''), COALESCE(deploy_status, ''), COALESCE(deploy_url, ''), started_at, finished_at
-	`, siteID, buildType, logs, outputPath).Scan(&item.ID, &item.SiteID, &item.Status, &item.BuildType, &item.Logs, &item.OutputPath, &item.DeployProvider, &item.DeployStatus, &item.DeployURL, &startedAt, &finishedAt)
+	siteResponse, err := a.getSite(operationCtx, siteID)
 	if err != nil {
 		return buildResponse{}, err
 	}
-	if startedAt.Valid {
-		value := startedAt.Time.UTC().Format(time.RFC3339)
-		item.StartedAt = &value
-	} else {
-		item.StartedAt = &now
+	site, err := deploymentSite(siteResponse)
+	if err != nil {
+		return buildResponse{}, fmt.Errorf("%w: invalid deployment configuration", errValidation)
 	}
-	if finishedAt.Valid {
-		value := finishedAt.Time.UTC().Format(time.RFC3339)
-		item.FinishedAt = &value
-	} else {
-		item.FinishedAt = &now
+
+	buildID, err := a.createPendingBuild(operationCtx, siteID, buildType, site.DeployProvider)
+	if err != nil {
+		return buildResponse{}, err
 	}
-	return item, nil
+	build := models.Build{ID: buildID, SiteID: siteID, BuildType: buildType}
+	buildData, err := a.buildData(operationCtx, siteID, siteResponse, buildType)
+	if err != nil {
+		return a.failBuild(buildID, "load CMS content", err)
+	}
+	outputPath, err := a.Services.Builder.GenerateSite(operationCtx, site, buildOptions(siteID, buildID, buildType, buildData))
+	if err != nil {
+		return a.failBuild(buildID, "generate static site", err)
+	}
+	deployment, err := a.Services.Deploy.Deploy(operationCtx, site, build, outputPath)
+	if err != nil {
+		return a.failBuild(buildID, "deploy static site", err)
+	}
+
+	deployStatus := "skipped"
+	if deployment.Provider != "none" {
+		deployStatus = "deployed"
+	}
+	if _, err := a.Services.DB.ExecContext(operationCtx, `
+		UPDATE builds
+		SET status = 'success', logs = $2, output_path = $3, deploy_provider = $4, deploy_status = $5, deploy_url = $6, finished_at = NOW()
+		WHERE id = $1
+	`, buildID, deployment.Message, outputPath, deployment.Provider, deployStatus, deployment.URL); err != nil {
+		return buildResponse{}, err
+	}
+	return a.getBuild(operationCtx, buildID)
+}
+
+func buildOptions(siteID, buildID, buildType string, data []byte) builder.GenerateOptions {
+	return builder.GenerateOptions{SiteID: siteID, BuildID: buildID, Preview: buildType == "preview", BuildData: data}
+}
+
+func (a *API) createPendingBuild(ctx context.Context, siteID, buildType, provider string) (string, error) {
+	var buildID string
+	err := a.Services.DB.QueryRowContext(ctx, `
+		INSERT INTO builds (site_id, status, build_type, logs, deploy_provider, deploy_status, started_at)
+		VALUES ($1, 'running', $2, 'Build started.', $3, 'pending', NOW())
+		RETURNING id::text
+	`, siteID, buildType, provider).Scan(&buildID)
+	return buildID, err
+}
+
+func (a *API) failBuild(buildID, stage string, cause error) (buildResponse, error) {
+	failureCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	message := fmt.Sprintf("%s failed: %v", stage, cause)
+	if _, err := a.Services.DB.ExecContext(failureCtx, `
+		UPDATE builds SET status = 'failed', logs = $2, deploy_status = 'failed', finished_at = NOW() WHERE id = $1
+	`, buildID, message); err != nil {
+		return buildResponse{}, err
+	}
+	return buildResponse{}, fmt.Errorf("%s", message)
+}
+
+func (a *API) buildData(ctx context.Context, siteID string, site siteResponse, buildType string) ([]byte, error) {
+	sections, err := a.listLandingSections(ctx, siteID)
+	if err != nil {
+		return nil, err
+	}
+	articles, err := a.listArticles(ctx, siteID)
+	if err != nil {
+		return nil, err
+	}
+	published := make([]articleResponse, 0, len(articles))
+	for _, article := range articles {
+		if buildType == "preview" || article.Status == "published" {
+			published = append(published, article)
+		}
+	}
+	return json.Marshal(struct {
+		Site struct {
+			Name     string `json:"name"`
+			Domain   string `json:"domain"`
+			BlogPath string `json:"blogPath"`
+		} `json:"site"`
+		Articles []articleResponse    `json:"articles"`
+		Sections []landingSectionResp `json:"sections"`
+	}{
+		Site: struct {
+			Name     string `json:"name"`
+			Domain   string `json:"domain"`
+			BlogPath string `json:"blogPath"`
+		}{Name: site.Name, Domain: site.Domain, BlogPath: site.BlogPath},
+		Articles: published,
+		Sections: sections,
+	})
+}
+
+func deploymentSite(site siteResponse) (models.Site, error) {
+	if site.DeployProvider == "cloudflare_pages" && site.BlogPath != "/articles" {
+		return models.Site{}, fmt.Errorf("Cloudflare Pages builds require blogPath /articles")
+	}
+	var deployConfig map[string]any
+	if err := json.Unmarshal([]byte(site.DeployConfig), &deployConfig); err != nil {
+		return models.Site{}, err
+	}
+	return models.Site{
+		ID: site.ID, Name: site.Name, Slug: site.Slug, Domain: site.Domain, BlogPath: site.BlogPath,
+		DeployProvider: site.DeployProvider, DeployConfig: deployConfig,
+	}, nil
 }
 
 func seedSiteDefaults(ctx context.Context, tx *sql.Tx, siteID string) error {

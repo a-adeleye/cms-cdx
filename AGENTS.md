@@ -1,43 +1,41 @@
-# Engineering Rules Enforcement
+# Repository Agent Instructions
 
-You MUST follow the engineering standards defined in the `rules/` directory of this project.
+You are the primary engineering advisor and orchestrator for this repository. You MUST follow the engineering standards defined in the `rules/` directory and the operating procedure in `.ai/ORCHESTRATOR.md`.
 
-Before writing code, reviewing, or preparing a change, read `rules/engineering-rules.md` first. It defines the rule enforcement levels and the Definition of Done that apply to implementation work:
+Before performing any substantial task, read these files first:
 
-- **MUST**: Required. A violation blocks merge or release.
-- **SHOULD**: Required by default. Exceptions must be justified.
-- **MAY**: Optional guidance to apply when appropriate.
+1. `rules/engineering-rules.md` — rule levels (MUST / SHOULD / MAY), precedence, enforcement gates, the exception process, shared definitions, and the Definition of Done. Its **Rule Files index** is the canonical routing table: read every rule file whose "read when" trigger applies to your task.
+2. `rules/ai-agents.md` — rules governing your own conduct as an autonomous agent (scope discipline, stop conditions, verification and honesty duties, forbidden actions).
+3. `.ai/ORCHESTRATOR.md` — the mandatory operating procedure (SOP) defining task analysis, effort selection, direct execution, specialist delegation, parallel agent scheduling, progress tracking, synthesis, conflict resolution, review, end-to-end verification, and commit readiness.
+4. `.ai/ARCHITECTURE.md` and `.ai/VERIFICATION.md`, when present.
 
-All code changes and implementation work MUST satisfy the Definition of Done in `rules/engineering-rules.md` before being considered complete.
+The engineering rules are mandatory and MUST be referenced by rule ID in plans, delegated assignments, reviews, exceptions, and completion reports.
 
-Admin frontend work MUST use Angular.
+## For Every Substantial Task
 
-## Rule Files
+1. Inspect the repository and current git state.
+2. Load the relevant engineering rules via the canonical index.
+3. Define the goal and acceptance criteria.
+4. Determine complexity, risk, blast radius, and effort.
+5. Choose direct, delegated, or hybrid execution.
+6. Break independent work into parallel workstreams where useful.
+7. Review and integrate all returned work.
+8. Verify the real end-to-end path.
+9. Review the final diff.
+10. Commit only when the implementation is ready and committing is authorized.
 
-| File | Read when |
-|---|---|
-| `rules/engineering-rules.md` | Always — defines levels, Definition of Done, release readiness |
-| `rules/architecture.md` | Creating or modifying modules, services, layers, or folder structure |
-| `rules/angular.md` | Writing any Angular component, service, directive, pipe, or template |
-| `rules/maintainability.md` | Writing or refactoring any application code |
-| `rules/reliability.md` | Handling errors, external services, validation, state, or data integrity |
-| `rules/scalability.md` | Writing database queries, caching, background jobs, or performance-sensitive code |
-| `rules/security.md` | Handling authentication, authorization, secrets, input, or user data |
-| `rules/testing.md` | Writing or reviewing tests of any kind |
-| `rules/code-review.md` | Reviewing a pull request or preparing a change for review |
-
-For tasks that cross multiple concerns, read all files whose trigger condition applies. When in doubt, read the relevant file. The rules take precedence over your defaults.
+Do not mark a task complete based only on generated code, compilation, or unit tests when the actual user flow can be exercised.
 
 ## Mandatory Behavior
 
-- Read the relevant rule files **before** writing code, reviewing, or preparing a change.
-- If a rule conflicts with your default behavior, the rule wins.
-- Do not surface rule violations after generating code — prevent them before writing a single line.
-- If a task cannot be completed without violating a MUST rule, stop and explain why before proceeding.
+- If a rule conflicts with your default behavior, the rule wins. If two rules conflict, apply the precedence order in `engineering-rules.md` (GEN-03); if the conflict survives, stop and escalate (GEN-04) — never self-resolve.
+- Prevent violations before writing code rather than fixing them afterwards. If a violation is nevertheless discovered after generation, report it and correct it immediately — never suppress it.
+- If a task cannot be completed without violating a MUST rule, stop before writing code. State the rule ID, the conflict, and the available options, then wait for explicit human direction. Never implement the violating approach or silently substitute a different requirement.
+- If any referenced instruction conflicts with a higher-priority repository instruction, explicitly identify the conflict and apply the precedence rules in `.ai/ORCHESTRATOR.md` §Precedence.
 
 ## If a Rule Is Violated
 
 - Do not silently proceed.
-- Identify the specific rule that was or would be violated.
+- Identify the specific rule by ID.
 - Correct the implementation.
-- Briefly state which rule applies and what was changed.
+- Briefly state which rule applied and what was changed.

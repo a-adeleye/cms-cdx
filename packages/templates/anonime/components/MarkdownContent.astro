@@ -1,0 +1,25 @@
+---
+import type { MarkdownBlock } from '../lib/markdown';
+import Icon from './Icon.astro';
+import InlineContent from './InlineContent.astro';
+
+const { blocks = [] } = Astro.props as { blocks: MarkdownBlock[] };
+---
+
+<div class="anonime-prose">
+  {blocks.map((block) => (
+    block.kind === 'heading' ? (
+      block.depth === 2
+        ? <h2 id={block.id}><InlineContent nodes={block.children} /></h2>
+        : <h3 id={block.id}><InlineContent nodes={block.children} /></h3>
+    ) : block.kind === 'paragraph' ? (
+      <p><InlineContent nodes={block.children} /></p>
+    ) : block.kind === 'quote' ? (
+      <blockquote><span class="anonime-callout-icon"><Icon name="quote" size={24} /></span><p><InlineContent nodes={block.children} /></p></blockquote>
+    ) : block.ordered ? (
+      <ol>{block.entries.map((entry) => <li><InlineContent nodes={entry} /></li>)}</ol>
+    ) : (
+      <ul>{block.entries.map((entry) => <li><InlineContent nodes={entry} /></li>)}</ul>
+    )
+  ))}
+</div>

@@ -1,0 +1,16 @@
+---
+import type { ArticleViewModel } from '../lib/model';
+import Avatar from './Avatar.astro';
+
+const { article, showAuthor = true, compact = false } = Astro.props as {
+  article: ArticleViewModel;
+  showAuthor?: boolean;
+  compact?: boolean;
+};
+---
+
+<div class:list={['anonime-meta', { 'is-compact': compact }] }>
+  {showAuthor && <><Avatar size={compact ? 26 : 32} name={article.author} /><strong>{article.author}</strong></>}
+  {article.publishedLabel && <><span>{article.publishedLabel}</span><i aria-hidden="true"></i></>}
+  <span>{article.readingTime} min read</span>
+</div>

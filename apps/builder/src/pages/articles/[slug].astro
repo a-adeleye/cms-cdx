@@ -1,23 +1,23 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { loadBuildData } from '../../content';
 
-const { slug } = Astro.params;
+const { site, articles } = loadBuildData();
+const { article } = Astro.props;
 
 export function getStaticPaths() {
-  return [
-    'what-is-private-cms',
-    'how-static-rendering-helps-seo',
-    'choosing-deployment-targets-per-site',
-  ].map((slug) => ({
-    params: { slug },
+  return loadBuildData().articles.map((article) => ({
+    params: { slug: article.slug },
+    props: { article },
   }));
 }
 ---
 
-<BaseLayout title={slug ?? 'Article'} description="Rendered article details from Markdown.">
+<BaseLayout title={article.seoTitle || article.title} description={article.seoDescription || article.excerpt} blogPath={site.blogPath}>
   <article class="page">
     <p class="eyebrow">Article</p>
-    <h1>{slug}</h1>
-    <p>The real implementation will load the article by slug, render Markdown, and emit SEO data.</p>
+    <h1>{article.title}</h1>
+    <p>{article.excerpt}</p>
+    <div style="white-space: pre-wrap">{article.contentMarkdown}</div>
   </article>
 </BaseLayout>

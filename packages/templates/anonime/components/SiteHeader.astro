@@ -1,0 +1,36 @@
+---
+import Icon from './Icon.astro';
+
+const { site, active = 'blog' } = Astro.props;
+---
+
+<header class="anonime-header">
+  <div class="anonime-container anonime-header-inner">
+    <a class="anonime-brand" href="/" aria-label={`${site.name} home`}>
+      <span class="anonime-brand-mark"><Icon name="shield" size={18} strokeWidth={2.2} /></span>
+      <span>{site.name}</span>
+    </a>
+    <nav class="anonime-primary-nav" aria-label="Primary navigation">
+      <a href="/#features">Features</a>
+      <a href="/#pricing">Pricing</a>
+      <a class:list={{ 'is-active': active === 'blog' }} href={`${site.blogPath}/`}>Blog</a>
+    </nav>
+    <div class="anonime-header-actions">
+      <span class="anonime-icon-button anonime-theme-button" aria-hidden="true">
+        <Icon name="moon" size={17} />
+      </span>
+      <a class="anonime-button anonime-button-small" href="#get-started">Get Started</a>
+      <details class="anonime-mobile-nav">
+        <summary class="anonime-icon-button anonime-menu-button" aria-label="Open navigation">
+          <Icon name="menu" size={20} />
+        </summary>
+        <nav aria-label="Mobile navigation">
+          <a href="/#features">Features</a>
+          <a href="/#pricing">Pricing</a>
+          <a href={`${site.blogPath}/`}>Blog</a>
+          <a href="#get-started">Get Started</a>
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>

@@ -1,0 +1,8 @@
+{
+  "name": "@cms-builder/template-anonime",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test lib/content.test.ts test/render.integration.test.mjs"
+  }
+}

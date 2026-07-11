@@ -1,0 +1,32 @@
+---
+import Icon from './Icon.astro';
+
+const { topics } = Astro.props as { topics?: Array<{ name: string; count: number }> };
+const rows = topics ?? [
+  { name: 'Privacy Basics', count: 12 },
+  { name: 'Security', count: 10 },
+  { name: 'Anonymity', count: 8 },
+  { name: 'Guides', count: 11 },
+  { name: 'Product', count: 6 },
+  { name: 'Identity', count: 7 },
+  { name: 'Welcome', count: 2 },
+];
+const icons: Record<string, string> = {
+  'Privacy Basics': 'privacy',
+  Security: 'security',
+  Anonymity: 'anonymity',
+  Guides: 'guides',
+  Product: 'product',
+  Identity: 'identity',
+  Welcome: 'shield',
+};
+---
+
+<aside class="anonime-side-card anonime-topic-counts">
+  <h2>Explore by topic</h2>
+  <ul>
+    {rows.map((topic) => (
+      <li><span><Icon name={icons[topic.name] ?? 'shield'} size={17} />{topic.name}</span><strong>{topic.count}</strong></li>
+    ))}
+  </ul>
+</aside>

@@ -1,65 +1,53 @@
-# Code Review Rules
+# Code Review, Commits, and Merge Rules
 
-Code review is a quality gate for correctness, security, reliability, maintainability, and operational readiness. Review should improve the change, not merely approve it.
+Read this file when preparing, committing, or reviewing a change, or when branching and merging. Code review is a quality gate for correctness, security, reliability, maintainability, and operational readiness; review should improve the change, not merely approve it.
+
+## Commits and Branches
+
+- **REV-01.** Commit messages MUST state what changed and why, in imperative form.
+- **REV-02.** Each commit SHOULD build and pass tests independently, and branches SHOULD be short-lived and follow the project's naming convention.
+- **REV-03.** Force-pushing or rewriting history on shared branches MUST NOT occur.
+- **REV-04.** A secret ever committed MUST be rotated and purged per SEC-17 — rotation first, history cleanup second.
 
 ## Before Submitting
 
-- Formatting, linting, type checks, builds, and relevant tests MUST be run before requesting review.
-- Unused files, debug logs, commented-out code, temporary flags, and dead code MUST be removed.
-- Pull requests SHOULD be focused on one main change.
-- The description MUST explain what changed, why it changed, how it was tested, and any risks.
-- Screenshots, recordings, API examples, migration notes, or operational notes SHOULD be included when they make review clearer.
-- Known limitations or follow-up work MUST be disclosed.
+- **REV-05.** Formatting, linting, type checks, and builds MUST pass before requesting review, and the test suites of every changed module MUST pass. A failing required check means the change is not ready for review.
+- **REV-06.** The change MUST contain no dead code or debug artifacts per MNT-05, and no debug-only or developer-only toggles. Release feature flags for phased rollout are exempt but MUST follow REL-30 (owner and removal condition).
+- **REV-07.** One pull request SHOULD do one main thing; formatting-only, refactoring-only, dependency-only, and feature changes SHOULD be separate unless tightly related — "tightly related" meaning the parts cannot merge independently without breaking build or behaviour.
+- **REV-08.** Pull requests over roughly 400 changed lines (project-configurable; excluding generated files and lockfiles) SHOULD be split, and the reviewer MAY require a split.
+- **REV-09.** The description MUST explain what changed, why, how it was tested, and any risks; known limitations and follow-up work MUST be disclosed.
+- **REV-10.** Supporting artifacts SHOULD be included when they make review clearer — in particular: before/after screenshots or recordings for user-visible UI changes, example requests and responses for API changes, and migration and rollback notes for schema or migration changes.
+- **REV-11.** Public API, schema, migration, security, and operational changes MUST be called out explicitly in the description, and the change MUST be understandable without reconstructing context from private conversations.
 
-## Review Checklist
+## Review Checklist (reviewer attention prompts, SHOULD-level)
 
-Reviewers SHOULD check:
-
-- Does the change solve the correct problem?
-- Is the solution as simple as the problem allows?
-- Is the code readable and maintainable?
-- Are edge cases and failure modes handled?
-- Are authentication, authorization, privacy, and security handled?
-- Are errors handled safely and observably?
-- Are tests added or updated at the right level?
-- Is there unnecessary complexity or coupling?
-- Will this scale reasonably for expected usage?
-- Are migrations, rollbacks, and compatibility handled?
-- Will another developer understand this later?
+Reviewers SHOULD check: Does the change solve the correct problem, as simply as the problem allows? Is it readable and maintainable? Are edge cases and failure modes handled? Are authentication, authorization, privacy, and security handled? Are errors handled safely and observably? Are tests added at the right level? Is there unnecessary complexity or coupling? Will it scale for the stated capacity assumptions? Are migrations, rollbacks, and compatibility handled? Will another developer understand this later?
 
 ## Blocking Issues
 
-Reviewers MUST block changes that:
+- **REV-12.** Reviewers MUST block a change that introduces a known security vulnerability; the blocking comment MUST identify the weakness and cite its source — a scanner finding, a CVE, a violated security.md rule, or a concretely described exploit scenario.
+- **REV-13.** Reviewers MUST block a change that bypasses required authorization or validation, or that risks data loss, corruption, or tenant/user data exposure.
+- **REV-14.** Reviewers MUST block a change that breaks a public contract without following ARCH-15.
+- **REV-15.** Reviewers MUST block a change that adds untested critical code (definition in engineering-rules.md §Definitions).
+- **REV-16.** Reviewers MUST block a change that adds required tests violating the determinism rules in testing.md (TST-25 to TST-27), citing the violated rule.
+- **REV-17.** Reviewers MUST block a change that adds dependencies, frameworks, or architecture changes without the justification required by MNT-19/MNT-24 or the ADR required by ARCH-27.
+- **REV-18.** Reviewers MUST block a change that makes production operation worse without mitigation — including removing or degrading monitoring or alerting, breaking rollback or deploy safety, adding an unmonitored failure mode, or comparable degradations; the blocking comment states the specific degradation and the author provides mitigation evidence in the PR.
 
-- Introduce known security vulnerabilities.
-- Bypass required authorization or validation.
-- Risk data loss, data corruption, or tenant/user data exposure.
-- Break public contracts without migration or coordination.
-- Add untested critical business logic.
-- Add unreliable or non-deterministic required tests.
-- Add unexplained large dependencies, frameworks, or architecture changes.
-- Make production operation materially worse without mitigation.
+## Comment Taxonomy
 
-## Pull Request Standards
-
-- One pull request SHOULD do one main thing.
-- Formatting-only, refactoring-only, dependency-only, and feature changes SHOULD be separate unless tightly related.
-- Large changes SHOULD be split into smaller reviewable parts.
-- Public API, schema, migration, security, or operational changes MUST be called out explicitly.
-- Reviewers SHOULD be able to understand the change without reconstructing context from private conversations.
-- If a change is urgent, review standards still apply; risk acceptance must be explicit.
-
-## Reviewer Expectations
-
-- Review comments SHOULD identify the concrete risk or improvement.
-- Nitpicks SHOULD be marked clearly and should not block unless they violate agreed standards.
-- Reviewers SHOULD distinguish required fixes from optional suggestions.
-- Reviewers SHOULD verify tests or evidence for critical paths.
-- Approval means the reviewer believes the change is safe enough to merge under the project standards.
+- **REV-19.** Review comments use three labels: **blocking** (violates a MUST rule or a Blocking Issue — must be resolved before merge, rule ID cited), **suggestion** (SHOULD-level or judgment — the author MAY decline with a written rationale), and **nit** (style or preference not backed by any rule — MUST NOT block).
+- **REV-20.** Review comments SHOULD identify the concrete risk or improvement, and reviewers SHOULD verify tests or evidence for critical code rather than taking the description's word.
 
 ## Author Expectations
 
-- Authors MUST respond to review comments or make the requested change.
-- Authors SHOULD explain tradeoffs when declining a suggestion.
-- Authors MUST not resolve substantive review comments without addressing the issue or explaining why it is not applicable.
-- Authors SHOULD keep the pull request updated and easy to re-review after changes.
+- **REV-21.** Authors MUST respond to every blocking comment by making the change or documenting why it does not apply, and MUST NOT resolve substantive comments without doing one of the two.
+- **REV-22.** Authors SHOULD keep the pull request easy to re-review after changes (append commits during review rather than rewriting).
+- **REV-23.** If author and reviewer cannot agree after one round of discussion, either party MUST escalate to the code owner or tech lead, whose decision is recorded in the pull request.
+
+## Merge Requirements
+
+- **REV-24.** At least one approval from a qualified reviewer who is not the author MUST be obtained; authors MUST NOT approve their own pull requests, and autonomous agents MUST NOT approve or merge changes (AGT-09).
+- **REV-25.** All required CI checks MUST pass at merge time (TST-30); changes MUST NOT merge on a red pipeline.
+- **REV-26.** Changes to designated sensitive areas (authentication, payments, migrations, secrets — the org-configured CODEOWNERS list) MUST be approved by the code owner.
+- **REV-27.** Substantive commits pushed after approval invalidate that approval and MUST be re-reviewed; trivial fixups (typos, comments, rebases with no content change) MAY merge on the existing approval. Enable dismiss-stale-approval enforcement where the platform supports it. Gate: CI.
+- **REV-28.** Urgent changes follow the same standards; risk acceptance MUST be recorded in the pull request using the exception format from GEN-05, accepted by the code owner or on-call lead. Gate: Evidence.

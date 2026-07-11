@@ -1,19 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionRenderer from '../components/SectionRenderer.astro';
+import { loadBuildData } from '../content';
 
-const site = {
-  name: 'Example Site',
-  blogPath: '/articles',
-  sections: [
-    { key: 'hero', title: 'Build once, deploy many', content: { headline: 'CMS-backed static sites' } },
-    { key: 'latest_articles', title: 'Latest Articles', dynamic: true },
-    { key: 'cta', title: 'Call To Action', content: { buttonLabel: 'Start building' } },
-  ],
-};
+const { site, articles, sections } = loadBuildData();
 ---
 
-<BaseLayout title={site.name} description="Static landing page generated from CMS data.">
-  {site.sections.map((section) => <SectionRenderer section={section} />)}
+<BaseLayout title={site.name} description="Static landing page generated from CMS data." blogPath={site.blogPath}>
+  {sections.filter((section) => section.isEnabled).map((section) => <SectionRenderer section={section} articles={articles} blogPath={site.blogPath} />)}
 </BaseLayout>
 

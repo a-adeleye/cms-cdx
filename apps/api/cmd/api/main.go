@@ -13,6 +13,10 @@ import (
 
 func main() {
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		log.Printf("invalid configuration: %v", err)
+		os.Exit(1)
+	}
 	db, err := database.Connect(cfg.DatabaseURL)
 	if err != nil {
 		log.Printf("database unavailable: %v", err)
@@ -28,4 +32,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-

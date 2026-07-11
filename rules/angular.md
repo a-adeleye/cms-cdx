@@ -1,94 +1,52 @@
 # Angular Rules
 
-Standards for building scalable, maintainable, accessible, secure, and production-ready Angular applications. Rule levels follow the engineering rules: MUST is required, SHOULD is required by default with justified exceptions, and MAY is optional guidance.
+Read this file when writing any Angular component, service, directive, pipe, or template. It contains only Angular-specific rules: the general files still apply in full — architecture.md (boundaries, folder structure), reliability.md (errors, timeouts, retries), security.md, testing.md, maintainability.md. Where this file tightens a general rule for Angular code, the tighter rule wins within Angular scope (GEN-03).
 
 ## Framework Standards
 
-- Applications MUST use an Angular version that is actively supported or approved for production use.
-- Greenfield applications SHOULD use the latest stable Angular major approved by the organization.
-- Applications on LTS or older supported versions MUST have an upgrade plan before support ends.
-- Unsupported Angular versions MUST NOT be used for production systems.
-- Modern Angular APIs SHOULD be used for new code.
-- Deprecated Angular APIs MUST NOT be introduced in new code.
-- Legacy or non-preferred APIs such as `*ngIf`, `*ngFor`, constructor injection, `@Input`, and `@Output` SHOULD NOT be introduced in new code unless compatibility, migration, or third-party constraints require them.
-- `standalone: true` MUST NOT be written when the project's Angular version treats standalone declarations as the default.
-- Built-in Angular features SHOULD be preferred over third-party libraries when the built-in feature meets the need.
-- Experimental Angular APIs MUST NOT be used in production-critical paths unless the risk is explicitly accepted.
+- **NG-01.** Applications MUST use an Angular major that is actively supported (current or LTS per the official support policy); unsupported versions MUST NOT run production systems, and applications on LTS MUST have an upgrade plan before support ends.
+- **NG-02.** Greenfield applications SHOULD start on the latest stable Angular major.
+- **NG-03.** Deprecated Angular APIs MUST NOT be introduced in new code. This includes the structural directives `*ngIf`, `*ngFor`, and `*ngSwitch` (deprecated since v20) — use built-in control flow (`@if`, `@for`, `@switch`).
+- **NG-04.** Supported-but-legacy APIs — constructor injection, `@Input`, `@Output`, `@HostBinding`/`@HostListener` — SHOULD NOT be introduced in new code unless compatibility, inheritance, or third-party constraints require them; note the constraint in the PR.
+- **NG-05.** `standalone: true` MUST NOT be written where the project's Angular version treats standalone as the default. Gate: CI (lint).
+- **NG-06.** Built-in Angular features SHOULD be preferred over third-party libraries when the built-in meets the need; experimental APIs MUST NOT be used in critical code without an exception per GEN-05.
 
 ## Project Configuration
 
-- Strict TypeScript mode MUST be enabled.
-- Types SHOULD NOT be explicitly declared when they can be correctly inferred by the TypeScript compiler.
-- `any` MUST NOT be used unless the type is genuinely unknown and the usage is explicitly justified.
-- `unknown` SHOULD be preferred over `any` at trust boundaries or when type is uncertain.
-- Angular template strictness MUST be enabled with `strictTemplates`.
-- Angular DI strictness SHOULD be enabled with `strictInjectionParameters`.
-- Standalone strictness SHOULD be enabled with `strictStandalone` when the project has completed its standalone migration.
-- Angular extended diagnostics SHOULD be enabled and reviewed in CI.
-- Formatting, linting, type checking, unit tests, and production builds MUST run in CI.
-- Production builds MUST use Angular production optimizations.
-- Source maps for production MUST follow the organization's security and observability policy.
-- Environment-specific configuration MUST be injected through approved configuration mechanisms, not hardcoded in application code.
+- **NG-07.** Strict TypeScript mode and `strictTemplates` MUST be enabled; `strictInjectionParameters` SHOULD be enabled, and `strictStandalone` SHOULD be enabled once the standalone migration is complete. Gate: CI.
+- **NG-08.** `any` MUST NOT be used unless the type is genuinely unknown and the usage is justified at the use site; `unknown` SHOULD be preferred at trust boundaries. Type assertions MUST be justified and kept close to validation. Types SHOULD NOT be declared where the compiler infers them correctly.
+- **NG-09.** Angular extended diagnostics SHOULD be enabled and reviewed in CI.
+- **NG-10.** Production builds MUST use Angular production optimizations, and bundle budgets MUST be configured in `angular.json` (initial bundle and component styles) and MUST fail the CI production build when exceeded. Gate: CI.
+- **NG-11.** Production source maps MUST be hidden (not publicly served) and uploaded only to the error-tracking system, unless a documented org policy states otherwise.
+- **NG-12.** Environment-specific configuration MUST be injected through approved configuration mechanisms, not hardcoded (MNT-35).
 
 ## Architecture
 
-- Code MUST be organized by feature or bounded context, not primarily by file type.
+Folder structure and boundary rules are owned by architecture.md (ARCH-25/26 examples apply). For Angular code the feature-first organization is MUST, not SHOULD:
 
-Preferred:
-
-```text
-/features/orders/
-/features/auth/
-/features/billing/
-```
-
-Avoid as the primary structure:
-
-```text
-/components/
-/services/
-/models/
-```
-
-- Each feature MUST separate concerns:
-  - UI: components, templates, styles, presentation-only pipes and directives.
-  - State: signals, stores, and state services.
-  - Business logic: domain services, use cases, validators, and orchestration.
-  - Infrastructure: HTTP services, browser APIs, storage, analytics, and third-party integrations.
-- Business logic MUST NOT live in components or templates.
-- Infrastructure code MUST NOT leak into business logic or components.
-- Components MUST depend on feature-level abstractions rather than directly coupling to unrelated features.
-- Cross-cutting concerns such as authentication, logging, error handling, tracing, analytics, configuration, and authorization SHOULD be centralized.
-- Shared UI and utility code MUST be generic, stable, and free of hidden feature-specific behaviour.
+- **NG-13.** Angular code MUST be organized by feature or bounded context (`/features/orders/`, `/features/auth/`), not primarily by file type (`/components/`, `/services/`).
+- **NG-14.** Each feature MUST separate concerns: UI (components, templates, presentation-only pipes/directives), state (signals, stores, state services), business logic (domain services, use cases, validators), and infrastructure (HTTP, browser APIs, storage, third-party integrations).
+- **NG-15.** Business logic MUST NOT live in components or templates, and infrastructure code MUST NOT leak into business logic or components.
+- **NG-16.** Cross-cutting concerns (authentication, logging, error handling, tracing, analytics, configuration, authorization) SHOULD be centralized; shared UI and utility code follows ARCH-07.
 
 ## Components
 
-- Each component MUST have one clear responsibility.
-- Components exceeding 300 lines SHOULD be reviewed for splitting.
-- Components MUST coordinate presentation, user interaction, and component-local state only.
-- Logic that does not relate to presentation MUST be moved to a service, use case, validator, or pure function.
-- Direct DOM manipulation MUST NOT be used unless Angular templates, bindings, directives, CDK, or renderer-safe APIs cannot meet the requirement.
-- Components that integrate non-Angular DOM libraries MUST isolate that integration and clean up resources on destroy.
-- Deeply nested component trees SHOULD be flattened by improving composition, projection, routing, or feature boundaries.
-- Components SHOULD use self-closing tags where no projected content exists.
-- Components SHOULD use inline templates and styles for components with small templates (e.g., < 15 lines).
-- External templates and styles MUST be referenced using paths relative to the component file.
-- `host` property MUST be used in the `@Component` decorator instead of `@HostBinding` or `@HostListener`.
+- **NG-17.** Each component MUST have one responsibility (MNT-01) and MUST coordinate presentation, user interaction, and component-local state only; non-presentation logic MUST move to a service, use case, validator, or pure function.
+- **NG-18.** Components SHOULD NOT exceed 300 source lines (`.ts` file including inline template; project-configurable). Keeping a larger component requires a one-line justification in the PR accepted by the reviewer.
+- **NG-19.** Direct DOM manipulation MUST NOT be used unless Angular templates, bindings, directives, CDK, or renderer-safe APIs cannot meet the requirement; components integrating non-Angular DOM libraries MUST isolate that integration and clean up resources on destroy.
+- **NG-20.** The `host` property in the decorator SHOULD be used instead of `@HostBinding`/`@HostListener` in new code; the decorators MAY be used in shared base classes where `host` metadata is unavailable.
+- **NG-21.** Components SHOULD use self-closing tags where no projected content exists, and SHOULD use inline templates and styles when the template is under 15 lines. External templates and styles MUST use paths relative to the component file.
+- **NG-22.** Deeply nested component trees SHOULD be flattened through composition, projection, routing, or feature boundaries when a presentational chain passes inputs through more than two intermediate layers.
 
-## Smart And Presentational Components
+## Smart and Presentational Components
 
-- Smart components MAY own data fetching, routing coordination, orchestration, and feature state.
-- Presentational components MUST receive data through inputs and communicate changes through outputs.
-- Presentational components MUST NOT contain business logic, direct HTTP calls, routing decisions, or global state mutation.
-- Presentational components SHOULD be pure: the same inputs should produce the same rendered output.
-- Shared presentational components MUST be accessible, themeable, and documented when reused across features.
+- **NG-23.** Smart components MAY own data fetching, routing coordination, orchestration, and feature state. Presentational components MUST receive data through inputs, communicate through outputs, and MUST NOT contain business logic, HTTP calls, routing decisions, or global state mutation.
+- **NG-24.** Presentational components SHOULD be pure: the same inputs produce the same rendered output.
+- **NG-25.** Shared presentational components MUST be accessible, themeable, and documented when reused across features.
 
-## Template Syntax
+## Templates
 
-- Modern control flow MUST be used for new templates.
-- Legacy structural directives such as `*ngIf`, `*ngFor`, and `*ngSwitch` MUST NOT be introduced in new code unless migration constraints require them.
-
-Modern:
+- **NG-26.** New templates MUST use built-in control flow (`@if`, `@for`, `@switch`) — see NG-03 for the deprecated directives.
 
 ```html
 @if (user) {
@@ -104,93 +62,42 @@ Modern:
 }
 ```
 
-Legacy:
+- **NG-27.** `@for` track expressions MUST uniquely and stably identify items (the compiler already requires `track` to be present).
+- **NG-28.** Functions called in templates MUST perform no I/O, no mutation, and no per-call object or array allocation; heavier or impure work MUST move to `computed()`, a service, a pipe, or a precomputed view model. Template expressions MUST NOT produce side effects.
+- **NG-29.** Templates SHOULD stay declarative: complex branching and transformation belongs in component code, `computed()`, or services. Signals read in templates MUST be invoked.
+- **NG-30.** `ngClass` and `ngStyle` MUST NOT be used; use `class` and `style` property bindings.
 
-```html
-<div *ngIf="user"></div>
-<div *ngFor="let item of items"></div>
-```
+Non-normative note: template expressions can only reference component members and template context (enforced by `strictTemplates`); expose values like `Math` or `Date` computations via component properties or `computed()`.
 
-- `track` MUST always be used with `@for`.
-- `track` expressions MUST uniquely and stably identify items.
-- Functions called in templates MUST be pure and cheap.
-- Heavy or impure template functions MUST be moved to a `computed()`, service, pipe, or precomputed view model.
-- Inline object or array creation in templates SHOULD be avoided because it can cause unnecessary work.
-- Template expressions MUST NOT produce side effects.
-- Templates SHOULD stay declarative. Complex branching and transformation logic belongs in component code, `computed()`, or services.
-- Signals read in templates MUST be invoked.
-- `ngClass` and `ngStyle` MUST NOT be used. Use `class` and `style` property bindings instead.
-- Templates MUST NOT assume global JavaScript objects (e.g., `Date`, `Math`, `window`) are available; provide them through component properties/methods.
+## Signals and State
 
-## Signals And State
-
-- Signals are the default primitive for synchronous local and shared reactive state.
+Signals are the default primitive for synchronous reactive state.
 
 ```ts
 count = signal(0);
 double = computed(() => this.count() * 2);
 ```
 
-- `signal()` MUST be used for local mutable state that affects rendering.
-- `computed()` MUST be used for values derived from signals.
-- `linkedSignal()` MAY be used for writable state that is intrinsically linked to another signal.
-- Derived values SHOULD NOT be copied into separate writable signals.
-- Writable signals MUST NOT be mutated from outside the component or service that owns them unless through an explicit public method.
-- Shared state MUST have a clear owner.
-- Global state SHOULD be owned by dedicated state services or stores, not scattered across components.
-- Signal values containing objects or arrays SHOULD be updated immutably.
-- Signal `mutate` MUST NOT be used (deprecated/removed in modern Angular); use `set` or `update` instead.
-- Read-only signals SHOULD be exposed from services when consumers must observe but not mutate state.
+- **NG-31.** `signal()` MUST be used for local mutable state that affects rendering; `computed()` MUST be used for values derived from signals; derived values MUST NOT be copied into separate writable signals. `linkedSignal()` MAY be used for writable state intrinsically linked to another signal.
+- **NG-32.** Writable signals MUST NOT be mutated from outside the owning component or service except through an explicit public method, and services exposing state SHOULD expose read-only signals.
+- **NG-33.** Shared state MUST have one owner (REL-09); global state SHOULD live in dedicated state services or stores.
+- **NG-34.** Signal values containing objects or arrays SHOULD be updated immutably with `set` or `update`; the removed `mutate` API MUST NOT appear in code targeting modern Angular.
 
-## Signals Vs RxJS
+## Signals vs RxJS
 
-Use signals when:
-
-- The value is synchronous.
-- The state is local to a component or owned by a service.
-- A value is derived from other reactive state.
-- The value is read directly by templates.
-
-Use RxJS when:
-
-- The source is naturally an Observable, such as HTTP, WebSocket, router events, form streams, or external event streams.
-- You need cancellation, retry, debouncing, throttling, buffering, or complex async coordination.
-- You need stream operators such as `switchMap`, `exhaustMap`, `debounceTime`, or `combineLatest`.
-
-Rules:
-
-- Mixing signals and RxJS SHOULD be done through `toSignal()` and `toObservable()` from `@angular/core/rxjs-interop`.
-- Manual subscription management when converting between signals and Observables SHOULD be avoided.
-- Observable subscriptions MUST be cleaned up with `takeUntilDestroyed()`, `AsyncPipe`, `toSignal()`, or an equivalent lifecycle-safe mechanism.
-- Long-lived subscriptions in services MUST have explicit ownership and cleanup expectations.
+- **NG-35.** Signals MUST be used for synchronous, template-facing state and values derived from other reactive state. RxJS SHOULD be used when the source is naturally an Observable (HTTP, WebSocket, router events, form streams) or when stream coordination is needed (cancellation, retry, debounce, `switchMap`, `combineLatest`).
+- **NG-36.** Conversion between signals and Observables SHOULD go through `toSignal()`/`toObservable()` from `@angular/core/rxjs-interop`, avoiding manual subscription management.
+- **NG-37.** Observable subscriptions MUST be cleaned up with `takeUntilDestroyed()`, `AsyncPipe`, `toSignal()`, or an equivalent lifecycle-safe mechanism; long-lived subscriptions in services MUST have explicit ownership and cleanup.
 
 ## Effects
 
-- `effect()` SHOULD be the last reactive API reached for.
-- Prefer `computed()` for derived values.
-- Prefer `linkedSignal()` when writable state depends on another signal.
-- `effect()` MUST be limited to controlled side effects at the edge of the system.
+- **NG-38.** `effect()` MUST be limited to controlled side effects at the edge of the system; `computed()` SHOULD be tried first for derivation and `linkedSignal()` for dependent writable state.
 
-`effect()` MUST NOT be used for:
+`effect()` MUST NOT be used for: API calls as a substitute for explicit user, route, or lifecycle actions; form patching loops; syncing unrelated signal state; replacing service methods; hiding unclear ownership.
 
-- API calls as a substitute for explicit user, route, or lifecycle actions.
-- Form patching loops.
-- Syncing unrelated signal state.
-- Replacing service methods.
-- Hiding unclear ownership or bad architecture.
+`effect()` MAY be used for: logging and analytics; synchronizing state with browser storage; synchronizing with a non-Angular library; custom DOM or canvas integration that cannot be expressed declaratively.
 
-`effect()` MAY be used for:
-
-- Logging and analytics side effects.
-- Synchronizing Angular state with browser storage.
-- Synchronizing Angular state with a third-party non-Angular library.
-- Custom DOM or canvas integration that cannot be expressed declaratively.
-
-Rules:
-
-- Effects that allocate resources MUST register cleanup.
-- Effects MUST avoid accidental dependency tracking by using `untracked()` where incidental reads are necessary.
-- Effects MUST NOT create circular updates.
+- **NG-39.** Effects that allocate resources MUST register cleanup. All effects MUST use `untracked()` for incidental reads and MUST NOT create circular updates.
 
 Bad:
 
@@ -210,234 +117,118 @@ loadData() {
 
 ## Dependency Injection
 
-- `inject()` SHOULD be used as the default injection mechanism for new code.
+- **NG-40.** `inject()` SHOULD be the default injection mechanism in new code (constructor injection per NG-04).
 
 ```ts
 private readonly api = inject(ApiService);
 ```
 
-- Constructor injection SHOULD NOT be used in new code unless compatibility, inheritance, testing, decorators, or framework constraints require it.
-- Services MUST NOT be injected unless they are used.
-- Injection tokens SHOULD be used for configuration values, abstract dependencies, and environment-specific implementations.
-- Providers SHOULD be scoped as narrowly as practical.
-- Root-provided services MUST be safe to keep for the lifetime of the application.
-- Feature-level providers MUST NOT accidentally create duplicate state unless feature isolation is intentional.
+- **NG-41.** Injected services MUST be used; injection tokens SHOULD be used for configuration values and abstract dependencies; providers SHOULD be scoped as narrowly as practical for their lifetime.
+- **NG-42.** Root-provided services MUST be safe to keep for the application's lifetime, and feature-level providers MUST NOT create duplicate state unless isolation is intentional and documented.
 
-## Inputs And Outputs
+## Inputs and Outputs
 
-- Modern signal-based input and output APIs SHOULD be used in new code.
+- **NG-43.** New code SHOULD use signal-based `input()`/`output()`; required inputs MUST use `input.required<T>()`.
 
 ```ts
 user = input.required<User>();
 saved = output<User>();
 ```
 
-Legacy decorator APIs SHOULD NOT be introduced in new code unless required for compatibility:
-
-```ts
-@Input() user!: User;
-@Output() saved = new EventEmitter<User>();
-```
-
-Rules:
-
-- Required inputs MUST use `input.required<T>()`.
-- Optional inputs SHOULD use `input<T>()` with a default or explicit `undefined` typing.
-- Input transforms MUST be pure and must not change the semantic meaning of the input.
-- Output names MUST describe events, not commands.
-- Output names SHOULD be past tense or event-like: `saved`, `deleted`, `selected`, `closed`.
-- Components MUST NOT mutate input-owned data directly.
-- Two-way binding between components SHOULD be used sparingly and only when ownership remains clear.
+- **NG-44.** Input transforms MUST be pure and MUST NOT change the input's semantic meaning; components MUST NOT mutate input-owned data.
+- **NG-45.** Output names MUST describe events, not commands, and SHOULD be past tense (`saved`, `deleted`, `selected`). Two-way binding SHOULD be used sparingly and only with clear ownership.
 
 ## Services
 
-- Each service MUST have a single responsibility.
-- Services MUST be separated by concern:
-  - API services: HTTP calls and response mapping.
-  - Business logic services: domain rules and orchestration.
-  - State services: shared reactive state.
-  - Integration services: browser APIs, analytics, storage, and third-party SDKs.
-- Services MUST NOT directly manipulate the UI.
-- Services MUST NOT become hidden global state containers by accident.
-- God services that accumulate unrelated responsibilities MUST be split.
-- Services that expose mutable state MUST provide explicit methods for mutation.
+- **NG-46.** Services MUST be separated by concern — API services (HTTP and response mapping), business logic services, state services, integration services — and each MUST have one responsibility; god services MUST be split.
+- **NG-47.** Services MUST NOT manipulate the UI directly, and services exposing mutable state MUST provide explicit mutation methods.
 
-## HTTP And API Layer
+## HTTP and API Layer
 
-- HTTP calls MUST be made from dedicated API or infrastructure services, not directly from components.
-- `provideHttpClient()` SHOULD be used for HTTP configuration in modern standalone applications.
-- Functional HTTP interceptors SHOULD be preferred over DI-based interceptors for predictable ordering.
-- HTTP interceptors SHOULD be used for cross-cutting concerns such as authentication headers, request tracing, deadlines, global error mapping, and safe retry policy.
-- HTTP errors MUST have an explicit handling strategy at the callsite, service boundary, resource state, or interceptor.
-- `catchError` SHOULD be used when an Observable error must be transformed, recovered, logged, mapped, or converted into UI state.
-- Unhandled HTTP errors MUST NOT silently fail.
-- Retries MUST be bounded and used only for safe or idempotent operations.
-- Retries SHOULD use backoff when repeated failure can cause load amplification.
-- API responses MUST be typed. `any` MUST NOT be used as a response type.
-- API response DTOs SHOULD be mapped to domain or view models instead of leaking backend shapes throughout the UI.
-- Request and response payloads SHOULD be validated at trust boundaries when data integrity matters.
-- Long-running API work SHOULD expose loading, success, empty, partial, and error states.
+Timeouts, bounded retries, and backoff are owned by reliability.md §External Services (REL-14 to REL-16) and apply in full to Angular HTTP code.
+
+- **NG-48.** HTTP calls MUST be made from dedicated API or infrastructure services, never directly from components.
+- **NG-49.** `provideHttpClient()` SHOULD configure HTTP, with functional interceptors preferred for predictable ordering; interceptors SHOULD carry cross-cutting concerns (auth headers, tracing, deadlines, global error mapping, safe retry policy).
+- **NG-50.** Every HTTP error MUST have an explicit handling strategy (callsite, service boundary, resource state, or interceptor) mapped to a defined outcome per REL-01; unhandled HTTP errors MUST NOT silently fail.
+- **NG-51.** API responses MUST be typed (`any` prohibited per NG-08), and response DTOs SHOULD be mapped to domain or view models instead of leaking backend shapes through the UI.
+- **NG-52.** Long-running API work SHOULD expose loading, success, empty, partial, and error states (REL-11).
+- **NG-53.** Applications MUST register a global `ErrorHandler` (plus browser global error listeners where supported) that reports unhandled errors to the telemetry sink and leaves the user in a safe, recoverable state.
 
 ## Forms
 
-- Reactive Forms MUST be used for non-trivial, validated, conditional, or dynamic forms.
-- Forms MUST be typed using `FormGroup<T>`, `FormControl<T>`, and `FormArray<T>` where practical.
-- Template-driven and reactive forms MUST NOT be mixed in the same feature.
-- Validation MUST occur on both client and server.
-- Client-side validation is UX, not a security boundary.
-- Forms MUST NOT be patched from service responses without explicit user, route, or lifecycle intent.
-- Form submission MUST prevent duplicate submissions when duplicate side effects are unsafe.
-- Form errors MUST be accessible and associated with the relevant controls.
-- Sensitive form fields MUST NOT be logged or stored insecurely.
-- Unsaved-change workflows SHOULD protect users from accidental data loss.
+- **NG-54.** Reactive Forms MUST be used when a form has any of: cross-field or async validation, dynamically added or removed controls, conditional structure, or a multi-step flow. Template-driven forms MAY be used below all of those triggers.
+- **NG-55.** New forms MUST be typed (`FormGroup<T>`, `FormControl<T>`, `FormArray<T>`); `UntypedFormGroup`/`UntypedFormControl` MUST NOT be introduced outside migration code, justified with a comment. Template-driven and reactive forms MUST NOT be mixed in one feature.
+- **NG-56.** Validation MUST occur on both client and server; client-side validation is UX, not a boundary (REL-07).
+- **NG-57.** Forms MUST NOT be patched from service responses without explicit user, route, or lifecycle intent, and submission MUST prevent duplicates where duplicate side effects are unsafe (REL-12).
+- **NG-58.** Form errors MUST be accessible and associated with their controls; sensitive fields MUST NOT be logged or stored insecurely; unsaved-change workflows SHOULD protect users from data loss.
 
 ## Routing
 
-- Routes SHOULD be lazy-loaded by default.
-- Feature route configuration SHOULD be kept in a dedicated routes file per feature.
-- Route data SHOULD be typed.
-- Route params and query params MUST be validated before use.
-- Navigation guards MAY be used for authentication, authorization UX, feature flags, unsaved changes, and conditional navigation.
-- Client-side route guards MUST NOT be treated as a security boundary.
-- Protected backend data and actions MUST enforce authorization on the server or trusted API layer.
-- Guards SHOULD return a `UrlTree` or redirect command instead of returning `false` and navigating imperatively.
-- Navigation guards MUST NOT stall indefinitely.
-- Long-running guards SHOULD redirect to a loading or access-checking route rather than blocking navigation.
-- Route-level providers SHOULD be used intentionally and reviewed for duplicate state.
+- **NG-59.** Feature routes MUST be lazy-loaded; eager loading requires a documented justification in the PR. (Single rule; no duplicate in Performance.)
+- **NG-60.** Feature route configuration SHOULD live in a dedicated routes file per feature, route data SHOULD be typed, and route params and query params MUST be validated before use.
+- **NG-61.** Client-side route guards MUST NOT be treated as a security boundary; authorization is enforced per SEC-10. Guards MAY handle authentication UX, feature flags, unsaved changes, and conditional navigation.
+- **NG-62.** Guards SHOULD return a `UrlTree` or redirect command instead of returning `false` and navigating imperatively, MUST NOT stall indefinitely, and guards awaiting slow checks SHOULD redirect to a loading route rather than blocking navigation.
+- **NG-63.** Route-level providers SHOULD be intentional and reviewed for duplicate state (NG-42).
 
-## Performance And Change Detection
+## Performance and Change Detection
 
-- `ChangeDetectionStrategy.OnPush` SHOULD be used for application components unless a documented reason requires eager/default change detection.
-- Components SHOULD be compatible with zoneless change detection patterns where practical.
-- Heavy or impure computations MUST NOT run during template evaluation.
-- `track` MUST always be used with `@for`.
-- Feature routes MUST be lazy-loaded unless eager loading is explicitly justified.
-- Large lists MUST use pagination, virtual scrolling, or incremental rendering when the list is unbounded or can exceed expected UI limits.
-- `toSignal()` SHOULD be used to consume Observables in templates when signal-based state improves clarity.
-- The `async` pipe remains acceptable for simple Observable template consumption.
-- Expensive components SHOULD be deferred, lazy-loaded, virtualized, or split.
-- Production bundles SHOULD be monitored for size regressions.
-- Large third-party libraries MUST be justified and lazy-loaded where practical.
-- `NgOptimizedImage` MUST be used for all static images. Note: This does not support base64 inline images.
+- **NG-64.** `ChangeDetectionStrategy.OnPush` SHOULD be used for application components; eager/default change detection requires a documented reason.
+- **NG-65.** Components MUST NOT rely on Zone.js to trigger change detection: state changes MUST flow through signals, `AsyncPipe`, or `markForCheck()`. Projects targeting zoneless MUST run their test suite with `provideZonelessChangeDetection()`.
+- **NG-66.** Lists that are unbounded or can exceed the project's rendering threshold (default 100 DOM rows, project-configurable) MUST use pagination, virtual scrolling, or incremental rendering.
+- **NG-67.** `toSignal()` SHOULD be used to consume Observables in templates where signal-based state improves clarity; `AsyncPipe` remains acceptable for simple consumption.
+- **NG-68.** Expensive components SHOULD be deferred (`@defer`), lazy-loaded, virtualized, or split.
+- **NG-69.** A third-party library adding more than the project's budget to the initial bundle (default 50 KB gzipped) MUST be justified in the PR, and SHOULD be lazy-loaded unless it is needed on initial render; NG-10's budgets enforce the aggregate.
+- **NG-70.** `NgOptimizedImage` MUST be used for `<img>` elements loading URL-referenced raster images. Base64/data URIs, CSS background images, and inline SVG are out of scope; those images MUST still declare explicit dimensions to prevent layout shift.
 
-## SSR, Hydration, And Rendering
+## SSR, Hydration, and Rendering
 
-- Public, SEO-sensitive, or performance-sensitive applications SHOULD evaluate SSR, prerendering, or hybrid rendering.
-- SSR-enabled applications MUST keep server-rendered and client-rendered DOM consistent.
-- Browser-only APIs MUST NOT run during server rendering.
-- Browser-only initialization SHOULD use render-safe lifecycle APIs or platform-specific providers.
-- `isPlatformBrowser` checks in templates SHOULD be avoided because they can cause hydration mismatches.
-- Components that opt out of hydration MUST document why.
-- Server-side providers MUST avoid leaking request-specific data across users.
-- HTTP transfer cache behaviour MUST be reviewed for sensitive authenticated requests.
+- **NG-71.** Public, SEO-sensitive, or performance-sensitive applications SHOULD evaluate SSR, prerendering, or hybrid rendering; the decision is recorded per GEN-11.
+- **NG-72.** SSR applications MUST keep server-rendered and client-rendered DOM consistent, and browser-only APIs MUST NOT run during server rendering — use render-safe lifecycle APIs or platform-specific providers, not `isPlatformBrowser` checks in templates (hydration mismatch risk).
+- **NG-73.** Components that opt out of hydration MUST document why.
+- **NG-74.** Server-side providers MUST NOT leak request-specific data across users, and HTTP transfer-cache behaviour MUST be reviewed for sensitive authenticated requests.
 
-## Security
+## Security (Angular-specific; security.md applies in full)
 
-- Angular's built-in sanitization MUST NOT be bypassed unless the input source is explicitly verified safe and the bypass is documented.
-- `bypassSecurityTrust*` methods MUST NOT be used without documented verification of the value source and security review for high-risk contexts.
-- User-controlled values MUST NOT be rendered as HTML without sanitization.
-- Direct DOM APIs, `ElementRef.nativeElement`, and third-party DOM manipulation MUST be treated as security-sensitive.
-- Content Security Policy and Trusted Types SHOULD be enabled for high-risk or public applications where practical.
-- Angular XSRF/CSRF protection SHOULD be enabled for cookie-based authenticated applications.
-- XSRF/CSRF protection MUST also be enforced by the backend.
-- Tokens and secrets MUST NOT be stored in insecure client-side storage without explicit risk acceptance.
-- Angular security advisories MUST be reviewed during framework upgrades.
+- **NG-75.** `bypassSecurityTrust*` MUST NOT be used unless the value source is verified safe, the justification is documented at the call site, and the usage passes security review when the value can be influenced by users or external systems. User-controlled values MUST NOT be rendered as HTML without sanitization (SEC-19).
+- **NG-76.** Direct DOM APIs, `ElementRef.nativeElement`, and third-party DOM manipulation MUST be treated as security-sensitive and reviewed as such.
+- **NG-77.** Content Security Policy and Trusted Types SHOULD be enabled for public or high-risk applications (SEC-29).
+- **NG-78.** Angular's XSRF helper SHOULD be enabled for cookie-authenticated applications; CSRF protection MUST be enforced by the backend regardless (SEC-27).
+- **NG-79.** Tokens and secrets MUST NOT be stored in insecure client-side storage without an exception per GEN-05, and Angular security advisories MUST be reviewed during framework upgrades.
 
 ## Accessibility
 
-- Angular applications MUST meet the organization's accessibility baseline.
-- Semantic HTML and native controls MUST be preferred over custom interactive elements.
-- Custom interactive components MUST support keyboard navigation, focus states, accessible names, and appropriate ARIA semantics.
-- Form controls MUST have accessible labels and error messages.
-- Error, loading, empty, and success states SHOULD be announced or exposed appropriately to assistive technologies.
-- Route changes SHOULD manage focus so keyboard and screen-reader users can start at the new page content.
-- Active navigation links SHOULD expose `aria-current` where appropriate.
-- Dialogs, menus, popovers, and overlays MUST handle focus trapping, escape behaviour, and focus restoration.
-- ARIA MUST NOT be used to compensate for incorrect HTML when a native semantic element is available.
-- Deferred or dynamically inserted important content SHOULD be announced using appropriate live regions.
-- Accessibility checks SHOULD be included in component tests, end-to-end tests, or review checklists for user-facing features.
-- All interactive features MUST pass automated **AXE** accessibility audits.
-- It MUST follow all WCAG AA minimums, including focus management, color contrast, and ARIA attributes.
+- **NG-80.** Applications MUST meet WCAG 2.1 AA (or a stricter documented org baseline). User-facing features MUST produce zero axe-core critical/serious violations, asserted in component or e2e tests in CI where the project has axe tooling; where it has none, the author MUST flag the gap in the PR rather than skip the check. Gate: CI/Evidence.
+- **NG-81.** Semantic HTML and native controls MUST be preferred over custom interactive elements; ARIA MUST NOT compensate for incorrect HTML where a native element exists.
+- **NG-82.** Custom interactive components MUST support keyboard navigation, focus states, accessible names, and appropriate ARIA semantics; dialogs, menus, and overlays MUST handle focus trapping, escape behaviour, and focus restoration.
+- **NG-83.** Form controls MUST have accessible labels and error messages, and status states (error, loading, empty, success) SHOULD be exposed to assistive technologies; dynamically inserted important content SHOULD use live regions.
+- **NG-84.** Route changes SHOULD manage focus to the new page content, and active navigation links SHOULD expose `aria-current`.
 
 ## Styling
 
-- Styles SHOULD be scoped to components using Angular's default view encapsulation.
-- Global styles MUST be intentional and limited to resets, themes, typography, design tokens, and application-level layout.
-- Style duplication across components SHOULD be extracted to design tokens, shared mixins, utility classes, or shared styles.
-- Inline styles MUST NOT be used unless the value is dynamically bound from component state.
-- Styling MUST NOT hide focus indicators without providing an accessible replacement.
-- Component styles SHOULD support responsive layouts and user accessibility preferences such as reduced motion and text scaling.
-- Design tokens SHOULD be used for shared color, spacing, typography, elevation, and motion values.
+- **NG-85.** Styles SHOULD be scoped via Angular's default view encapsulation; global styles MUST be limited to resets, themes, typography, design tokens, and application-level layout.
+- **NG-86.** Design tokens SHOULD be used for shared color, spacing, typography, elevation, and motion; style duplication SHOULD be extracted to tokens, mixins, or shared styles.
+- **NG-87.** Inline styles MUST NOT be used unless the value is dynamically bound from component state, and styling MUST NOT hide focus indicators without an accessible replacement.
+- **NG-88.** Component styles SHOULD support responsive layouts and user preferences (reduced motion, text scaling).
 
-## Testing
+## Internationalization
 
-- Business logic in services, validators, stores, and pure functions MUST be unit tested.
-- Critical component behaviour MUST be tested.
-- Bug fixes MUST include a regression test unless not practical; exceptions must be documented.
-- Tests MUST NOT rely on implementation details such as private methods or internal signal storage.
+Applies when the application supports or plans to support multiple locales; otherwise inert.
 
-### Component Tests
+- **NG-89.** User-facing strings MUST go through the i18n mechanism, never hardcoded; translation keys MUST be stable and reviewed like contracts.
+- **NG-90.** Dates, numbers, and currency MUST use locale-aware formatting APIs, and layouts SHOULD tolerate text expansion and RTL where required.
 
-- `TestBed` MUST be used for component tests that involve Angular rendering, inputs, outputs, dependency injection, content projection, routing, or forms.
-- Component harnesses SHOULD be used for interacting with Angular Material or CDK components.
-- Presentational components SHOULD be tested by setting inputs and asserting rendered output and emitted events.
-- Smart components SHOULD test orchestration by mocking injected services at the boundary.
-- Accessibility-critical components SHOULD include accessibility assertions.
+## Testing (Angular-specific; testing.md applies in full)
 
-### Service Tests
+Generic rules — regression tests, determinism, flakiness, naming, production data — are owned by testing.md; do not restate them here.
 
-- Services with no Angular-specific dependencies SHOULD be tested without `TestBed` for speed.
-- Services with injected dependencies MUST use `TestBed` or manual `inject()` inside an injection context.
-- HTTP calls MUST be tested using `HttpTestingController` or equivalent HTTP test utilities.
-- State services MUST test state transitions through public methods.
+- **NG-91.** New projects MUST use a supported, non-deprecated test runner (e.g. the Angular CLI's supported runner or Jest/Vitest per org choice); Karma MUST NOT be adopted for new projects.
+- **NG-92.** `TestBed` MUST be used for component tests involving rendering, inputs/outputs, DI, content projection, routing, or forms; component harnesses SHOULD be used for Material/CDK components.
+- **NG-93.** Presentational components SHOULD be tested by setting inputs and asserting rendered output and emitted events; smart components SHOULD be tested by mocking injected services at the boundary.
+- **NG-94.** Services without Angular-specific dependencies SHOULD be tested without `TestBed`; services with injected dependencies MUST use `TestBed` or `inject()` in an injection context. HTTP calls MUST be tested with `HttpTestingController` or equivalent.
+- **NG-95.** Guards MUST be tested for allowed, denied, and redirected outcomes, and route parameter handling SHOULD be tested for valid, missing, and invalid values.
+- **NG-96.** Signals MUST be tested through public logic and observable outcomes; `computed()` through its dependencies; `effect()` SHOULD be tested via the external side effect, not directly.
+- **NG-97.** Accessibility-critical components SHOULD include accessibility assertions (NG-80).
 
-### Routing Tests
+## Definition of Done (Angular delta)
 
-- Guards MUST be tested for allowed, denied, and redirected outcomes.
-- Route parameter handling SHOULD be tested for valid, missing, and invalid values.
-- Critical navigation flows SHOULD be tested with router-aware test utilities.
-
-### Signal And State Tests
-
-- Signals MUST be tested by invoking public logic and reading observable outcomes.
-- `computed()` values MUST be tested through their signal dependencies.
-- `effect()` SHOULD NOT be tested directly unless unavoidable; test the external side effect or user-visible outcome instead.
-
-### Test Quality
-
-- Tests MUST be deterministic.
-- Flaky tests MUST be fixed or removed from required CI gates until fixed.
-- Test names MUST describe the scenario and expected outcome.
-- Tests SHOULD use fake clocks or controlled schedulers for timing-sensitive behaviour.
-- Tests MUST NOT use production data.
-
-## Code Quality
-
-- `any` MUST NOT be used unless the type is genuinely unknown and the usage is explicitly justified.
-- `unknown` SHOULD be preferred over `any` at trust boundaries.
-- Type assertions MUST be justified and kept close to validation.
-- Unused imports, variables, files, and dependencies MUST be removed.
-- Dead code, obsolete feature flags, and abandoned TODOs MUST be removed.
-- `console.log` MUST NOT appear in production code.
-- Public APIs, components, routes, and events SHOULD use consistent domain language.
-- Errors MUST be handled in a way that produces safe user state and useful diagnostic information.
-
-## Definition Of Done
-
-An Angular feature is not complete unless:
-
-- The application uses a supported Angular version.
-- Modern Angular APIs are used where practical.
-- Business logic is separated from components and templates.
-- New component state uses signals where appropriate.
-- Loading, success, empty, partial, and error states are handled where relevant.
-- Authorization-sensitive flows enforce protection on the backend or trusted API layer.
-- Forms are typed, accessible, and validated on both client and server where applicable.
-- Routes are lazy-loaded unless eager loading is justified.
-- Accessibility implications were considered and handled.
-- Security implications were considered and handled.
-- Performance impact was considered for routes, lists, images, bundles, and third-party libraries.
-- SSR or hydration impact was considered when the application uses server or hybrid rendering.
-- Tests cover critical business logic, component behaviour, state transitions, edge cases, and regressions.
-- No unused code, debug logs, or unjustified `any` types were introduced.
-- Formatting, linting, type checks, production build, and relevant CI checks pass.
+All items in engineering-rules.md §Definition of Done apply. Additionally, an Angular change is not complete unless: modern APIs are used per NG-03/NG-04; state uses signals where NG-31 applies; UI states are handled per NG-52; routes are lazy-loaded per NG-59; accessibility (NG-80) and SSR impact (NG-71 to NG-74, when applicable) were addressed; and bundle budgets (NG-10) pass.

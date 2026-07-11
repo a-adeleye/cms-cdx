@@ -1,0 +1,22 @@
+---
+import type { ArticleViewModel } from '../lib/model';
+import ArticleMeta from './ArticleMeta.astro';
+import CyberVisual from './CyberVisual.astro';
+
+const { article, blogPath } = Astro.props as { article: ArticleViewModel; blogPath: string };
+---
+
+<article class="anonime-featured">
+  <div class="anonime-featured-copy">
+    <div class="anonime-featured-labels">
+      <span>Featured</span>
+      <strong>{article.category}</strong>
+    </div>
+    <h2><a href={`${blogPath}/${article.slug}/`}>{article.title}</a></h2>
+    <p>{article.excerpt}</p>
+    <ArticleMeta article={article} />
+  </div>
+  <a class="anonime-featured-media" href={`${blogPath}/${article.slug}/`} aria-label={`Read ${article.title}`}>
+    <CyberVisual article={article} index={20} context="featured" />
+  </a>
+</article>

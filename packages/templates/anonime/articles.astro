@@ -1,0 +1,87 @@
+---
+import ArticleCard from './components/ArticleCard.astro';
+import ArticleMiniList from './components/ArticleMiniList.astro';
+import Icon from './components/Icon.astro';
+import MissionCta from './components/MissionCta.astro';
+import PrivacyOrbit from './components/PrivacyOrbit.astro';
+import SiteShell from './components/SiteShell.astro';
+import TopicCounts from './components/TopicCounts.astro';
+import TopicTabs from './components/TopicTabs.astro';
+import {
+  designArticles,
+  normalizePositiveInteger,
+  resolveArticles,
+  resolveSite,
+} from './lib/model';
+
+const {
+  site: siteInput,
+  articles: articleInput,
+  page: pageInput,
+  totalPages: totalPagesInput,
+} = Astro.props as {
+  site?: unknown;
+  articles?: unknown;
+  page?: unknown;
+  totalPages?: unknown;
+};
+const site = resolveSite(siteInput);
+const hasCmsArticles = articleInput !== undefined;
+const articles = resolveArticles(articleInput);
+const page = normalizePositiveInteger(pageInput, 1);
+const configuredTotalPages = totalPagesInput === undefined ? undefined : normalizePositiveInteger(totalPagesInput, 1);
+const visibleArticles = hasCmsArticles ? articles.slice(0, 6) : designArticles.slice(0, 6);
+const popularArticles = hasCmsArticles ? articles.slice(0, 4) : designArticles.slice(6, 10);
+const totalPages = Math.max(1, configuredTotalPages ?? (hasCmsArticles ? Math.ceil(articles.length / 6) : 12));
+const paginationPages = Array.from({ length: Math.min(5, totalPages) }, (_, index) => index + 1);
+const topicCounts = hasCmsArticles
+  ? Array.from(articles.reduce((counts, article) => {
+      counts.set(article.category, (counts.get(article.category) ?? 0) + 1);
+      return counts;
+    }, new Map<string, number>())).map(([name, count]) => ({ name, count }))
+  : undefined;
+---
+
+<SiteShell site={site} page="articles">
+  <section class="anonime-container anonime-articles-hero">
+    <div class="anonime-hero-copy">
+      <p class="anonime-eyebrow">The Privacy Blog</p>
+      <h1>All Articles</h1>
+      <p>Insights on privacy, identity, and encrypted communication. Real-world guides and ideas to help you take back control.</p>
+    </div>
+    <PrivacyOrbit />
+  </section>
+
+  <section class="anonime-container anonime-articles-topics">
+    <TopicTabs blogPath={site.blogPath} includeIdentity showSort />
+  </section>
+
+  <section class="anonime-container anonime-articles-layout">
+    <div class="anonime-articles-list">
+      {visibleArticles.length === 0 ? (
+        <div class="anonime-empty-state"><h2>No articles yet</h2><p>Published insights will appear here.</p></div>
+      ) : visibleArticles.map((article, index) => (
+        <ArticleCard article={article} blogPath={site.blogPath} index={index} layout="listing" />
+      ))}
+      {visibleArticles.length > 0 && totalPages > 1 && (
+        <nav class="anonime-pagination" aria-label="Article pages">
+          <a href={page > 1 ? `${site.blogPath}/page/${page - 1}/` : `${site.blogPath}/`} aria-label="Previous page"><Icon name="arrow-left" size={16} /></a>
+          {paginationPages.map((pageNumber) => (
+            <a class:list={{ 'is-active': pageNumber === page }} aria-current={pageNumber === page ? 'page' : undefined} href={pageNumber === 1 ? `${site.blogPath}/` : `${site.blogPath}/page/${pageNumber}/`}>{pageNumber}</a>
+          ))}
+          {totalPages > 6 && <span>…</span>}
+          {totalPages > 5 && <a href={`${site.blogPath}/page/${totalPages}/`}>{totalPages}</a>}
+          <a href={`${site.blogPath}/page/${Math.min(totalPages, page + 1)}/`} aria-label="Next page"><Icon name="arrow-right" size={16} /></a>
+        </nav>
+      )}
+    </div>
+    <div class="anonime-articles-sidebar">
+      <TopicCounts topics={topicCounts} />
+      <aside class="anonime-side-card anonime-popular-card">
+        <h2>Popular Articles</h2>
+        <ArticleMiniList articles={popularArticles} blogPath={site.blogPath} startIndex={30} />
+      </aside>
+      <MissionCta blogPath={site.blogPath} tone="light" compact />
+    </div>
+  </section>
+</SiteShell>

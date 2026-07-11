@@ -1,0 +1,92 @@
+---
+import ArticleMeta from './components/ArticleMeta.astro';
+import ArticleMiniList from './components/ArticleMiniList.astro';
+import CyberVisual from './components/CyberVisual.astro';
+import Icon from './components/Icon.astro';
+import MarkdownContent from './components/MarkdownContent.astro';
+import MissionCta from './components/MissionCta.astro';
+import SiteShell from './components/SiteShell.astro';
+import { parseArticleMarkdown } from './lib/markdown';
+import {
+  designArticles,
+  resolveArticles,
+  resolveFeaturedArticle,
+  resolveSite,
+} from './lib/model';
+
+const {
+  site: siteInput,
+  article: articleInput,
+  relatedArticles: relatedInput,
+} = Astro.props as {
+  site?: unknown;
+  article?: unknown;
+  relatedArticles?: unknown;
+};
+const site = resolveSite(siteInput);
+const article = resolveFeaturedArticle(articleInput);
+const parsedContent = parseArticleMarkdown(article.contentMarkdown, article.title);
+const relatedArticles = relatedInput !== undefined
+  ? resolveArticles(relatedInput).slice(0, 4)
+  : articleInput === undefined ? designArticles.slice(6, 10) : [];
+const articleUrl = `${site.blogPath}/${article.slug}/`;
+const shareUrl = article.canonicalUrl || articleUrl;
+const shareSubject = encodeURIComponent(article.title);
+---
+
+<SiteShell site={site} page="article">
+  <nav class="anonime-container anonime-breadcrumb" aria-label="Breadcrumb">
+    <a href={`${site.blogPath}/`}>Blog</a><span>›</span><a href={`${site.blogPath}/?topic=${article.category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>{article.category}</a><span>›</span><span aria-current="page">{article.title}</span>
+  </nav>
+
+  <div class="anonime-container anonime-read-layout">
+    <article class="anonime-read-article">
+      <header class="anonime-read-header">
+        <p class="anonime-category">{article.category}</p>
+        <h1 id="article-title">{article.title}</h1>
+        <p class="anonime-read-deck">{article.excerpt}</p>
+        <div class="anonime-read-meta-row">
+          <ArticleMeta article={article} />
+          <div class="anonime-read-actions" aria-label="Article actions">
+            <a href="#article-title" aria-label="Bookmark article"><Icon name="bookmark" size={19} /></a>
+            <a href={`mailto:?subject=${shareSubject}&body=${encodeURIComponent(shareUrl)}`} aria-label="Share article"><Icon name="share" size={19} /></a>
+            <a href={shareUrl} aria-label="Article permalink"><Icon name="link" size={19} /></a>
+          </div>
+        </div>
+      </header>
+
+      <CyberVisual article={article} index={50} context="read" class="anonime-read-cover" />
+      <MarkdownContent blocks={parsedContent.blocks} />
+
+      <aside class="anonime-article-end-cta">
+        <strong>Your conversations are yours.<br />Keep them that way.</strong>
+        <a class="anonime-button anonime-button-small" href="#get-started">Explore Anonime <Icon name="arrow-right" size={15} /></a>
+        <div aria-hidden="true"><Icon name="shield" size={90} strokeWidth={1.2} /></div>
+      </aside>
+
+      <div class="anonime-feedback" id="article-feedback">
+        <span>Was this article helpful?</span>
+        <a href={`${articleUrl}?helpful=yes#article-feedback`}><Icon name="thumbs-up" size={16} />Yes</a>
+        <a href={`${articleUrl}?helpful=no#article-feedback`}><Icon name="thumbs-down" size={16} />No</a>
+      </div>
+    </article>
+
+    <aside class="anonime-read-sidebar">
+      <nav class="anonime-side-card anonime-toc" aria-label="On this page">
+        <h2>On this page</h2>
+        <ol>
+          {parsedContent.tableOfContents.map((entry, index) => (
+            <li class:list={{ 'is-active': index === 0 }}><a href={`#${entry.id}`}>{entry.label}</a></li>
+          ))}
+        </ol>
+      </nav>
+      {relatedArticles.length > 0 && (
+        <aside class="anonime-side-card anonime-related-card">
+          <h2>Related Articles</h2>
+          <ArticleMiniList articles={relatedArticles} blogPath={site.blogPath} startIndex={60} />
+        </aside>
+      )}
+      <MissionCta blogPath={site.blogPath} tone="light" compact />
+    </aside>
+  </div>
+</SiteShell>

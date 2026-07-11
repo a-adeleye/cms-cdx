@@ -1,18 +1,26 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-const { page } = Astro.params;
+import { loadBuildData } from '../../../content';
+
+const { site, articles } = loadBuildData();
+const { page, pageArticles } = Astro.props;
 
 export function getStaticPaths() {
-  return ['2', '3'].map((pageNumber) => ({
-    params: { page: pageNumber },
-  }));
+  const pages = Math.ceil(loadBuildData().articles.length / 10);
+  return Array.from({ length: Math.max(0, pages - 1) }, (_, index) => {
+    const page = index + 2;
+    return {
+      params: { page: String(page) },
+      props: { page, pageArticles: loadBuildData().articles.slice((page - 1) * 10, page * 10) },
+    };
+  });
 }
 ---
 
-<BaseLayout title={`Articles - Page ${page}`} description="Paginated article listing placeholder.">
+<BaseLayout title={`Articles - Page ${page}`} description={`Published articles for ${site.name}.`} blogPath={site.blogPath}>
   <section class="page">
     <p class="eyebrow">Articles</p>
     <h1>Page {page}</h1>
-    <p>Static pagination will be generated here from published content.</p>
+    <ul>{pageArticles.map((article) => <li><a href={`${site.blogPath}/${article.slug}/`}>{article.title}</a></li>)}</ul>
   </section>
 </BaseLayout>

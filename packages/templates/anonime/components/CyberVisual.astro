@@ -1,0 +1,130 @@
+---
+import type { ArticleViewModel } from '../lib/model';
+
+const { article, index = 0, context = 'card', class: className = '' } = Astro.props as {
+  article: ArticleViewModel;
+  index?: number;
+  context?: 'card' | 'featured' | 'read';
+  class?: string;
+};
+const uid = `anonime-${article.visual}-${index}`.replace(/[^a-z0-9-]/gi, '');
+const stars = Array.from({ length: 34 }, (_, star) => ({
+  x: 18 + ((star * 73 + index * 29) % 680),
+  y: 16 + ((star * 47 + index * 31) % 382),
+  radius: star % 5 === 0 ? 2.2 : 1.1,
+}));
+const rays = Array.from({ length: 14 }, (_, ray) => {
+  const angle = (ray / 14) * Math.PI * 2;
+  return {
+    x1: 360 + Math.cos(angle) * 78,
+    y1: 210 + Math.sin(angle) * 78,
+    x2: 360 + Math.cos(angle) * 330,
+    y2: 210 + Math.sin(angle) * 185,
+  };
+});
+---
+
+<figure class={`anonime-cyber-visual ${className}`}>
+  {article.imageUrl ? (
+    <img src={article.imageUrl} alt={`${article.title} cover`} loading="lazy" />
+  ) : (
+    <svg viewBox="0 0 720 420" role="img" aria-label={`${article.title} abstract privacy illustration`} preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <radialGradient id={`${uid}-bg`} cx="52%" cy="48%" r="72%">
+          <stop offset="0" stop-color="#063b31" />
+          <stop offset=".46" stop-color="#021f1c" />
+          <stop offset="1" stop-color="#010b0f" />
+        </radialGradient>
+        <linearGradient id={`${uid}-neon`} x1="0" y1="0" x2="1" y2="1">
+          <stop stop-color="#72ffd5" />
+          <stop offset=".5" stop-color="#00d89a" />
+          <stop offset="1" stop-color="#007e62" />
+        </linearGradient>
+        <pattern id={`${uid}-grid`} width="26" height="26" patternUnits="userSpaceOnUse">
+          <path d="M26 0H0v26" fill="none" stroke="#0d715d" stroke-width=".7" opacity=".28" />
+        </pattern>
+        <filter id={`${uid}-glow`} x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="7" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <filter id={`${uid}-soft`} x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="18" />
+        </filter>
+      </defs>
+      <rect width="720" height="420" rx="14" fill={`url(#${uid}-bg)`} />
+      <rect width="720" height="420" rx="14" fill={`url(#${uid}-grid)`} opacity=".7" />
+      <ellipse cx="360" cy="210" rx="220" ry="130" fill="#00d99b" opacity=".08" filter={`url(#${uid}-soft)`} />
+      <g stroke="#00e5a5" stroke-width="1" opacity=".3">
+        {rays.map((ray) => <line x1={ray.x1} y1={ray.y1} x2={ray.x2} y2={ray.y2} />)}
+      </g>
+      <g fill="#39ffc3">
+        {stars.map((star) => <circle cx={star.x} cy={star.y} r={star.radius} opacity={star.radius > 2 ? .8 : .38} />)}
+      </g>
+      <g fill="none" stroke={`url(#${uid}-neon)`} filter={`url(#${uid}-glow)`}>
+        {(article.visual === 'lock' || article.visual === 'architecture') && <>
+          <circle cx="360" cy="210" r="128" stroke-width="1.7" opacity=".65" />
+          <circle cx="360" cy="210" r="93" stroke-width="1" stroke-dasharray="5 8" opacity=".65" />
+          <rect x="302" y="190" width="116" height="104" rx="10" stroke-width="6" />
+          <path d="M323 190v-35a37 37 0 0 1 74 0v35" stroke-width="7" />
+          <circle cx="360" cy="235" r="10" stroke-width="4" />
+          <path d="M360 245v19" stroke-width="5" />
+          {article.visual === 'lock' && context === 'read' && <>
+            <circle cx="202" cy="118" r="28" stroke-width="2" /><path d="M188 118h28l-14 11-14-11Zm0 0 14-11 14 11" stroke-width="2" />
+            <circle cx="519" cy="118" r="28" stroke-width="2" /><circle cx="519" cy="110" r="7" stroke-width="2" /><path d="M506 129c2-10 24-10 26 0" stroke-width="2" />
+            <circle cx="202" cy="306" r="28" stroke-width="2" /><circle cx="202" cy="298" r="7" stroke-width="2" /><path d="M189 317c2-10 24-10 26 0" stroke-width="2" />
+            <circle cx="519" cy="306" r="28" stroke-width="2" /><circle cx="519" cy="298" r="7" stroke-width="2" /><path d="M506 317c2-10 24-10 26 0" stroke-width="2" />
+          </>}
+        </>}
+        {article.visual === 'silhouette' && <>
+          <path d="M360 95c-25 0-42 20-42 47 0 21 8 38 18 51-29 19-48 57-53 125h154c-5-68-24-106-53-125 10-13 18-30 18-51 0-27-17-47-42-47Z" fill="#031311" stroke-width="2" />
+          <path d="M360 74v264M274 117l172 188M446 117 274 305M238 209h244" stroke-width="1.5" opacity=".75" />
+        </>}
+        {article.visual === 'key' && <>
+          <circle cx="303" cy="175" r="66" stroke-width="14" />
+          <circle cx="303" cy="175" r="22" stroke-width="8" />
+          <path d="m351 221 126 126 37-37-24-24 20-20-31-31-20 20-71-71" stroke-width="20" />
+          <path d="m420 263 24-24M450 293l24-24" stroke-width="5" />
+        </>}
+        {article.visual === 'message' && <>
+          <rect x="238" y="126" width="244" height="176" rx="16" stroke-width="7" />
+          <path d="m248 143 112 90 112-90" stroke-width="7" />
+          <path d="m247 286 78-68M473 286l-78-68" stroke-width="4" />
+          <path d="M203 101 517 321M516 101 203 321" stroke-width="1.5" opacity=".5" />
+        </>}
+        {article.visual === 'identity' && <>
+          <path d="M360 72 214 129v92c0 92 52 147 146 178 94-31 146-86 146-178v-92L360 72Z" stroke-width="8" />
+          <circle cx="360" cy="185" r="33" stroke-width="6" />
+          <path d="M291 305c8-56 40-84 69-84s61 28 69 84" stroke-width="7" />
+          <circle cx="282" cy="221" r="21" stroke-width="4" /><circle cx="438" cy="221" r="21" stroke-width="4" />
+        </>}
+        {article.visual === 'product' && <>
+          <path d="m360 78 137 79v158l-137 79-137-79V157l137-79Z" stroke-width="7" />
+          <path d="m226 159 134 78 134-78M360 237v155" stroke-width="6" />
+          <path d="m288 120 138 80" stroke-width="3" stroke-dasharray="8 8" />
+        </>}
+        {article.visual === 'fingerprint' && <>
+          <path d="M268 319c-19-34-29-75-25-117 6-68 54-116 117-116 64 0 112 48 117 116 4 43-7 85-29 120" stroke-width="8" />
+          <path d="M304 333c-25-42-31-88-24-126 8-43 37-75 80-75 44 0 73 34 80 78 6 38-2 85-26 127" stroke-width="7" />
+          <path d="M343 344c-27-48-33-96-24-133 5-22 20-37 41-37 23 0 38 17 42 42 7 39-2 85-24 131" stroke-width="6" />
+          <path d="M360 212c-12 40-6 80 3 120" stroke-width="5" />
+        </>}
+        {article.visual === 'email' && <>
+          <path d="M360 76 232 126v84c0 84 47 136 128 166 81-30 128-82 128-166v-84L360 76Z" stroke-width="8" />
+          <rect x="291" y="165" width="138" height="100" rx="8" stroke-width="6" />
+          <path d="m299 177 61 49 61-49" stroke-width="5" />
+        </>}
+        {article.visual === 'brokers' && <>
+          <path d="M409 83c-81 0-138 55-138 132 0 53 25 93 63 116v43h113v-61c34-31 53-70 53-115 0-64-35-115-91-115Z" stroke-width="7" />
+          <circle cx="384" cy="172" r="31" stroke-width="5" /><path d="M327 279c9-49 30-76 57-76 27 0 49 27 57 76" stroke-width="5" />
+          <path d="M220 111 502 331M499 107 222 333" stroke-width="1.5" opacity=".45" />
+        </>}
+        {article.visual === 'minimalism' && <>
+          <path d="M360 71 229 124v91c0 81 47 135 131 168 84-33 131-87 131-168v-91L360 71Z" stroke-width="5" />
+          <path d="m360 71 2 312M229 124l262 0M254 282l214-143M252 140l214 142" stroke-width="1.5" opacity=".55" />
+          <circle cx="360" cy="207" r="55" stroke-width="4" />
+        </>}
+      </g>
+      <rect x="1" y="1" width="718" height="418" rx="13" fill="none" stroke="#2b5d53" stroke-opacity=".45" />
+    </svg>
+  )}
+</figure>

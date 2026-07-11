@@ -32,3 +32,7 @@ Local host ports:
 - Astro is only the static generator.
 - Public sites are static and SEO-friendly.
 - AI-assisted content is saved as draft or review only.
+
+## Cloudflare Pages Deployments
+
+Published builds can deploy to a Cloudflare Pages Direct Upload project when the site's deployment provider is `cloudflare_pages`. See `packages/deploy-adapters/cloudflare/README.md` for the site configuration, runtime credentials, post-deploy checks, and rollback procedure.

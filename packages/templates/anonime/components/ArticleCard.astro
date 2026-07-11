@@ -1,0 +1,31 @@
+---
+import type { ArticleViewModel } from '../lib/model';
+import ArticleMeta from './ArticleMeta.astro';
+import CyberVisual from './CyberVisual.astro';
+import Icon from './Icon.astro';
+
+const { article, blogPath, index = 0, layout = 'landing' } = Astro.props as {
+  article: ArticleViewModel;
+  blogPath: string;
+  index?: number;
+  layout?: 'landing' | 'listing';
+};
+const articleUrl = `${blogPath}/${article.slug}/`;
+---
+
+<article class={`anonime-article-card is-${layout}`}>
+  <a class="anonime-card-media" href={articleUrl} aria-label={`Read ${article.title}`}>
+    <CyberVisual article={article} index={index} />
+  </a>
+  <div class="anonime-card-copy">
+    <p class="anonime-category">{article.category}</p>
+    <h3><a href={articleUrl}>{article.title}</a></h3>
+    <p class="anonime-card-excerpt">{article.excerpt}</p>
+    {layout === 'listing'
+      ? <ArticleMeta article={article} compact />
+      : <ArticleMeta article={article} compact showAuthor={false} />}
+    <a class="anonime-card-arrow" href={articleUrl} aria-label={`Read ${article.title}`}>
+      <Icon name="arrow-right" size={17} />
+    </a>
+  </div>
+</article>

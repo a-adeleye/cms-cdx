@@ -1,0 +1,32 @@
+---
+import type { ArticleViewModel } from '../lib/model';
+import CyberVisual from './CyberVisual.astro';
+
+const { articles, blogPath, showCategory = false, startIndex = 0 } = Astro.props as {
+  articles: ArticleViewModel[];
+  blogPath: string;
+  showCategory?: boolean;
+  startIndex?: number;
+};
+---
+
+<div class="anonime-mini-list">
+  {articles.map((article, index) => (
+    <article class="anonime-mini-article">
+      <a class="anonime-mini-media" href={`${blogPath}/${article.slug}/`} aria-label={`Read ${article.title}`}>
+        <CyberVisual article={article} index={startIndex + index} />
+      </a>
+      <div>
+        {showCategory && <p class="anonime-category">{article.category}</p>}
+        <h3><a href={`${blogPath}/${article.slug}/`}>{article.title}</a></h3>
+        {(article.publishedLabel || showCategory) && (
+          <p class="anonime-mini-meta">
+            {article.publishedLabel}
+            {article.publishedLabel && showCategory && <i></i>}
+            {showCategory && <>{article.readingTime} min read</>}
+          </p>
+        )}
+      </div>
+    </article>
+  ))}
+</div>

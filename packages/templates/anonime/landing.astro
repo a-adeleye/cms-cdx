@@ -1,0 +1,79 @@
+---
+import ArticleCard from './components/ArticleCard.astro';
+import ArticleMiniList from './components/ArticleMiniList.astro';
+import FeaturedArticle from './components/FeaturedArticle.astro';
+import Icon from './components/Icon.astro';
+import MissionCta from './components/MissionCta.astro';
+import PrivacyOrbit from './components/PrivacyOrbit.astro';
+import SiteShell from './components/SiteShell.astro';
+import TopicTabs from './components/TopicTabs.astro';
+import {
+  designArticles,
+  featuredDesignArticle,
+  resolveArticles,
+  resolveSite,
+} from './lib/model';
+
+const { site: siteInput, articles: articleInput } = Astro.props as {
+  site?: unknown;
+  articles?: unknown;
+};
+const site = resolveSite(siteInput);
+const hasCmsArticles = articleInput !== undefined;
+const cmsArticles = resolveArticles(articleInput);
+const featured = hasCmsArticles
+  ? (cmsArticles.find((article) => article.isFeatured) ?? cmsArticles[0])
+  : featuredDesignArticle;
+const unfeaturedArticles = featured ? cmsArticles.filter((article) => article.slug !== featured.slug) : cmsArticles;
+const latest = hasCmsArticles ? unfeaturedArticles.slice(0, 3) : designArticles.slice(0, 3);
+const secondary = hasCmsArticles ? unfeaturedArticles.slice(3, 8) : [
+  designArticles[6],
+  designArticles[3],
+  designArticles[7],
+  designArticles[4],
+  designArticles[5],
+];
+---
+
+<SiteShell site={site} page="landing">
+  <section class="anonime-container anonime-landing-hero">
+    <div class="anonime-hero-copy">
+      <p class="anonime-eyebrow">The Privacy Blog</p>
+      <h1>Thoughts that<br />protect your<br />right to <em>privacy.</em></h1>
+      <p>Deep dives, real-world guides, and the latest thinking on privacy, identity, and taking back control of your data.</p>
+      <a class="anonime-button" href={`${site.blogPath}/`}>Explore all articles <Icon name="arrow-right" size={17} /></a>
+    </div>
+    <PrivacyOrbit />
+  </section>
+
+  {featured && (
+    <section class="anonime-container anonime-featured-section" aria-label="Featured article">
+      <FeaturedArticle article={featured} blogPath={site.blogPath} />
+    </section>
+  )}
+
+  <section class="anonime-container anonime-landing-topics">
+    <TopicTabs blogPath={site.blogPath} />
+  </section>
+
+  <section class="anonime-container anonime-latest-section">
+    <header class="anonime-section-heading">
+      <h2>Latest insights</h2>
+      <a href={`${site.blogPath}/`}>View all articles <Icon name="arrow-right" size={17} /></a>
+    </header>
+    {cmsArticles.length === 0 && hasCmsArticles ? (
+      <div class="anonime-empty-state"><h3>No articles yet</h3><p>Published insights will appear here.</p></div>
+    ) : (
+      <div class="anonime-latest-grid">
+        <div class="anonime-latest-primary">
+          {latest.map((article, index) => <ArticleCard article={article} blogPath={site.blogPath} index={index} />)}
+        </div>
+        <ArticleMiniList articles={secondary} blogPath={site.blogPath} showCategory startIndex={6} />
+      </div>
+    )}
+  </section>
+
+  <section class="anonime-container anonime-landing-mission">
+    <MissionCta blogPath={site.blogPath} />
+  </section>
+</SiteShell>

@@ -1,0 +1,52 @@
+---
+import Icon from './Icon.astro';
+
+const { site } = Astro.props;
+---
+
+<footer class="anonime-footer">
+  <div class="anonime-container anonime-footer-grid">
+    <div class="anonime-footer-brand">
+      <a class="anonime-brand" href="/" aria-label={`${site.name} home`}>
+        <span class="anonime-brand-mark"><Icon name="shield" size={16} strokeWidth={2.2} /></span>
+        <span>{site.name}</span>
+      </a>
+      <p>Private communication<br />without permanent trails.</p>
+      <div class="anonime-socials" aria-label="Social media">
+        <a href="#x" aria-label="X"><Icon name="x" size={13} /></a>
+        <a href="#linkedin" aria-label="LinkedIn"><Icon name="linkedin" size={14} /></a>
+        <a href="#github" aria-label="GitHub"><Icon name="github" size={14} /></a>
+      </div>
+      <small>© 2026 Anonime. Your identity, your rules.</small>
+    </div>
+    <nav class="anonime-footer-nav" aria-label="Product">
+      <strong>Product</strong>
+      <a href="/#features">Features</a>
+      <a href="/#pricing">Pricing</a>
+      <a href="/#security">Security</a>
+      <a href="/#nyms">Nyms</a>
+    </nav>
+    <nav class="anonime-footer-nav" aria-label="Resources">
+      <strong>Resources</strong>
+      <a class="is-accent" href={`${site.blogPath}/`}>Blog</a>
+      <a href="/#guides">Guides</a>
+      <a href="/#help">Help Center</a>
+      <a href="/#status">Status</a>
+    </nav>
+    <nav class="anonime-footer-nav" aria-label="Company">
+      <strong>Company</strong>
+      <a href="/#about">About</a>
+      <a href="/#privacy">Privacy</a>
+      <a href="/#terms">Terms</a>
+      <a href="/#contact">Contact</a>
+    </nav>
+    <aside class="anonime-footer-cta" id="get-started">
+      <div class="anonime-footer-cta-title">
+        <span><Icon name="lock" size={21} /></span>
+        <strong>One platform.<br />Separate lives.</strong>
+      </div>
+      <p>Take control of your privacy with end-to-end encrypted communication.</p>
+      <a class="anonime-button anonime-button-small" href="#get-started">Get Started</a>
+    </aside>
+  </div>
+</footer>

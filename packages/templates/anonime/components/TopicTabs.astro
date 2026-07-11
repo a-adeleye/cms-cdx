@@ -1,0 +1,30 @@
+---
+import Icon from './Icon.astro';
+
+const { blogPath, includeIdentity = false, showSort = false } = Astro.props;
+const topics = [
+  { name: 'All Articles', icon: 'grid', value: '' },
+  { name: 'Privacy Basics', icon: 'privacy', value: 'privacy-basics' },
+  { name: 'Security', icon: 'security', value: 'security' },
+  { name: 'Anonymity', icon: 'anonymity', value: 'anonymity' },
+  { name: 'Guides', icon: 'guides', value: 'guides' },
+  { name: 'Product', icon: 'product', value: 'product' },
+  ...(includeIdentity ? [{ name: 'Identity', icon: 'identity', value: 'identity' }] : []),
+];
+---
+
+<nav class:list={['anonime-topic-row', { 'has-sort': showSort }]} aria-label="Article topics">
+  <div class="anonime-topic-tabs">
+    {topics.map((topic, index) => (
+      <a class:list={['anonime-topic-tab', { 'is-active': index === 0 }]} href={topic.value ? `${blogPath}/?topic=${topic.value}` : `${blogPath}/`}>
+        <Icon name={topic.icon} size={18} />
+        <span>{topic.name}</span>
+      </a>
+    ))}
+  </div>
+  {showSort && (
+    <a class="anonime-sort" href={`${blogPath}/?sort=latest`}>
+      Latest <Icon name="chevron-down" size={16} />
+    </a>
+  )}
+</nav>

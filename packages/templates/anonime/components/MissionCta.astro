@@ -1,0 +1,14 @@
+---
+import Icon from './Icon.astro';
+
+const { blogPath, tone = 'dark', compact = false } = Astro.props;
+---
+
+<aside class:list={['anonime-mission', `is-${tone}`, { 'is-compact': compact }] }>
+  <div class="anonime-mission-copy">
+    <h2>Privacy isn’t just our product.<br />It’s our mission.</h2>
+    <p>Read more insights, guides, and real-world stories on taking back control of your digital life.</p>
+  </div>
+  <a class="anonime-button" href={`${blogPath}/`}>Explore all articles <Icon name="arrow-right" size={16} /></a>
+  <div class="anonime-mission-shield" aria-hidden="true"><Icon name="shield" size={76} strokeWidth={1.1} /></div>
+</aside>

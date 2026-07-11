@@ -9,6 +9,10 @@
     "dev:admin": "npm run start --workspace apps/admin",
     "dev:builder": "npm run dev --workspace apps/builder",
     "build:admin": "npm run build --workspace apps/admin",
-    "build:builder": "npm run build --workspace apps/builder"
+    "build:builder": "npm run build --workspace apps/builder",
+    "test:template:anonime": "npm --prefix packages/templates/anonime test"
+  },
+  "devDependencies": {
+    "wrangler": "4.110.0"
   }
 }

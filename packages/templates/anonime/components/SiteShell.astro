@@ -1,0 +1,13 @@
+---
+import '../styles/anonime.css';
+import SiteFooter from './SiteFooter.astro';
+import SiteHeader from './SiteHeader.astro';
+
+const { site, page = '' } = Astro.props;
+---
+
+<div class={`anonime-site anonime-page-${page}`}>
+  <SiteHeader site={site} />
+  <main><slot /></main>
+  <SiteFooter site={site} />
+</div>

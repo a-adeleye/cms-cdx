@@ -1,12 +1,15 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { loadBuildData } from '../../content';
+
+const { site, articles } = loadBuildData();
 ---
 
-<BaseLayout title="Articles" description="Published articles for the example site.">
+<BaseLayout title="Articles" description={`Published articles for ${site.name}.`} blogPath={site.blogPath}>
   <section class="page">
     <p class="eyebrow">Articles</p>
     <h1>Published articles</h1>
-    <p>This route is where the builder will render paginated article cards from the CMS.</p>
+    {articles.length === 0 ? <p>No articles have been published yet.</p> : <ul>{articles.map((article) => <li><a href={`${site.blogPath}/${article.slug}/`}>{article.title}</a><p>{article.excerpt}</p></li>)}</ul>}
   </section>
 </BaseLayout>
 

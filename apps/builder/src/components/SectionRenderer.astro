@@ -1,15 +1,16 @@
 ---
-const { section } = Astro.props;
+const { section, articles, blogPath } = Astro.props;
 ---
 
-<section class={`section section-${section.key}`}>
+<section class={`section section-${section.sectionKey}`}>
   <p class="eyebrow">{section.title}</p>
-  {section.dynamic ? (
-    <div class="panel">Dynamic section placeholder for {section.key}.</div>
+  {section.sectionKey === 'latest_articles' ? (
+    <div class="panel">
+      {articles.length === 0 ? <p>No articles have been published yet.</p> : <ul>{articles.slice(0, 3).map((article) => <li><a href={`${blogPath}/${article.slug}/`}>{article.title}</a></li>)}</ul>}
+    </div>
   ) : (
     <div class="panel">
-      <strong>{section.content?.headline ?? section.title}</strong>
-      <p>Template-driven content for {section.key}.</p>
+      <strong>{section.subtitle || section.title}</strong>
     </div>
   )}
 </section>

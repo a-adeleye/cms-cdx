@@ -1,0 +1,45 @@
+.deployment-summary-strip { display: grid; grid-template-columns: 1.1fr 1.9fr; align-items: center; padding: 24px; }
+.deployment-summary-strip > div { display: flex; align-items: center; gap: 14px; }
+.summary-success { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; background: #d1fadf; color: var(--success); font-size: 22px; }
+.deployment-summary-strip small, .deployment-summary-strip strong, .deployment-summary-strip b { display: block; }
+.deployment-summary-strip small { color: var(--muted); font-size: 10px; }
+.deployment-summary-strip strong { margin-top: 8px; font-size: 15px; }
+.deployment-summary-strip b { margin-top: 4px; color: var(--muted); font-size: 10px; font-weight: 400; }
+.deployment-summary-strip dl { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; }
+.deployment-summary-strip dl div { padding: 0 20px; border-left: 1px solid var(--line); }
+.deployment-summary-strip dt { color: var(--muted); font-size: 9px; }
+.deployment-summary-strip dd { display: flex; align-items: center; gap: 7px; margin: 9px 0 0; font-size: 11px; font-weight: 600; }
+.deployment-summary-strip dd i { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+.deployment-summary-strip dd small { display: block; }
+.deployment-details-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+.deployment-tabs-card { padding: 0; overflow: hidden; }
+.deployment-overview-grid { display: grid; grid-template-columns: .9fr 1.3fr; gap: 14px; padding: 16px; background: #fbfcfe; }
+.deployment-overview-grid > section { padding: 18px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.deployment-overview-grid h2 { font-size: 13px; }
+.deployment-timeline { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.deployment-timeline li { position: relative; display: grid; grid-template-columns: 70px 1fr; gap: 18px; min-height: 50px; padding-left: 18px; }
+.deployment-timeline li::before { content: '✓'; position: absolute; left: 0; top: 1px; display: grid; width: 13px; height: 13px; place-items: center; border-radius: 50%; background: var(--success); color: #fff; font-size: 8px; }
+.deployment-timeline li::after { content: ''; position: absolute; left: 6px; top: 15px; bottom: 0; width: 1px; background: #a6e6c3; }
+.deployment-timeline li:last-child::after { display: none; }
+.deployment-timeline time { color: var(--muted); font-size: 9px; }
+.deployment-timeline strong, .deployment-timeline small { display: block; }
+.deployment-timeline strong { font-size: 10px; }
+.deployment-timeline small { margin-top: 4px; color: var(--muted); font-size: 9px; }
+.deployment-side-card > div { display: grid; grid-template-columns: 1fr auto; gap: 4px; padding: 15px 0; border-bottom: 1px solid var(--line); }
+.deployment-side-card > div:last-child { border-bottom: 0; }
+.deployment-side-card strong { font-size: 11px; }
+.deployment-side-card small { grid-column: 1 / -1; color: var(--muted); font-size: 9px; }
+.performance-card dl { display: grid; margin: 0; }
+.performance-card dl div { display: flex; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.performance-card dt, .performance-card dd { font-size: 10px; }
+.performance-card dd { margin: 0; font-weight: 600; }
+.performance-card dd span { color: var(--success); }
+.deployment-actions-card { padding: 0; overflow: hidden; }
+.deployment-actions-card h2 { padding: 18px; }
+.deployment-actions-card a, .deployment-actions-card button { display: grid; width: 100%; grid-template-columns: 24px 1fr auto; gap: 9px; padding: 13px 18px; border: 0; border-top: 1px solid var(--line); background: #fff; text-align: left; }
+.deployment-actions-card button:disabled { opacity: .58; }
+.deployment-actions-card strong, .deployment-actions-card small { display: block; }
+.deployment-actions-card strong { font-size: 10px; }
+.deployment-actions-card small { margin-top: 3px; color: var(--muted); font-size: 9px; }
+@media (max-width: 1100px) { .deployment-details-layout, .deployment-summary-strip { grid-template-columns: 1fr; } .deployment-summary-strip dl { margin-top: 20px; } }
+@media (max-width: 760px) { .deployment-summary-strip dl, .deployment-overview-grid { grid-template-columns: 1fr; } .deployment-summary-strip dl div { padding: 10px 0; border-left: 0; border-top: 1px solid var(--line); } }

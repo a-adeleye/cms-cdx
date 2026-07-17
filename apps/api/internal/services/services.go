@@ -29,7 +29,11 @@ func New(db *sql.DB, cfg config.Config) Services {
 		Config:  cfg,
 		AI:      ai.NoopProvider{},
 		Builder: builder.NewLocalBuilder(""),
-		Deploy:  deploy.NewAdapter(""),
+		Deploy: deploy.NewAdapterWithCloudflareAndRepository("", deploy.CloudflarePagesAdapter{
+			APIToken:  cfg.CloudflareAPIToken,
+			AccountID: cfg.CloudflareAccountID,
+			Command:   cfg.WranglerCommand,
+		}, deploy.RepositoryAdapter{GitCommand: "git", AllowedHosts: cfg.GitAllowedHosts}),
 		Storage: storage.NewFromConfig(cfg),
 		Sites:   repositories.NoopSites{},
 	}

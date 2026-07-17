@@ -1,0 +1,22 @@
+@if (asset(); as item) {
+  <section class="ui-page asset-details-page">
+    <header class="ui-page-header">
+      <div><nav class="ui-breadcrumbs"><a routerLink="/content/media">Media Library</a><span>›</span><span>{{ item.fileName }}</span></nav><h1>{{ item.fileName }}</h1><p class="ui-page-description">{{ item.mimeType.startsWith('image/') ? 'Image' : 'Document' }}　•　{{ formatSize(item.sizeBytes) }}　•　Stored in {{ item.storageProvider }}</p></div>
+      <div class="hero-actions"><button class="button button-secondary" type="button" disabled title="Asset replacement is not available in the current API">↻ Replace</button><a class="button button-secondary" [href]="item.fileUrl" target="_blank" rel="noreferrer">⇩ Download</a><button class="button button-danger--solid" type="button" disabled title="Asset deletion is not available in the current API">♜ Delete</button></div>
+    </header>
+    <section class="asset-layout">
+      <div class="ui-stack">
+        <article class="ui-card asset-preview-card">@if (item.mimeType.startsWith('image/')) { <img [ngSrc]="item.fileUrl" [alt]="item.altText" width="1200" height="630" priority /> } @else { <div class="asset-document-preview">PDF<br /><small>{{ item.fileName }}</small></div> }</article>
+        <article class="ui-card"><h2>Asset information</h2><div class="asset-info-grid"><dl class="definition-list"><div><dt>File name</dt><dd>{{ item.fileName }}</dd></div><div><dt>File type</dt><dd>{{ item.mimeType }}</dd></div><div><dt>File size</dt><dd>{{ formatSize(item.sizeBytes) }}</dd></div></dl><dl class="definition-list"><div><dt>Uploaded by</dt><dd>Workspace editor</dd></div><div><dt>Storage provider</dt><dd>{{ item.storageProvider }}</dd></div><div><dt>Asset ID</dt><dd>{{ item.id }}</dd></div></dl></div></article>
+        <article class="ui-card"><div class="toolbar"><h2>Alt text</h2><button class="button button-secondary" type="button" disabled title="Alt-text editing is not available in the current API">✎ Edit</button></div><p>{{ item.altText || 'No alt text has been provided.' }}</p></article>
+      </div>
+      <aside class="ui-stack">
+        <article class="ui-card"><h2>Alt text</h2><textarea rows="5" [value]="item.altText" readonly></textarea><p class="field-help">Describe the purpose of this asset.</p></article>
+        <article class="ui-card"><div class="toolbar"><h2>Usage</h2><strong>{{ usageArticles().length }} {{ usageArticles().length === 1 ? 'article' : 'articles' }}</strong></div>@for (article of usageArticles(); track article.id) { <a class="list-card" [routerLink]="['/content/articles', article.id, 'edit']"><span><strong>{{ article.title }}</strong><small>/articles/{{ article.slug }}</small></span><span class="ui-link">↗</span></a> } @empty { <p class="muted">This asset is not used as an article cover.</p> }<a class="ui-link asset-link" routerLink="/content/articles">View all articles　›</a></article>
+        <article class="ui-card asset-actions"><h2>Actions</h2><a [href]="item.fileUrl" target="_blank" rel="noreferrer"><span>⇩</span><span><strong>Download original</strong><small>Download the original file</small></span><b>›</b></a><button type="button" disabled><span>↻</span><span><strong>Replace asset</strong><small>API support required</small></span><b>›</b></button><button class="asset-action-danger" type="button" disabled><span>♜</span><span><strong>Delete asset</strong><small>API support required</small></span><b>›</b></button></article>
+      </aside>
+    </section>
+  </section>
+} @else {
+  <section class="ui-card"><h1>Asset not found</h1><p class="muted">This media asset is unavailable for the current site.</p><a class="button button-secondary" routerLink="/content/media">Back to Media Library</a></section>
+}

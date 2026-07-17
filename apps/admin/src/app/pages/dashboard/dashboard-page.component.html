@@ -1,42 +1,125 @@
-<section class="metric-grid">
-  @for (metric of dashboardStats(); track metric.label) {
-    <article class="metric-card">
-      <p class="metric-value">{{ metric.value }}</p>
-      <h2>{{ metric.label }}</h2>
-      <p>{{ metric.detail }}</p>
-    </article>
-  }
-</section>
-
-<section class="two-column">
-  <article class="panel">
-    <h2>Selected site</h2>
-    <p class="muted">{{ selectedSite()?.name ?? 'None' }}</p>
-    <dl class="definition-list tabular-nums">
-      <div>
-        <dt>Domain</dt>
-        <dd>{{ selectedSite()?.domain ?? 'unset' }}</dd>
-      </div>
-      <div>
-        <dt>Blog path</dt>
-        <dd>{{ selectedSite()?.blogPath ?? '/articles' }}</dd>
-      </div>
-      <div>
-        <dt>Template</dt>
-        <dd>{{ selectedSite()?.templateKey ?? 'default-blog' }}</dd>
-      </div>
-    </dl>
-  </article>
-
-  <article class="panel">
-    <h2>Recent articles</h2>
-    <div class="stack">
-      @for (article of recentArticles(); track article.id) {
-        <button class="list-item" type="button" (click)="selectArticle(article.id)">
-          <strong>{{ article.title }}</strong>
-          <span>{{ article.status }} - {{ article.updatedAt | date: 'mediumDate' }}</span>
-        </button>
-      }
+<section class="ui-page dashboard-page">
+  <header class="ui-page-header">
+    <div>
+      <h1>Dashboard</h1>
+      <p class="ui-page-description">Workspace overview and publishing health.</p>
     </div>
-  </article>
+    <div class="hero-actions">
+      <div class="dashboard-site-picker">
+        <span class="dashboard-site-picker__icon" aria-hidden="true">◎</span>
+        <span><strong>{{ selectedSite()?.name || 'Current site' }}</strong><small>{{ selectedSite()?.domain || 'No domain configured' }}</small></span>
+      </div>
+      <a class="button button-primary" routerLink="/content/articles/new"><span aria-hidden="true">＋</span> New Article</a>
+    </div>
+  </header>
+
+  <section class="dashboard-metrics" aria-label="Workspace health">
+    @for (metric of dashboardStats(); track metric.label; let index = $index) {
+      <article class="ui-card dashboard-metric" [class.dashboard-metric--green]="metric.label === 'Deployments'" [class.dashboard-metric--amber]="metric.label === 'Drafts'" [class.dashboard-metric--purple]="metric.label === 'Review queue'">
+        <div class="dashboard-metric__top">
+          <span class="dashboard-metric__icon" aria-hidden="true">
+            @switch (metric.label) {
+              @case ('Published') { ▤ }
+              @case ('Drafts') { ✎ }
+              @case ('Review queue') { ♧ }
+              @case ('Deployments') { ✓ }
+              @default { ▧ }
+            }
+          </span>
+          <span>
+            <strong class="dashboard-metric__value">{{ metric.value }}</strong>
+            <b>{{ metric.label }}</b>
+            <small>{{ metric.detail }}</small>
+          </span>
+        </div>
+        <svg class="dashboard-sparkline" viewBox="0 0 180 24" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 18 L10 13 L20 18 L32 7 L44 15 L56 12 L68 18 L80 11 L92 17 L104 16 L116 7 L128 18 L140 16 L152 17 L164 10 L180 6" />
+        </svg>
+      </article>
+    }
+  </section>
+
+  <section class="dashboard-main-grid">
+    <article class="ui-card current-site-card">
+      <div class="ui-card__header"><h2>Current site</h2></div>
+      <div class="current-site-card__body">
+        <div class="site-preview" aria-label="Site preview">
+          <div class="site-preview__nav"><strong>ANONIME</strong><span>Articles　 About　 Contact</span></div>
+          <div class="site-preview__hero"><strong>Privacy is a<br />fundamental right.</strong><span>Practical guides for a safer digital life.</span><i>Explore articles</i></div>
+          <div class="site-preview__posts"><span></span><span></span><span></span></div>
+        </div>
+        <dl class="current-site-details">
+          <div><dt>Site name</dt><dd>{{ selectedSite()?.name || '—' }}</dd></div>
+          <div><dt>Domain</dt><dd class="ui-link">{{ selectedSite()?.domain || 'Not configured' }}</dd></div>
+          <div><dt>Blog path</dt><dd>{{ selectedSite()?.blogPath || '/blog' }}</dd></div>
+          <div><dt>Template</dt><dd>{{ selectedSite()?.templateKey || 'Default' }}</dd></div>
+          <div><dt>Environment</dt><dd>Production</dd></div>
+          <div><dt>Provider</dt><dd>{{ selectedSite()?.deployProvider || 'Not configured' }}</dd></div>
+          <div><dt>Last deployment</dt><dd>{{ latestProductionBuild()?.finishedAt ? (latestProductionBuild()?.finishedAt | date: 'short') : '—' }}</dd></div>
+        </dl>
+      </div>
+      <div class="current-site-actions">
+        @if (latestLiveProductionDeployment(); as liveDeployment) { <a class="button button-secondary" [href]="liveDeployment.deployUrl" target="_blank" rel="noreferrer">↗ Open Site</a> } @else { <span class="button button-secondary" aria-disabled="true">Site unavailable</span> }
+        <a class="button button-secondary" routerLink="/configuration/site-settings">⚙ Site Settings</a>
+      </div>
+    </article>
+
+    <article class="ui-card activity-card">
+      <div class="ui-card__header"><h2>Recent activity</h2><a class="button button-secondary dashboard-small-button" routerLink="/publishing/history">View all</a></div>
+      <div class="activity-list">
+        @for (activity of recentBuildActivity(); track activity.build.id) {
+          <div class="activity-item">
+            <time>{{ (activity.build.finishedAt || activity.build.startedAt) ? ((activity.build.finishedAt || activity.build.startedAt) | date: 'shortTime') : 'Not started' }}</time>
+            <span class="activity-item__dot" [class.activity-item__dot--green]="activity.build.status === 'success'" aria-hidden="true">{{ activity.build.status === 'success' ? '✓' : '•' }}</span>
+            <span><strong>{{ activity.title }}</strong><small>{{ activity.build.buildType === 'published' ? 'Production' : 'Preview' }} · {{ activity.build.deployProvider || 'Provider not recorded' }} · {{ activity.statusLabel }}</small></span>
+          </div>
+        }
+        @for (article of recentArticles().slice(0, 2); track article.id) {
+          <div class="activity-item">
+            <time>{{ article.updatedAt | date: 'shortTime' }}</time>
+            <span class="activity-item__dot" aria-hidden="true">▤</span>
+            <span><strong>{{ article.status === 'published' ? 'Article published' : 'Draft updated' }}</strong><small>{{ article.title }}</small></span>
+          </div>
+        }
+        @if (recentBuilds().length === 0 && recentArticles().length === 0) {
+          <p class="muted">No recent activity.</p>
+        }
+      </div>
+    </article>
+  </section>
+
+  <section class="dashboard-lower-grid">
+    <article class="ui-card ui-card--flush recent-articles-card">
+      <div class="ui-card__header"><h2>Recent articles</h2><a class="button button-secondary dashboard-small-button" routerLink="/content/articles">View all articles</a></div>
+      <div class="ui-table-wrap">
+        <table class="ui-table">
+          <thead><tr><th>Title</th><th>Status</th><th>Author</th><th>Updated</th><th>Actions</th></tr></thead>
+          <tbody>
+            @for (article of recentArticles(); track article.id) {
+              <tr>
+                <td><button class="dashboard-article-title" type="button" (click)="selectArticle(article.id)"><span class="article-thumb" aria-hidden="true"></span><strong>{{ article.title }}</strong></button></td>
+                <td><span class="ui-badge" [class.ui-badge--success]="article.status === 'published'" [class.ui-badge--warning]="article.status === 'draft'" [class.ui-badge--purple]="article.status === 'review'">{{ article.status | titlecase }}</span></td>
+                <td><span class="ui-person"><span class="ui-avatar">AU</span> Author</span></td>
+                <td>{{ article.updatedAt | date: 'mediumDate' }}</td>
+                <td><button class="button button-secondary dashboard-small-button" type="button" (click)="selectArticle(article.id)">{{ article.status === 'draft' ? 'Continue' : 'Edit' }}</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="ui-card deployment-status-card">
+      <div class="ui-card__header"><h2>Deployment status</h2></div>
+      <div class="deployment-environment">
+        <div><strong>Production</strong><span class="ui-badge" [class.ui-badge--success]="productionDeploymentState().isHealthy" [class.ui-badge--danger]="productionDeploymentState().build?.status === 'failed'">{{ productionDeploymentState().label }}</span></div>
+        <dl><div><dt>Provider</dt><dd>{{ selectedSite()?.deployProvider || 'Not configured' }}</dd></div><div><dt>Latest deployment</dt><dd>{{ (latestProductionBuild()?.finishedAt || latestProductionBuild()?.startedAt) ? ((latestProductionBuild()?.finishedAt || latestProductionBuild()?.startedAt) | date: 'short') : 'No deployments yet' }}</dd></div><div><dt>Status</dt><dd>{{ productionDeploymentState().label }}</dd></div></dl>
+      </div>
+      <div class="deployment-environment">
+        <div><strong>Preview</strong><span class="ui-badge" [class.ui-badge--success]="previewDeploymentState().isHealthy" [class.ui-badge--danger]="previewDeploymentState().build?.status === 'failed'">{{ previewDeploymentState().label }}</span></div>
+        <dl><div><dt>Provider</dt><dd>{{ selectedSite()?.previewDeployProvider || 'Not configured' }}</dd></div><div><dt>Latest deployment</dt><dd>{{ (latestPreviewBuild()?.finishedAt || latestPreviewBuild()?.startedAt) ? ((latestPreviewBuild()?.finishedAt || latestPreviewBuild()?.startedAt) | date: 'short') : 'No deployments yet' }}</dd></div><div><dt>Status</dt><dd>{{ previewDeploymentState().label }}</dd></div></dl>
+      </div>
+      <a class="ui-link" routerLink="/publishing">Open publishing →</a>
+    </article>
+  </section>
 </section>

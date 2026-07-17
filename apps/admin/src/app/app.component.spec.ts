@@ -21,11 +21,11 @@ class LoginRouteStubComponent {}
 class DashboardRouteStubComponent {}
 
 @Component({
-  selector: 'app-settings-route-stub',
+  selector: 'app-configuration-route-stub',
   standalone: false,
-  template: '<p>Settings route is active</p>',
+  template: '<p>Configuration route is active</p>',
 })
-class SettingsRouteStubComponent {}
+class ConfigurationRouteStubComponent {}
 
 @Component({
   selector: 'app-sites-route-stub',
@@ -90,7 +90,7 @@ describe('AppComponent', () => {
         AppComponent,
         LoginRouteStubComponent,
         DashboardRouteStubComponent,
-        SettingsRouteStubComponent,
+        ConfigurationRouteStubComponent,
         SitesRouteStubComponent,
         ArticlesRouteStubComponent,
         PublishingRouteStubComponent,
@@ -102,14 +102,24 @@ describe('AppComponent', () => {
           { path: 'dashboard', component: DashboardRouteStubComponent },
           { path: 'publishing', component: PublishingRouteStubComponent },
           {
-            path: 'settings',
-            component: SettingsRouteStubComponent,
+            path: 'configuration',
+            component: ConfigurationRouteStubComponent,
             children: [{ path: 'sites', component: SitesRouteStubComponent }],
           },
           {
-            path: 'articles',
+            path: 'content',
             component: ArticlesRouteStubComponent,
-            children: [{ path: 'editor', component: ArticlesRouteStubComponent }],
+            children: [
+              {
+                path: 'articles',
+                component: ArticlesRouteStubComponent,
+                children: [
+                  { path: 'new', component: ArticlesRouteStubComponent },
+                  { path: ':articleId/edit', component: ArticlesRouteStubComponent },
+                ],
+              },
+              { path: 'media', component: ArticlesRouteStubComponent },
+            ],
           },
         ]),
       ],
@@ -149,16 +159,29 @@ describe('AppComponent', () => {
     await fixture.whenStable();
 
     const links = Array.from(fixture.nativeElement.querySelectorAll('nav a')) as HTMLAnchorElement[];
-    expect(links.map((link) => link.textContent?.trim())).toEqual(['Dashboard', 'Articles', 'Publishing', 'Settings']);
+    expect(links.map((link) => link.textContent?.trim())).toEqual([
+      'Dashboard',
+      'Articles',
+      'Media Library',
+      'Publishing',
+      'Deployment History',
+      'Sites',
+      'Site settings',
+      'Templates',
+      'Taxonomy',
+      'Users',
+      'AI',
+      'Deployment',
+    ]);
 
     const dashboardLink = links.find((link) => link.textContent?.includes('Dashboard'));
-    const settingsLink = links.find((link) => link.textContent?.includes('Settings'));
+    const sitesLink = links.find((link) => link.textContent?.trim() === 'Sites');
 
     expect(dashboardLink).toBeTruthy();
     expect(dashboardLink?.getAttribute('href')).toContain('/dashboard');
     expect(dashboardLink?.getAttribute('href')).not.toContain('#dashboard');
-    expect(settingsLink?.getAttribute('href')).toContain('/settings');
-    expect(settingsLink?.getAttribute('href')).not.toContain('#settings');
+    expect(sitesLink?.getAttribute('href')).toContain('/configuration/sites');
+    expect(sitesLink?.getAttribute('href')).not.toContain('#configuration');
 
     dashboardLink?.click();
     await fixture.whenStable();
@@ -169,23 +192,23 @@ describe('AppComponent', () => {
     expect(fakeState.selectSite).toHaveBeenCalledWith('site-example');
   });
 
-  it('keeps settings active on nested settings routes', async () => {
-    await router.navigate(['/settings/sites']);
+  it('keeps configuration active on nested configuration routes', async () => {
+    await router.navigate(['/configuration/sites']);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const settingsLink = Array.from(
+    const sitesLink = Array.from(
       fixture.nativeElement.querySelectorAll('nav a') as NodeListOf<HTMLAnchorElement>,
-    ).find((link) => link.textContent?.includes('Settings'));
+    ).find((link) => link.textContent?.trim() === 'Sites');
 
-    expect(location.path()).toBe('/settings/sites');
-    expect(settingsLink?.classList.contains('is-active')).toBeTrue();
-    expect(fixture.nativeElement.textContent).toContain('Settings route is active');
+    expect(location.path()).toBe('/configuration/sites');
+    expect(sitesLink?.classList.contains('is-active')).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Configuration route is active');
   });
 
   it('keeps articles active on nested article routes', async () => {
-    await router.navigate(['/articles/editor']);
+    await router.navigate(['/content/articles/article-1/edit']);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -194,7 +217,7 @@ describe('AppComponent', () => {
       fixture.nativeElement.querySelectorAll('nav a') as NodeListOf<HTMLAnchorElement>,
     ).find((link) => link.textContent?.includes('Articles'));
 
-    expect(location.path()).toBe('/articles/editor');
+    expect(location.path()).toBe('/content/articles/article-1/edit');
     expect(articlesLink?.classList.contains('is-active')).toBeTrue();
     expect(fixture.nativeElement.textContent).toContain('Articles route is active');
   });
@@ -207,7 +230,7 @@ describe('AppComponent', () => {
 
     const publishingLink = Array.from(
       fixture.nativeElement.querySelectorAll('nav a') as NodeListOf<HTMLAnchorElement>,
-    ).find((link) => link.textContent?.includes('Publishing'));
+    ).find((link) => link.textContent?.trim() === 'Publishing');
 
     expect(location.path()).toBe('/publishing');
     expect(publishingLink?.classList.contains('is-active')).toBeTrue();
@@ -222,7 +245,7 @@ describe('AppComponent', () => {
 
     const signOutButton = fixture.nativeElement.querySelector('.sidebar-logout') as HTMLButtonElement | null;
     expect(signOutButton).toBeTruthy();
-    expect(signOutButton?.textContent?.trim()).toBe('Sign out');
+    expect(signOutButton?.textContent).toContain('Sign out');
 
     signOutButton?.click();
     await fixture.whenStable();

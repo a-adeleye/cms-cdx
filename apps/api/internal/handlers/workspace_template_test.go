@@ -10,21 +10,12 @@ import (
 	"cms-builder/api/internal/services"
 )
 
-func TestCreateTemplateRegistersTemplateInWorkspace(t *testing.T) {
+func TestWorkspaceListsOnlyRenderedTemplatesWithPreviewURLs(t *testing.T) {
 	db := openTestDatabase(t)
 	ctx := context.Background()
 	buildRoot := t.TempDir()
 	deployRoot := t.TempDir()
 	api := &API{Services: services.Services{DB: db, Builder: builder.NewLocalBuilder(buildRoot), Deploy: deploy.NewFilesystemAdapter(deployRoot)}}
-
-	created, err := api.createTemplate(ctx, templateUpsertRequest{Name: "Magazine", Slug: "magazine"})
-	if err != nil {
-		t.Fatalf("createTemplate returned error: %v", err)
-	}
-	if created.Slug != "magazine" {
-		t.Fatalf("expected slug magazine, got %q", created.Slug)
-	}
-
 	workspace, err := api.loadWorkspace(ctx, "", "")
 	if err != nil {
 		t.Fatalf("loadWorkspace returned error: %v", err)
@@ -32,17 +23,10 @@ func TestCreateTemplateRegistersTemplateInWorkspace(t *testing.T) {
 
 	found := false
 	for _, template := range workspace.Templates {
-		if template.Slug == "magazine" {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("expected workspace templates to include magazine, got %#v", workspace.Templates)
-	}
-	found = false
-	for _, template := range workspace.Templates {
 		if template.Slug == "anonime" {
+			if template.PreviewURL != "/api/v1/template-previews/anonime" {
+				t.Fatalf("expected renderer preview URL, got %q", template.PreviewURL)
+			}
 			found = true
 			break
 		}
@@ -50,8 +34,6 @@ func TestCreateTemplateRegistersTemplateInWorkspace(t *testing.T) {
 	if !found {
 		t.Fatalf("expected workspace templates to include anonime, got %#v", workspace.Templates)
 	}
-
-	_, _ = db.ExecContext(ctx, `DELETE FROM templates WHERE slug = $1`, "magazine")
 }
 
 func TestCreateSiteRejectsUnknownTemplateSlug(t *testing.T) {

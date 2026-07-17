@@ -12,7 +12,7 @@ type TaxonomyRecord = CategoryRecord | TagRecord;
 @Component({
   selector: 'app-taxonomy-page',
   templateUrl: './taxonomy-page.component.html',
-  styleUrl: '../../features/pages/page-view.component.css',
+  styleUrls: ['../../features/pages/page-view.component.css', './taxonomy-page.component.css'],
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,11 +31,28 @@ export class TaxonomyPageComponent {
   });
 
   readonly editingId = signal<string>('');
-  readonly records = computed(() => (this.kind() === 'categories' ? this.state.categories() : this.state.tags()));
+  readonly search = signal('');
+  readonly records = computed(() => {
+    const search = this.search().trim().toLowerCase();
+    const records = this.kind() === 'categories' ? this.state.categories() : this.state.tags();
+    return records.filter((record) => !search || `${record.name} ${record.slug}`.toLowerCase().includes(search));
+  });
   readonly isCategoryPage = computed(() => this.kind() === 'categories');
   readonly pageTitle = computed(() => (this.isCategoryPage() ? 'Categories' : 'Tags'));
   readonly singularLabel = computed(() => (this.isCategoryPage() ? 'category' : 'tag'));
   readonly showDescription = computed(() => this.isCategoryPage());
+
+  articleCount(record: TaxonomyRecord): number {
+    return this.isCategoryPage()
+      ? this.state.articles().filter((article) => article.categoryId === record.id).length
+      : this.state.articles().filter((article) => article.tagIds.includes(record.id)).length;
+  }
+
+  recordDescription(record: TaxonomyRecord): string {
+    return 'description' in record && record.description
+      ? record.description
+      : 'Organize related content and topics.';
+  }
 
   startCreate(): void {
     this.state.clearError();
@@ -81,8 +98,7 @@ export class TaxonomyPageComponent {
   }
 
   async remove(record: TaxonomyRecord): Promise<void> {
-    const confirmed = this.confirmDelete(record);
-    if (!confirmed) {
+    if (!this.confirmDelete(record)) {
       return;
     }
 
@@ -95,9 +111,7 @@ export class TaxonomyPageComponent {
         await this.state.deleteTag(record.id);
       }
       this.feedback.success(`${this.pageTitle()} deleted successfully.`);
-      if (this.editingId() === record.id) {
-        this.resetForm();
-      }
+      this.resetForm();
     } catch (error) {
       this.feedback.error(this.buildErrorMessage(`Unable to delete ${this.singularLabel()}.`, error));
     }
@@ -115,16 +129,12 @@ export class TaxonomyPageComponent {
     );
   }
 
-  private confirmDelete(record: TaxonomyRecord): boolean {
-    if (typeof globalThis.confirm !== 'function') {
-      return true;
-    }
-
-    return globalThis.confirm(`Delete ${record.name}? This cannot be undone.`);
-  }
-
   private buildErrorMessage(message: string, error: unknown): string {
     const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
     return `${message}${detail}`;
+  }
+
+  private confirmDelete(record: TaxonomyRecord): boolean {
+    return typeof globalThis.confirm !== 'function' || globalThis.confirm(`Delete ${record.name}? This cannot be undone.`);
   }
 }

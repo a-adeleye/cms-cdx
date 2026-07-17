@@ -6,7 +6,6 @@ import { ActivatedRoute } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of } from 'rxjs';
 import { DashboardPageComponent } from '../../pages/dashboard/dashboard-page.component';
-import { SettingsPageComponent } from '../../pages/settings/settings-page.component';
 import { PageViewComponent } from './page-view.component';
 import { WorkspaceStateService } from './workspace-state.service';
 
@@ -32,8 +31,8 @@ const dashboardPage = {
   kind: 'dashboard' as const,
   eyebrow: 'Overview',
   title: 'Dashboard',
-  primaryAction: { label: 'Review articles', path: '/articles' },
-  secondaryAction: { label: 'Manage sites', path: '/settings/sites' },
+  primaryAction: { label: 'Review articles', path: '/content/articles' },
+  secondaryAction: { label: 'Manage sites', path: '/configuration/sites' },
 };
 
 describe('PageViewComponent', () => {
@@ -79,7 +78,6 @@ describe('PageViewComponent', () => {
       ReactiveFormsModule,
       RouterTestingModule.withRoutes(routeConfig),
       DashboardPageComponent,
-      SettingsPageComponent,
     ];
   }
 

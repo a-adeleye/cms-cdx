@@ -1,12 +1,9 @@
 export type WorkspacePageKind =
   | 'login'
   | 'dashboard'
-  | 'settings'
   | 'landing-page-editor'
   | 'articles'
   | 'media-library'
-  | 'ai-assistant'
-  | 'builds'
   | 'publishing';
 
 export interface WorkspacePageConfig {
@@ -26,6 +23,8 @@ export interface WorkspacePageConfig {
 }
 
 export type ArticleStatus = 'draft' | 'review' | 'published' | 'archived';
+export type SiteContentContext = 'application_blog' | 'standalone_blog';
+export type AIProvider = 'none' | 'openai' | 'anthropic' | 'google' | 'openai_compatible';
 
 export type BuildStatus = 'queued' | 'running' | 'success' | 'failed';
 
@@ -43,6 +42,12 @@ export interface SiteRecord {
   slug: string;
   domain: string;
   blogPath: string;
+  description?: string;
+  contentContext: SiteContentContext;
+  logoMediaId?: string;
+  logoUrl?: string;
+  faviconMediaId?: string;
+  faviconUrl?: string;
   status: 'active' | 'inactive';
   templateKey: string;
   themeConfig: string;
@@ -61,6 +66,7 @@ export interface TemplateRecord {
   name: string;
   slug: string;
   updatedAt: string;
+  previewUrl?: string;
 }
 
 export interface LandingSectionRecord {
@@ -131,6 +137,7 @@ export interface MediaAssetRecord {
   storageProvider: string;
   storageKey: string;
   altText: string;
+  createdAt?: string;
 }
 
 export interface BuildRecord {
@@ -143,6 +150,7 @@ export interface BuildRecord {
   deployProvider: string;
   deployStatus: string;
   deployUrl: string;
+  deployRevision?: string;
   startedAt: string | null;
   finishedAt: string | null;
 }

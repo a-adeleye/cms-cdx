@@ -21,7 +21,7 @@ export class ArticleDetailsPageComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     const articleId = this.route.snapshot.paramMap.get('articleId')?.trim();
     if (!articleId) {
-      void this.router.navigate(['/articles']);
+      void this.router.navigate(['/content/articles']);
       return;
     }
 
@@ -32,7 +32,7 @@ export class ArticleDetailsPageComponent implements OnInit {
 
     await this.state.selectArticle(articleId);
     if (!this.state.selectedArticle()) {
-      void this.router.navigate(['/articles']);
+      void this.router.navigate(['/content/articles']);
     }
   }
 
@@ -50,7 +50,7 @@ export class ArticleDetailsPageComponent implements OnInit {
       this.feedback.loading('Deleting article...');
       this.state.clearError();
       await this.state.deleteArticle(article.id);
-      void this.router.navigate(['/articles'], {
+      void this.router.navigate(['/content/articles'], {
         state: { flashMessage: 'Article deleted successfully.' },
       });
     } catch (error) {
@@ -58,14 +58,13 @@ export class ArticleDetailsPageComponent implements OnInit {
     }
   }
 
-  async editArticle(): Promise<void> {
+  editArticle(): void {
     const articleId = this.state.selectedArticle()?.id;
     if (!articleId) {
       return;
     }
 
-    await this.state.selectArticle(articleId);
-    void this.router.navigate(['/articles/editor']);
+    void this.router.navigate(['/content/articles', articleId, 'edit']);
   }
 
   authorName(authorId: string): string {

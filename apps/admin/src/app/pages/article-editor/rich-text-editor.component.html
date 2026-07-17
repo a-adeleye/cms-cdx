@@ -1,0 +1,23 @@
+<div class="rich-text-editor">
+  <div class="rich-text-editor__toolbar" role="toolbar" aria-label="Article formatting" (mousedown)="preserveTextSelection($event)">
+    <select aria-label="Block style" [disabled]="disabled()" (change)="applyBlockStyle($event)">
+      <option value="paragraph">Paragraph</option>
+      <option value="heading-2">Heading 2</option>
+      <option value="heading-3">Heading 3</option>
+    </select>
+    <span class="rich-text-editor__divider" aria-hidden="true"></span>
+    <button type="button" aria-label="Bold" title="Bold" [disabled]="disabled()" (click)="applyInlineStyle('bold')"><b>B</b></button>
+    <button type="button" aria-label="Italic" title="Italic" [disabled]="disabled()" (click)="applyInlineStyle('italic')"><i>I</i></button>
+    <button type="button" aria-label="Strikethrough" title="Strikethrough" [disabled]="disabled()" (click)="applyInlineStyle('strikethrough')"><s>S</s></button>
+    <button type="button" aria-label="Inline code" title="Inline code" [disabled]="disabled()" (click)="applyInlineStyle('code')">&lt;/&gt;</button>
+    <span class="rich-text-editor__divider" aria-hidden="true"></span>
+    <button type="button" aria-label="Insert link" title="Insert link" [disabled]="disabled()" (click)="applyInlineStyle('link')">↗</button>
+    <button type="button" aria-label="Insert image" title="Insert image" [disabled]="disabled()" (click)="applyInlineStyle('image')">▧</button>
+    <button type="button" aria-label="Block quote" title="Block quote" [disabled]="disabled()" (click)="applyLineStyle('quote')">❝</button>
+    <button type="button" aria-label="Bulleted list" title="Bulleted list" [disabled]="disabled()" (click)="applyLineStyle('bulleted-list')">☷</button>
+    <button type="button" aria-label="Numbered list" title="Numbered list" [disabled]="disabled()" (click)="applyLineStyle('numbered-list')">1.</button>
+    <strong>Markdown</strong>
+  </div>
+  <textarea #contentInput class="rich-text-editor__canvas" rows="22" [value]="value()" [disabled]="disabled()" [placeholder]="placeholder()" aria-label="Article body" [attr.aria-describedby]="describedBy() || null" [attr.aria-invalid]="invalid()" (input)="updateValue($event)" (select)="captureTextSelection($event)" (click)="captureTextSelection($event)" (keyup)="captureTextSelection($event)" (blur)="markTouched()" (keydown)="handleKeyboardShortcut($event)"></textarea>
+  <footer class="rich-text-editor__footer"><span>{{ wordCount() }} words · {{ value().length }} characters</span><span>Formatting is saved as portable Markdown.</span></footer>
+</div>

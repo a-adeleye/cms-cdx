@@ -68,6 +68,10 @@ interface SiteUpsertPayload {
   slug: string;
   domain: string;
   blogPath: string;
+  description: string;
+  contentContext: SiteRecord['contentContext'];
+  logoMediaId: string;
+  faviconMediaId: string;
   status: SiteRecord['status'];
   templateKey: string;
   themeConfig: string;
@@ -77,11 +81,6 @@ interface SiteUpsertPayload {
   previewDeployConfig: string;
   aiConfig: string;
   storageConfig: string;
-}
-
-interface TemplateUpsertPayload {
-  name: string;
-  slug: string;
 }
 
 interface LandingOrderPayload {
@@ -149,10 +148,6 @@ export class AdminApiService {
 
   async listTemplates(): Promise<ItemsResponse<TemplateRecord>> {
     return firstValueFrom(this.http.get<ItemsResponse<TemplateRecord>>(`${this.baseUrl}/templates`, { headers: this.headers() }));
-  }
-
-  async createTemplate(payload: TemplateUpsertPayload): Promise<TemplateRecord> {
-    return firstValueFrom(this.http.post<TemplateRecord>(`${this.baseUrl}/templates`, payload, { headers: this.headers() }));
   }
 
   async createSite(payload: SiteUpsertPayload): Promise<SiteRecord> {
@@ -261,11 +256,17 @@ export class AdminApiService {
 
   async upsertArticle(siteId: string, payload: ArticleUpsertPayload): Promise<ArticleRecord> {
     try {
-      // Temporarily disable update semantics while we trace the editor/article ID flow.
-      // Always create a new article so PATCH cannot be triggered from the client.
-      const createPayload = { ...payload };
-      delete createPayload.id;
-      return await firstValueFrom(this.http.post<ArticleRecord>(`${this.baseUrl}/sites/${siteId}/articles`, createPayload, { headers: this.headers() }));
+      const articleId = payload.id?.trim();
+      if (articleId) {
+        return await firstValueFrom(
+          this.http.patch<ArticleRecord>(`${this.baseUrl}/articles/${articleId}`, payload, { headers: this.headers() }),
+        );
+      }
+
+      const { id: _id, ...createPayload } = payload;
+      return await firstValueFrom(
+        this.http.post<ArticleRecord>(`${this.baseUrl}/sites/${siteId}/articles`, createPayload, { headers: this.headers() }),
+      );
     } catch (error) {
       throw this.toError(error);
     }

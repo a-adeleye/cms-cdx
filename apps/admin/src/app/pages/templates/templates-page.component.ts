@@ -1,50 +1,36 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { createPageActionFeedback } from '../../features/pages/page-feedback';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 
 @Component({
-  selector: 'app-templates-page',
-  templateUrl: './templates-page.component.html',
-  styleUrl: '../../features/pages/page-view.component.css',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-templates-page', templateUrl: './templates-page.component.html',
+  styleUrls: ['../../features/pages/page-view.component.css', './templates-page.component.css'],
+  standalone: true, imports: [CommonModule, RouterModule], changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TemplatesPageComponent {
-  private readonly fb = inject(FormBuilder);
   readonly state = inject(WorkspaceStateService);
   readonly feedback = createPageActionFeedback();
-
-  readonly templateForm = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.minLength(2)]],
-    slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9-]+$/)]],
+  private readonly sanitizer = inject(DomSanitizer);
+  readonly search = signal('');
+  readonly templates = computed(() => {
+    const query = this.search().trim().toLowerCase();
+    return this.state.templates().filter((template) => !query || `${template.name} ${template.slug}`.toLowerCase().includes(query));
   });
 
-  readonly templates = computed(() => this.state.templates());
-
-  async saveTemplate(): Promise<void> {
-    if (this.templateForm.invalid) {
-      this.templateForm.markAllAsTouched();
-      this.feedback.error('Fix the highlighted fields to save the template.');
-      return;
-    }
-
+  async selectTemplate(templateKey: string): Promise<void> {
     try {
-      this.state.clearError();
-      this.feedback.loading('Saving template...');
-      await this.state.createTemplate(this.templateForm.getRawValue());
-      this.feedback.success('Template registered successfully.');
-      this.templateForm.reset({ name: '', slug: '' });
+      this.feedback.loading('Applying template...');
+      await this.state.updateSelectedSite({ templateKey });
+      this.feedback.success('Template applied successfully.');
     } catch (error) {
-      this.feedback.error(this.buildErrorMessage('Unable to create template.', error));
+      this.feedback.error(error instanceof Error ? error.message : 'Unable to apply template.');
     }
   }
 
-  private buildErrorMessage(message: string, error: unknown): string {
-    const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
-    return `${message}${detail}`;
+  previewUrl(slug: string): SafeResourceUrl {
+    return this.sanitizer.bypassSecurityTrustResourceUrl(`/api/v1/template-previews/${encodeURIComponent(slug)}`);
   }
 }

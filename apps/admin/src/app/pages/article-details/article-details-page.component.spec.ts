@@ -98,8 +98,17 @@ describe('ArticleDetailsPageComponent', () => {
     await fixture.whenStable();
 
     expect(fakeState.deleteArticle).toHaveBeenCalledWith('article-1');
-    expect(router.navigate).toHaveBeenCalledWith(['/articles'], {
+    expect(router.navigate).toHaveBeenCalledWith(['/content/articles'], {
       state: { flashMessage: 'Article deleted successfully.' },
     });
+  });
+
+  it('opens the refresh-safe edit route for the selected article', () => {
+    const editButton = Array.from(
+      fixture.nativeElement.querySelectorAll('.hero-actions button') as NodeListOf<HTMLButtonElement>,
+    ).find((button) => button.textContent?.includes('Edit article'));
+    editButton?.click();
+
+    expect(router.navigate).toHaveBeenCalledWith(['/content/articles', 'article-1', 'edit']);
   });
 });

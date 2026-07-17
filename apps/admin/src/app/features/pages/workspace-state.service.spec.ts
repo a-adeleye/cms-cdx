@@ -51,6 +51,7 @@ describe('WorkspaceStateService', () => {
           slug: siteId === 'site-new' ? 'new-site' : 'example',
           domain: siteId === 'site-new' ? 'https://new.example' : 'https://example.test',
           blogPath: '/articles',
+          contentContext: 'standalone_blog' as const,
           status: 'active',
           templateKey: 'default-blog',
           themeConfig: '{}',
@@ -135,6 +136,7 @@ describe('WorkspaceStateService', () => {
       slug: 'new-site',
       domain: 'https://new.example',
       blogPath: '/articles',
+      contentContext: 'standalone_blog',
       status: 'active',
       templateKey: 'default-blog',
       themeConfig: '{}',
@@ -266,7 +268,7 @@ describe('WorkspaceStateService', () => {
       templateKey: 'default-blog',
     });
 
-    expect(api.createSite).toHaveBeenCalled();
+    expect(api.createSite).toHaveBeenCalledWith(jasmine.objectContaining({ contentContext: 'standalone_blog' }));
     expect(service.selectedSite().id).toBe('site-new');
     expect(service.sites().some((site) => site.slug === 'new-site')).toBeTrue();
   });

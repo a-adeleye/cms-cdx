@@ -1,8 +1,13 @@
 package deploy
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"reflect"
+	"testing"
 
-import "cms-builder/api/internal/models"
+	"cms-builder/api/internal/models"
+)
 
 func TestPagesConfigAcceptsProjectAndDefaultBranch(t *testing.T) {
 	projectName, branch, err := pagesConfig(map[string]any{"projectName": "example-site"})
@@ -50,5 +55,25 @@ func TestNonCloudflareProviderDoesNotReportDeployment(t *testing.T) {
 	}
 	if result.Provider != "none" {
 		t.Fatalf("expected a skipped deployment, got provider %q", result.Provider)
+	}
+}
+
+func TestDeploymentVerificationPathsUsesConfiguredBlogPath(t *testing.T) {
+	outputPath := t.TempDir()
+	articlePath := filepath.Join(outputPath, "blog", "hello-world")
+	if err := os.MkdirAll(articlePath, 0o755); err != nil {
+		t.Fatalf("create article output: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(articlePath, "index.html"), []byte("<html></html>"), 0o644); err != nil {
+		t.Fatalf("write article output: %v", err)
+	}
+
+	paths, err := deploymentVerificationPaths("/blog", outputPath)
+	if err != nil {
+		t.Fatalf("deploymentVerificationPaths returned error: %v", err)
+	}
+	want := []string{"/", "/blog/", "/blog/hello-world/"}
+	if !reflect.DeepEqual(paths, want) {
+		t.Fatalf("deployment verification paths = %#v, want %#v", paths, want)
 	}
 }

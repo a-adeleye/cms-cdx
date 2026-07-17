@@ -11,6 +11,7 @@ type DeployResult struct {
 	Provider string `json:"provider"`
 	URL      string `json:"url,omitempty"`
 	Message  string `json:"message,omitempty"`
+	Revision string `json:"revision,omitempty"`
 }
 
 type DeployAdapter interface {

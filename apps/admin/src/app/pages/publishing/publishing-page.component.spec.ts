@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { PublishingPageComponent } from './publishing-page.component';
@@ -6,113 +5,33 @@ import { WorkspaceStateService } from '../../features/pages/workspace-state.serv
 
 describe('PublishingPageComponent', () => {
   let fixture: ComponentFixture<PublishingPageComponent>;
-  let fakeState: WorkspaceStateService;
+  let state: jasmine.SpyObj<WorkspaceStateService>;
+  const article = { id: 'article-1', title: 'Real article', status: 'draft', updatedAt: '2026-07-17T00:00:00Z', coverImageUrl: '' };
 
   beforeEach(async () => {
-    const selectedSite = {
-      id: 'site-example',
-      name: 'Example Site',
-      slug: 'example',
-      domain: 'https://example.test',
-      blogPath: '/articles',
-      status: 'active' as const,
-      templateKey: 'default-blog',
-      themeConfig: '{}',
-      deployProvider: 'netlify',
-      deployConfig: '{}',
-      previewDeployProvider: 'cloudflare',
-      previewDeployConfig: '{}',
-      aiConfig: '{}',
-      storageConfig: '{}',
-      deploymentWarnings: ['Firebase production deploy secret FIREBASE_SERVICE_ACCOUNT_JSON is not set on the API server.'],
-      updatedAt: '2026-05-23T00:00:00.000Z',
-    };
-
-    fakeState = {
-      selectedSite: jasmine.createSpy('selectedSite').and.returnValue(selectedSite),
-      articles: jasmine.createSpy('articles').and.returnValue([
-        {
-          id: 'article-1',
-          siteId: 'site-example',
-          authorId: 'author-1',
-          categoryId: 'category-1',
-          title: 'First article',
-          slug: 'first-article',
-          excerpt: 'A short excerpt.',
-          contentMarkdown: '# First article',
-          coverImageUrl: '',
-          status: 'draft' as const,
-          isFeatured: false,
-          publishedAt: null,
-          seoTitle: 'First article',
-          seoDescription: 'First article description',
-          canonicalUrl: '',
-          generatedByAi: false,
-          humanReviewed: false,
-          aiPrompt: '',
-          aiModel: '',
-          tagIds: [],
-          updatedAt: '2026-05-23T00:00:00.000Z',
-        },
-      ]),
-      error: jasmine.createSpy('error').and.returnValue(null),
-      reportError: jasmine.createSpy('reportError'),
-      triggerBuild: jasmine.createSpy('triggerBuild').and.resolveTo({
-        id: 'build-1',
-        siteId: 'site-example',
-        status: 'success',
-        buildType: 'preview',
-        logs: '',
-        outputPath: 'dist/preview/site',
-        deployProvider: 'cloudflare',
-        deployStatus: 'deployed',
-        deployUrl: 'http://localhost:8081/deployments/cloudflare/example/preview/',
-        startedAt: null,
-        finishedAt: null,
-      }),
-    } as unknown as WorkspaceStateService;
-
-    await TestBed.configureTestingModule({
-      imports: [CommonModule, RouterTestingModule, PublishingPageComponent],
-      providers: [{ provide: WorkspaceStateService, useValue: fakeState }],
-    }).compileComponents();
-
+    state = jasmine.createSpyObj<WorkspaceStateService>('WorkspaceStateService', ['selectedSite', 'articles', 'builds', 'error', 'triggerBuild', 'setArticleStatus', 'reportError']);
+    state.selectedSite.and.returnValue({ name: 'Example', deployProvider: 'cloudflare_pages', previewDeployProvider: 'git_repository', deploymentWarnings: [] } as never);
+    state.articles.and.returnValue([article] as never);
+    state.builds.and.returnValue([]);
+    state.error.and.returnValue(null);
+    state.setArticleStatus.and.resolveTo();
+    state.triggerBuild.and.resolveTo({ id: 'build-1', status: 'success', buildType: 'preview', deployStatus: 'deployed', deployProvider: 'git_repository', deployUrl: 'https://preview.test', logs: '', outputPath: '', siteId: '', startedAt: null, finishedAt: null } as never);
+    await TestBed.configureTestingModule({ imports: [RouterTestingModule, PublishingPageComponent], providers: [{ provide: WorkspaceStateService, useValue: state }] }).compileComponents();
     fixture = TestBed.createComponent(PublishingPageComponent);
     fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
   });
 
-  it('renders the selected article list and build targets', () => {
-    expect(fixture.nativeElement.textContent).toContain('Publishing');
-    expect(fixture.nativeElement.textContent).toContain('First article');
-    expect(fixture.nativeElement.textContent).toContain('cloudflare');
-    expect(fixture.nativeElement.textContent).toContain('default-blog');
+  it('renders actual article and empty build history', () => {
+    expect(fixture.nativeElement.textContent).toContain('Real article');
+    expect(fixture.nativeElement.textContent).toContain('No build has been attempted');
   });
 
-  it('renders deployment warnings when the selected site is missing deploy secrets', () => {
-    expect(fixture.nativeElement.textContent).toContain('Deployment warning');
-    expect(fixture.nativeElement.textContent).toContain('Firebase production deploy secret FIREBASE_SERVICE_ACCOUNT_JSON is not set on the API server.');
-  });
-
-  it('selects all articles and triggers preview builds', async () => {
-    const selectAll = fixture.nativeElement.querySelector('.publishing-select-all input') as HTMLInputElement | null;
-    selectAll?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.textContent).toContain('1 selected of 1');
-
-    const previewButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>).find(
-      (button) => button.textContent?.trim() === 'Trigger preview build',
-    );
-    previewButton?.click();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(fakeState.triggerBuild).toHaveBeenCalledWith('preview', ['article-1']);
-    expect(fixture.nativeElement.textContent).toContain('Preview build deployed to cloudflare.');
-    expect(fixture.nativeElement.textContent).toContain('http://localhost:8081/deployments/cloudflare/example/preview/');
+  it('passes selected IDs to preview and production builds', async () => {
+    fixture.componentInstance.toggleArticleSelection('article-1');
+    await fixture.componentInstance.triggerPreviewBuild();
+    expect(state.triggerBuild).toHaveBeenCalledWith('preview', ['article-1']);
+    await fixture.componentInstance.triggerPublishedBuild();
+    expect(state.setArticleStatus).toHaveBeenCalledWith('article-1', 'published');
+    expect(state.triggerBuild).toHaveBeenCalledWith('published', ['article-1']);
   });
 });

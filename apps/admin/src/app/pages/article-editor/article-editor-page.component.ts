@@ -1,29 +1,41 @@
-import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
+import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, effect, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { createPageActionFeedback } from '../../features/pages/page-feedback';
 import { ArticleStatus } from '../../features/pages/pages.model';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
+import { RichTextEditorComponent } from './rich-text-editor.component';
+
+type EditorTool = 'write' | 'ai' | 'preview' | 'history';
+type EditorMode = 'create' | 'edit';
 
 @Component({
   selector: 'app-article-editor-page',
   templateUrl: './article-editor-page.component.html',
   styleUrls: ['../../features/pages/page-view.component.css', './article-editor-page.component.css'],
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, NgOptimizedImage, ReactiveFormsModule, RouterModule, RichTextEditorComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ArticleEditorPageComponent {
+  @ViewChild('previewDrawer') private previewDrawer?: ElementRef<HTMLElement>;
+
   private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private routeInitializationStarted = false;
+  private previewTrigger: HTMLElement | null = null;
   readonly state = inject(WorkspaceStateService);
 
-  readonly previewOpen = signal(false);
+  readonly editorMode: EditorMode = this.route.snapshot.data['editorMode'] === 'edit' ? 'edit' : 'create';
+  readonly routeReady = signal(false);
+  readonly activeTool = signal<EditorTool>('write');
   readonly coverImageMode = signal<'url' | 'upload'>('url');
   readonly uploadingCoverImage = signal(false);
   readonly coverImageFileName = signal('');
   readonly coverImageError = signal<string | null>(null);
+  readonly coverImageLoadFailed = signal(false);
   readonly feedback = createPageActionFeedback();
 
   readonly articleForm = this.fb.nonNullable.group({
@@ -44,6 +56,19 @@ export class ArticleEditorPageComponent {
 
   constructor() {
     effect(() => {
+      if (this.state.loading() || this.routeInitializationStarted) {
+        return;
+      }
+
+      this.routeInitializationStarted = true;
+      void this.initializeFromRoute();
+    });
+
+    effect(() => {
+      if (!this.routeReady()) {
+        return;
+      }
+
       const article = this.state.selectedArticle();
       if (!article) {
         this.articleForm.reset(
@@ -67,6 +92,7 @@ export class ArticleEditorPageComponent {
         this.coverImageMode.set('url');
         this.coverImageFileName.set('');
         this.coverImageError.set(null);
+        this.coverImageLoadFailed.set(false);
         this.feedback.clear();
         return;
       }
@@ -92,12 +118,62 @@ export class ArticleEditorPageComponent {
       this.coverImageMode.set(article.coverImageUrl ? 'url' : 'upload');
       this.coverImageFileName.set('');
       this.coverImageError.set(null);
+      this.coverImageLoadFailed.set(false);
       this.feedback.clear();
     });
   }
 
-  setPreviewOpen(isOpen: boolean): void {
-    this.previewOpen.set(isOpen);
+  setActiveTool(tool: EditorTool, trigger?: EventTarget | null): void {
+    const closingPreview = this.activeTool() === 'preview' && tool !== 'preview';
+    if (tool === 'preview' && trigger instanceof HTMLElement) {
+      this.previewTrigger = trigger;
+    }
+    this.activeTool.set(tool);
+
+    if (tool === 'preview') {
+      setTimeout(() => this.previewDrawer?.nativeElement.focus());
+    } else if (closingPreview) {
+      const restoreTarget = this.previewTrigger;
+      this.previewTrigger = null;
+      setTimeout(() => restoreTarget?.focus());
+    }
+  }
+
+  handlePreviewKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.setActiveTool('write');
+      return;
+    }
+
+    if (event.key !== 'Tab') {
+      return;
+    }
+
+    const drawer = this.previewDrawer?.nativeElement;
+    const focusable = drawer ? Array.from(drawer.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])')) : [];
+    if (!drawer || focusable.length === 0) {
+      event.preventDefault();
+      drawer?.focus();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === drawer) {
+      event.preventDefault();
+      last.focus();
+      return;
+    }
+    if ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    }
+  }
+
+  async publishArticle(): Promise<void> {
+    this.articleForm.controls.status.setValue('published');
+    await this.saveArticle();
   }
 
   setCoverImageMode(mode: 'url' | 'upload'): void {
@@ -128,6 +204,7 @@ export class ArticleEditorPageComponent {
       this.articleForm.controls.coverImageUrl.setValue(media.fileUrl);
       this.coverImageMode.set('url');
       this.coverImageFileName.set(file.name);
+      this.coverImageLoadFailed.set(false);
     } catch (error) {
       const detail = error instanceof Error && error.message ? error.message : 'Upload failed.';
       this.coverImageError.set(detail);
@@ -168,9 +245,8 @@ export class ArticleEditorPageComponent {
       });
 
       await this.state.selectArticle(article.id);
-      void this.router.navigate(['/articles', article.id], {
-        state: { flashMessage: 'Article saved successfully.' },
-      });
+      await this.router.navigate(['/content/articles', article.id, 'edit'], { replaceUrl: true });
+      this.feedback.success('Article saved successfully.');
       this.state.clearError();
     } catch (error) {
       this.feedback.error(this.buildErrorMessage('Unable to save article.', error));
@@ -187,6 +263,35 @@ export class ArticleEditorPageComponent {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
+  }
+
+  private async initializeFromRoute(): Promise<void> {
+    this.state.clearError();
+
+    if (this.editorMode === 'create') {
+      this.state.clearSelectedArticle();
+      this.routeReady.set(true);
+      return;
+    }
+
+    const articleId = this.route.snapshot.paramMap.get('articleId')?.trim() ?? '';
+    const routeArticle = this.state.articles().find((article) => article.id === articleId);
+    if (!articleId || !routeArticle) {
+      this.state.clearSelectedArticle();
+      this.state.reportError('The requested article could not be found.');
+      await this.router.navigate(['/content/articles']);
+      return;
+    }
+
+    await this.state.selectArticle(articleId);
+    if (this.state.selectedArticle()?.id !== articleId) {
+      this.state.clearSelectedArticle();
+      this.state.reportError('The requested article could not be opened.');
+      await this.router.navigate(['/content/articles']);
+      return;
+    }
+
+    this.routeReady.set(true);
   }
 
   private buildErrorMessage(message: string, error: unknown): string {

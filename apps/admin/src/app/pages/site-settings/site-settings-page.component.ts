@@ -4,16 +4,14 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { createPageActionFeedback } from '../../features/pages/page-feedback';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
-import {
-  DEFAULT_TEMPLATE_SLUG,
-  DEPLOY_PROVIDER_OPTIONS,
-  templateSelectOptions,
-} from '../../features/pages/site-config-options';
+import { DEFAULT_TEMPLATE_SLUG, templateSelectOptions } from '../../features/pages/site-config-options';
+import { externalSiteUrl } from '../../features/pages/external-url';
+import type { SiteContentContext } from '../../features/pages/pages.model';
 
 @Component({
   selector: 'app-site-settings-page',
   templateUrl: './site-settings-page.component.html',
-  styleUrl: '../../features/pages/page-view.component.css',
+  styleUrls: ['../../features/pages/page-view.component.css', './site-settings-page.component.css'],
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,68 +20,68 @@ export class SiteSettingsPageComponent {
   private readonly fb = inject(FormBuilder);
   readonly state = inject(WorkspaceStateService);
   readonly feedback = createPageActionFeedback();
-
-  readonly siteSettingsForm = this.fb.nonNullable.group({
-    templateKey: ['default-blog', [Validators.required]],
-    themeConfig: ['', [Validators.required]],
-    deployProvider: ['none', [Validators.required]],
-    previewDeployProvider: ['none', [Validators.required]],
+  readonly selectedSiteUrl = computed(() => externalSiteUrl(this.state.selectedSite().domain));
+  readonly templateOptions = computed(() => templateSelectOptions(this.state.templates(), this.state.selectedSite().templateKey));
+  readonly form = this.fb.nonNullable.group({
+    name: ['', [Validators.required, Validators.minLength(2)]],
+    domain: ['', [Validators.required]],
+    blogPath: ['/blog', [Validators.required, Validators.pattern(/^\/[a-z0-9][a-z0-9/_-]*$/)]],
+    description: ['', [Validators.maxLength(180)]],
+    contentContext: ['standalone_blog' as SiteContentContext, [Validators.required]],
+    templateKey: [DEFAULT_TEMPLATE_SLUG, [Validators.required]],
+    accentColor: ['#2563eb', [Validators.required, Validators.pattern(/^#[0-9a-fA-F]{6}$/)]],
   });
-
-  readonly templateOptions = computed(() =>
-    templateSelectOptions(this.state.templates(), this.state.selectedSite().templateKey),
-  );
-  readonly deployProviderOptions = DEPLOY_PROVIDER_OPTIONS;
 
   constructor() {
     effect(() => {
       const site = this.state.selectedSite();
-      if (!site) {
-        return;
-      }
-
-      this.siteSettingsForm.reset(
-        {
-          templateKey: site.templateKey || this.templateOptions()[0]?.value || DEFAULT_TEMPLATE_SLUG,
-          themeConfig: site.themeConfig,
-          deployProvider: site.deployProvider || 'none',
-          previewDeployProvider: site.previewDeployProvider || 'none',
-        },
-        { emitEvent: false },
-      );
+      let theme: Record<string, unknown> = {};
+      try { theme = JSON.parse(site.themeConfig || '{}') as Record<string, unknown>; } catch { theme = {}; }
+      this.form.reset({
+        name: site.name,
+        domain: site.domain,
+        blogPath: site.blogPath,
+        description: site.description || '',
+        contentContext: site.contentContext || 'standalone_blog',
+        templateKey: site.templateKey || DEFAULT_TEMPLATE_SLUG,
+        accentColor: typeof theme['accent'] === 'string' ? theme['accent'] : '#2563eb',
+      }, { emitEvent: false });
     });
   }
 
-  async saveSiteSettings(): Promise<void> {
-    if (this.siteSettingsForm.invalid) {
-      this.siteSettingsForm.markAllAsTouched();
-      this.feedback.error('Fix the highlighted fields to save the site settings.');
+  async save(): Promise<void> {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.feedback.error('Fix the highlighted fields before saving.');
       return;
     }
-
-    const {
-      templateKey,
-      themeConfig,
-      deployProvider,
-      previewDeployProvider,
-    } = this.siteSettingsForm.getRawValue();
+    const value = this.form.getRawValue();
     try {
-      this.state.clearError();
-      this.feedback.loading('Saving site settings...');
+      this.feedback.loading('Saving site configuration...');
       await this.state.updateSelectedSite({
-        templateKey,
-        themeConfig,
-        deployProvider,
-        previewDeployProvider,
+        name: value.name.trim(), domain: value.domain.trim(), blogPath: value.blogPath.trim(),
+        description: value.description.trim(), contentContext: value.contentContext, templateKey: value.templateKey,
+        themeConfig: JSON.stringify({ accent: value.accentColor }),
       });
-      this.feedback.success('Site settings saved successfully.');
+      this.feedback.success('Site configuration saved.');
     } catch (error) {
-      this.feedback.error(this.buildErrorMessage('Unable to save site settings.', error));
+      this.feedback.error(error instanceof Error ? error.message : 'Unable to save site configuration.');
     }
   }
 
-  private buildErrorMessage(message: string, error: unknown): string {
-    const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
-    return `${message}${detail}`;
+  async uploadBrandAsset(kind: 'logo' | 'favicon', event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      this.feedback.loading(`Uploading ${kind}...`);
+      const asset = await this.state.uploadMediaFile(file, `${this.form.controls.name.value} ${kind}`);
+      await this.state.updateSelectedSite(kind === 'logo' ? { logoMediaId: asset.id } : { faviconMediaId: asset.id });
+      this.feedback.success(`${kind === 'logo' ? 'Logo' : 'Favicon'} uploaded and assigned.`);
+    } catch (error) {
+      this.feedback.error(error instanceof Error ? error.message : `Unable to upload ${kind}.`);
+    } finally {
+      input.value = '';
+    }
   }
 }

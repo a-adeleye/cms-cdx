@@ -98,6 +98,25 @@ describe('SitesPageComponent', () => {
     expect(fakeState.createSite).not.toHaveBeenCalled();
   });
 
+  it('keeps the create form focused on name and domain and derives an omitted slug', async () => {
+    fixture.componentInstance.openCreateSiteModal();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('details.site-advanced')).toBeTruthy();
+
+    fixture.componentInstance.siteCreateForm.controls.name.setValue('New publication');
+    fixture.componentInstance.siteCreateForm.controls.domain.setValue('https://new.example.test');
+
+    await fixture.componentInstance.saveSiteFromModal();
+
+    expect(fakeState.createSite).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        name: 'New publication',
+        domain: 'https://new.example.test',
+        slug: 'new-publication',
+      }),
+    );
+  });
+
   it('opens the edit modal with the selected site values', async () => {
     const editButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>).find(
       (button) => button.textContent?.trim() === 'Edit site',

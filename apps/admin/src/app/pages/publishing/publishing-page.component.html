@@ -1,110 +1,18 @@
-<section class="page">
-  <header class="hero">
-    <p class="eyebrow">Delivery</p>
-    <div class="hero-row">
-      <div>
-        <h1>Publishing</h1>
-        <p class="muted">Select articles, then trigger preview or production builds for the current site.</p>
-      </div>
-
-      <div class="hero-actions">
-        <a class="button button-secondary" routerLink="/articles">Open articles</a>
-        <button class="button button-primary" type="button" (click)="triggerPreviewBuild()">Trigger preview build</button>
-        <button class="button button-secondary" type="button" (click)="triggerPublishedBuild()">Trigger published build</button>
-      </div>
+<section class="ui-page publishing-page">
+  <header class="ui-page-header"><div><h1>Publishing</h1><p class="ui-page-description">Select stored articles, build them with the active template, and deploy through the configured channel.</p></div><div class="hero-actions"><a class="button button-secondary" routerLink="/configuration/deployment">Deployment settings</a>@if (latestSuccessfulProductionDeployment(); as build) { <a class="button button-secondary" [href]="build.deployUrl" target="_blank" rel="noreferrer">Open live site ↗</a> }</div></header>
+  @if (state.error()) { <p class="page-error" role="alert">{{ state.error() }}</p> }
+  @if (actionFeedback(); as status) { <p class="page-status" [class.page-status--success]="status.kind === 'success'" [class.page-status--error]="status.kind === 'error'" role="status">{{ status.message }}</p> }
+  @if (deploymentWarnings().length) { <section class="page-warning"><h2>Deployment configuration</h2><ul>@for (warning of deploymentWarnings(); track warning) { <li>{{ warning }}</li> }</ul></section> }
+  <section class="publishing-layout">
+    <div class="publishing-content">
+      <article class="ui-card publishing-list-card"><div class="toolbar"><h2>Articles ({{ articles().length }})</h2><button class="ui-link publishing-text-button" type="button" (click)="toggleAllArticles()">{{ isAllSelected() ? 'Clear selection' : 'Select all' }}</button></div><div class="publishing-list">
+        @for (article of articles(); track article.id) { <label class="publishing-list-item">@if (article.coverImageUrl) { <img class="publishing-thumb" [src]="article.coverImageUrl" alt="" /> } @else { <span class="publishing-thumb"></span> }<span><strong>{{ article.title }}</strong><small>{{ article.status | titlecase }} · Updated {{ article.updatedAt | date: 'short' }}</small></span><input type="checkbox" [checked]="isArticleSelected(article.id)" (change)="toggleArticleSelection(article.id)" /></label> } @empty { <p class="muted">No articles are stored for this site.</p> }
+      </div></article>
+      <article class="ui-card ui-card--flush recent-deployments"><div class="ui-card__header"><h2>Recorded deployment attempts</h2><a class="ui-link" routerLink="/publishing/history">Full history</a></div><div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Channel</th><th>Build</th><th>Deployment</th><th>Provider</th><th>Revision</th><th>Finished</th><th></th></tr></thead><tbody>@for (build of recentBuilds(); track build.id) { <tr><td>{{ build.buildType === 'published' ? 'Production' : 'Preview' }}</td><td>{{ build.status | titlecase }}</td><td>{{ build.deployStatus || 'Not started' }}</td><td>{{ build.deployProvider || 'Local' }}</td><td><code>{{ build.deployRevision ? build.deployRevision.slice(0, 8) : '—' }}</code></td><td>{{ build.finishedAt ? (build.finishedAt | date: 'short') : 'In progress' }}</td><td><a class="button button-secondary" [routerLink]="['/publishing/history', build.id]">Details</a></td></tr> } @empty { <tr><td colspan="7">No build has been attempted.</td></tr> }</tbody></table></div></article>
     </div>
-  </header>
-
-  @if (state.error()) {
-    <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
-  }
-
-  @if (successMessage()) {
-    <p class="page-error" role="status" aria-live="polite">{{ successMessage() }}</p>
-  }
-
-  @if (deploymentWarnings().length) {
-    <section class="page-warning" role="alert" aria-live="polite">
-      <h2>Deployment warning</h2>
-      <p class="muted">Fix the following site settings before triggering a real deploy:</p>
-      <ul>
-        @for (warning of deploymentWarnings(); track warning) {
-          <li>{{ warning }}</li>
-        }
-      </ul>
-    </section>
-  }
-
-  <section class="metric-grid">
-    @for (metric of summaryMetrics(); track metric.label) {
-      <article class="metric-card">
-        <p class="metric-value">{{ metric.value }}</p>
-        <h2>{{ metric.label }}</h2>
-        <p>{{ metric.detail }}</p>
-      </article>
-    }
-  </section>
-
-  <section class="two-column">
-    <article class="panel">
-      <div class="toolbar">
-        <div>
-          <h2>Articles</h2>
-          <p class="muted">{{ selectedCount() }} selected of {{ articles().length }}</p>
-        </div>
-
-        <label class="publishing-select-all">
-          <input type="checkbox" [checked]="isAllSelected()" (change)="toggleAllArticles()" />
-          <span>Select all</span>
-        </label>
-      </div>
-
-      <div class="stack">
-        @for (article of articles(); track article.id) {
-          <label class="list-card publishing-row" [class.is-selected]="isArticleSelected(article.id)">
-            <span class="publishing-checkbox">
-              <input
-                type="checkbox"
-                [checked]="isArticleSelected(article.id)"
-                (change)="toggleArticleSelection(article.id)"
-                [attr.aria-label]="'Select ' + article.title"
-              />
-            </span>
-
-            <span class="publishing-main">
-              <strong>{{ article.title }}</strong>
-              <span>{{ article.status }} · {{ article.updatedAt | date: 'mediumDate' }}</span>
-            </span>
-
-            <span class="publishing-meta">{{ article.slug }}</span>
-          </label>
-        } @empty {
-          <p class="muted">No articles are available for the current site.</p>
-        }
-      </div>
-    </article>
-
-    <article class="panel">
-      <h2>Build targets</h2>
-      <dl class="definition-list">
-        <div>
-          <dt>Template</dt>
-          <dd>{{ state.selectedSite().templateKey || 'default-blog' }}</dd>
-        </div>
-        <div>
-          <dt>Production deploy</dt>
-          <dd>{{ state.selectedSite().deployProvider || 'none' }}</dd>
-        </div>
-        <div>
-          <dt>Preview deploy</dt>
-          <dd>{{ state.selectedSite().previewDeployProvider || 'none' }}</dd>
-        </div>
-        <div>
-          <dt>Blog path</dt>
-          <dd>{{ state.selectedSite().blogPath || '/articles' }}</dd>
-        </div>
-      </dl>
-      <p class="muted">Preview builds should use the preview deploy config. Published builds should use the production config.</p>
-    </article>
+    <aside class="publishing-sidebar">
+      <article class="ui-card publish-action-card"><h2>Selected content</h2><strong>{{ selectedCount() }} article{{ selectedCount() === 1 ? '' : 's' }}</strong><p>Preview does not change article status. Production publishes selected drafts before building.</p><button class="button button-secondary" type="button" [disabled]="isBuildPending()" (click)="triggerPreviewBuild()">Build and deploy preview</button><button class="button button-primary" type="button" [disabled]="selectedCount() === 0 || isBuildPending()" (click)="triggerPublishedBuild()">Publish to production</button></article>
+      <article class="ui-card deployment-targets"><h2>Configured targets</h2><p><strong>Preview</strong><br />{{ state.selectedSite().previewDeployProvider || 'Local build only' }} · {{ previewEnvironmentState().label }}</p><p><strong>Production</strong><br />{{ state.selectedSite().deployProvider || 'Local build only' }} · {{ productionEnvironmentState().label }}</p></article>
+    </aside>
   </section>
 </section>

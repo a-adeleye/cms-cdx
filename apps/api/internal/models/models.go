@@ -2,6 +2,18 @@ package models
 
 import "time"
 
+type SiteContentContext string
+
+const (
+	SiteContentContextApplicationBlog SiteContentContext = "application_blog"
+	SiteContentContextStandaloneBlog  SiteContentContext = "standalone_blog"
+)
+
+func IsValidSiteContentContext(value string) bool {
+	context := SiteContentContext(value)
+	return context == SiteContentContextApplicationBlog || context == SiteContentContextStandaloneBlog
+}
+
 type User struct {
 	ID           string    `json:"id"`
 	Email        string    `json:"email"`
@@ -13,22 +25,28 @@ type User struct {
 }
 
 type Site struct {
-	ID                    string         `json:"id"`
-	Name                  string         `json:"name"`
-	Slug                  string         `json:"slug"`
-	Domain                string         `json:"domain,omitempty"`
-	BlogPath              string         `json:"blog_path"`
-	Status                string         `json:"status"`
-	TemplateKey           string         `json:"template_key"`
-	ThemeConfig           map[string]any `json:"theme_config"`
-	DeployProvider        string         `json:"deploy_provider,omitempty"`
-	DeployConfig          map[string]any `json:"deploy_config"`
-	PreviewDeployProvider string         `json:"preview_deploy_provider,omitempty"`
-	PreviewDeployConfig   map[string]any `json:"preview_deploy_config"`
-	AIConfig              map[string]any `json:"ai_config"`
-	StorageConfig         map[string]any `json:"storage_config"`
-	CreatedAt             time.Time      `json:"created_at"`
-	UpdatedAt             time.Time      `json:"updated_at"`
+	ID                    string             `json:"id"`
+	Name                  string             `json:"name"`
+	Slug                  string             `json:"slug"`
+	Domain                string             `json:"domain,omitempty"`
+	BlogPath              string             `json:"blog_path"`
+	Description           string             `json:"description,omitempty"`
+	ContentContext        SiteContentContext `json:"content_context"`
+	LogoMediaID           string             `json:"logo_media_id,omitempty"`
+	LogoURL               string             `json:"logo_url,omitempty"`
+	FaviconMediaID        string             `json:"favicon_media_id,omitempty"`
+	FaviconURL            string             `json:"favicon_url,omitempty"`
+	Status                string             `json:"status"`
+	TemplateKey           string             `json:"template_key"`
+	ThemeConfig           map[string]any     `json:"theme_config"`
+	DeployProvider        string             `json:"deploy_provider,omitempty"`
+	DeployConfig          map[string]any     `json:"deploy_config"`
+	PreviewDeployProvider string             `json:"preview_deploy_provider,omitempty"`
+	PreviewDeployConfig   map[string]any     `json:"preview_deploy_config"`
+	AIConfig              map[string]any     `json:"ai_config"`
+	StorageConfig         map[string]any     `json:"storage_config"`
+	CreatedAt             time.Time          `json:"created_at"`
+	UpdatedAt             time.Time          `json:"updated_at"`
 }
 
 type Template struct {
@@ -144,6 +162,7 @@ type Build struct {
 	DeployProvider string     `json:"deploy_provider,omitempty"`
 	DeployStatus   string     `json:"deploy_status,omitempty"`
 	DeployURL      string     `json:"deploy_url,omitempty"`
+	DeployRevision string     `json:"deploy_revision,omitempty"`
 	StartedAt      *time.Time `json:"started_at,omitempty"`
 	FinishedAt     *time.Time `json:"finished_at,omitempty"`
 	CreatedAt      time.Time  `json:"created_at"`

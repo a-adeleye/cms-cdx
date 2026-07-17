@@ -21,7 +21,7 @@
     </section>
   } @else {
     <section class="page">
-      @if ((currentPage.kind !== 'settings' || isSettingsRoot()) && currentPage.kind !== 'articles' && currentPage.kind !== 'publishing') {
+      @if (currentPage.kind === 'landing-page-editor') {
         <header class="hero">
           <p class="eyebrow">{{ currentPage.eyebrow }}</p>
           <div class="hero-row">
@@ -30,15 +30,13 @@
             </div>
 
             <div class="hero-actions">
-              @if (currentPage.kind !== 'dashboard') {
-                <a class="button button-primary" [routerLink]="currentPage.primaryAction.path">
-                  {{ currentPage.primaryAction.label }}
+              <a class="button button-primary" [routerLink]="currentPage.primaryAction.path">
+                {{ currentPage.primaryAction.label }}
+              </a>
+              @if (currentPage.secondaryAction) {
+                <a class="button button-secondary" [routerLink]="currentPage.secondaryAction.path">
+                  {{ currentPage.secondaryAction.label }}
                 </a>
-                @if (currentPage.secondaryAction) {
-                  <a class="button button-secondary" [routerLink]="currentPage.secondaryAction.path">
-                    {{ currentPage.secondaryAction.label }}
-                  </a>
-                }
               }
             </div>
           </div>
@@ -50,19 +48,12 @@
       }
 
       @switch (currentPage.kind) {
-      @case ('settings') {
-        @if (isSettingsRoot()) {
-          <app-settings-page [authSession]="state.authSession()" />
-        } @else {
-          <router-outlet />
-        }
-      }
-
       @case ('dashboard') {
         <app-dashboard-page
           [dashboardStats]="state.dashboardStats()"
           [selectedSite]="state.selectedSite()"
-          [recentArticles]="state.articles().slice(0, 3)"
+          [recentArticles]="state.articles().slice(0, 5)"
+          [recentBuilds]="state.builds().slice(0, 5)"
           (articleSelected)="openArticle($event)"
         />
       }
@@ -72,6 +63,10 @@
       }
 
       @case ('publishing') {
+        <router-outlet />
+      }
+
+      @case ('media-library') {
         <router-outlet />
       }
 
@@ -111,57 +106,6 @@
         </section>
       }
 
-      @default {
-        <section class="support-grid">
-          @for (metric of supportMetrics(); track metric.label) {
-            <article class="metric-card">
-              <p class="metric-value">{{ metric.value }}</p>
-              <h2>{{ metric.label }}</h2>
-              <p>{{ metric.detail }}</p>
-            </article>
-          }
-        </section>
-
-        <section class="two-column">
-          <article class="panel">
-            <h2>Highlights</h2>
-            <ul class="bullets">
-              @for (item of supportHighlights(); track item) {
-                <li>{{ item }}</li>
-              }
-            </ul>
-          </article>
-
-          <article class="panel">
-            <h2>Quick actions</h2>
-            <div class="stack">
-              <a class="list-item link-item" [routerLink]="currentPage.primaryAction.path">
-                <strong>{{ currentPage.primaryAction.label }}</strong>
-                <span>Jump to the next step</span>
-              </a>
-              @if (currentPage.secondaryAction) {
-                <a class="list-item link-item" [routerLink]="currentPage.secondaryAction.path">
-                  <strong>{{ currentPage.secondaryAction.label }}</strong>
-                  <span>Continue the workflow</span>
-                </a>
-              }
-
-              @if (currentPage.kind === 'media-library') {
-                <button class="button button-primary" type="button" (click)="uploadSampleMedia()">Upload sample media</button>
-              }
-
-              @if (currentPage.kind === 'ai-assistant') {
-                <button class="button button-primary" type="button" (click)="createArticleDraft()">Start AI draft</button>
-              }
-
-              @if (currentPage.kind === 'builds') {
-                <button class="button button-primary" type="button" (click)="triggerPreviewBuild()">Trigger preview build</button>
-                <button class="button button-secondary" type="button" (click)="triggerPublishedBuild()">Trigger published build</button>
-              }
-            </div>
-          </article>
-        </section>
-      }
       }
     </section>
   }

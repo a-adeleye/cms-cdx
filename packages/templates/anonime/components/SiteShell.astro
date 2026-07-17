@@ -11,3 +11,36 @@ const { site, page = '' } = Astro.props;
   <main><slot /></main>
   <SiteFooter site={site} />
 </div>
+
+<script is:inline>
+  (() => {
+    const storageKey = 'anonime-theme';
+    const root = document.documentElement;
+    const control = document.querySelector('[data-anonime-theme-control]');
+    if (!(control instanceof HTMLInputElement)) return;
+
+    let storedTheme = '';
+    try { storedTheme = localStorage.getItem(storageKey) || ''; } catch {
+      storedTheme = '';
+    }
+    const initialTheme = storedTheme === 'dark' || storedTheme === 'light'
+      ? storedTheme
+      : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+    const applyTheme = (theme, persist) => {
+      const isDark = theme === 'dark';
+      root.dataset.anonimeTheme = theme;
+      root.style.colorScheme = theme;
+      control.checked = isDark;
+      control.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+      if (persist) {
+        try { localStorage.setItem(storageKey, theme); } catch {
+          control.dataset.themePersistence = 'unavailable';
+        }
+      }
+    };
+
+    applyTheme(initialTheme, false);
+    control.addEventListener('change', () => applyTheme(control.checked ? 'dark' : 'light', true));
+  })();
+</script>

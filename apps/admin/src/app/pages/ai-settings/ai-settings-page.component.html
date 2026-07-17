@@ -1,0 +1,33 @@
+<section class="ui-page ai-settings-page">
+  <header class="ui-page-header">
+    <div><h1>AI configuration</h1><p class="ui-page-description">Choose the provider and model used for AI writing on {{ state.selectedSite().name }}.</p></div>
+    <button class="button button-primary" type="button" [disabled]="feedback.isBusy()" (click)="save()">{{ feedback.isBusy() ? 'Saving…' : 'Save AI configuration' }}</button>
+  </header>
+
+  @if (state.error()) { <p class="page-error" role="alert">{{ state.error() }}</p> }
+  @if (feedback.state(); as status) { @if (status.kind !== 'idle') { <p class="page-status" [class.page-status--success]="status.kind === 'success'" [class.page-status--error]="status.kind === 'error'" role="status">{{ status.message }}</p> } }
+
+  <form class="ai-settings-form ui-card settings-section-content" [formGroup]="form" (ngSubmit)="save()">
+    <div><h2>Provider</h2><p class="muted">Credentials stay in the server environment. Enter only the name of the environment variable that holds the API key.</p></div>
+    <label>AI provider
+      <select formControlName="provider" (change)="setProvider($any($event.target).value)">
+        <option value="none">Not configured</option>
+        <option value="openai">OpenAI</option>
+        <option value="anthropic">Anthropic</option>
+        <option value="google">Google Gemini</option>
+        <option value="openai_compatible">OpenAI-compatible API</option>
+      </select>
+    </label>
+
+    @if (isConfigured()) {
+      <label>Model<input type="text" formControlName="model" placeholder="Provider model name" /></label>
+      <label>API-key environment variable<input type="text" formControlName="apiKeySecretRef" placeholder="OPENAI_API_KEY" autocapitalize="characters" /><small>The key itself is never stored in this CMS.</small></label>
+      @if (isCompatibleProvider()) { <label>Compatible API base URL<input type="url" formControlName="baseUrl" placeholder="https://api.example.com/v1" /></label> }
+      <p class="page-warning">Selecting a provider saves its configuration. AI drafting remains unavailable until the server-side AI adapter for that provider is enabled.</p>
+    } @else {
+      <p class="muted">No provider is selected. AI generation controls will remain unavailable.</p>
+    }
+
+    <div class="hero-actions"><a class="button button-secondary" routerLink="/content/articles">Back to articles</a><button class="button button-primary" type="submit" [disabled]="feedback.isBusy()">Save AI configuration</button></div>
+  </form>
+</section>

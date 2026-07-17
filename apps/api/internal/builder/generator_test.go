@@ -8,16 +8,6 @@ import (
 	"cms-builder/api/internal/models"
 )
 
-func TestNormalizedBlogPathEnsuresALeadingSlashAndTrimsTrailingSlashes(t *testing.T) {
-	if got := normalizedBlogPath("articles/"); got != "/articles" {
-		t.Fatalf("expected /articles, got %q", got)
-	}
-
-	if got := normalizedBlogPath(""); got != "/articles" {
-		t.Fatalf("expected empty blog path to fall back to /articles, got %q", got)
-	}
-}
-
 func TestBuildOutputPathUsesPreviewDirectoryForPreviewBuilds(t *testing.T) {
 	site := models.Site{Slug: "Anonime Blog"}
 
@@ -25,7 +15,7 @@ func TestBuildOutputPathUsesPreviewDirectoryForPreviewBuilds(t *testing.T) {
 		t.Fatalf("expected published build path to use the site slug, got %q", got)
 	}
 
-	if got := buildOutputPath("dist/builds", site, true); got != filepath.Join("dist", "builds", "preview", "site") {
+	if got := buildOutputPath("dist/builds", site, true); got != filepath.Join("dist", "builds", "preview", "anonime-blog") {
 		t.Fatalf("expected preview build path to use the preview directory, got %q", got)
 	}
 }
@@ -60,7 +50,7 @@ func TestNoopBuilderUsesPublishedAndPreviewDestinations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateSite returned error for preview build: %v", err)
 	}
-	if previewPath != "dist/preview/site" {
+	if previewPath != "dist/preview/anonime-blog" {
 		t.Fatalf("expected preview build path, got %q", previewPath)
 	}
 }

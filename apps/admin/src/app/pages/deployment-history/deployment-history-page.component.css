@@ -1,0 +1,16 @@
+.history-domain { min-height: 40px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 5px; background: #fff; font-size: 12px; }
+.history-filter-spacer { flex: 1; }
+.history-clear { border: 0; background: transparent; color: var(--accent); font-weight: 600; cursor: pointer; }
+.deployment-table tbody tr { position: relative; }
+.deployment-table tbody tr td:first-child { border-left: 3px solid var(--success); }
+.deployment-table tbody tr.deploy-preview td:first-child { border-left-color: var(--accent); }
+.deployment-environment { display: flex; align-items: center; gap: 7px; }
+.deployment-environment i { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+.deploy-preview .deployment-environment i { background: var(--accent); }
+.deployment-environment strong { font-size: 12px; }
+.history-commit, .history-commit small { display: block; }
+.history-commit a { color: var(--accent); }
+.history-commit small { margin-top: 4px; color: var(--muted); font-size: 10px; }
+.history-detail-button { min-height: 32px; padding: 6px 11px; font-size: 10px; }
+.history-more { width: 36px; height: 32px; margin-left: 8px; border: 1px solid var(--line); border-radius: 5px; background: #fff; }
+.history-empty { height: 180px !important; color: var(--muted); text-align: center; }

@@ -1,0 +1,13 @@
+<section class="ui-page media-page">
+  <header class="ui-page-header"><div><h1>Media library</h1><p class="ui-page-description">Uploaded assets available to articles and site branding.</p></div><div class="hero-actions"><span><strong>{{ state.mediaAssets().length }}</strong> assets · {{ formatSize(storageBytes()) }}</span><label class="button button-primary media-upload">{{ uploading() ? 'Uploading…' : 'Upload image' }}<input class="sr-only" type="file" accept="image/png,image/jpeg,image/gif,image/webp" [disabled]="uploading()" (change)="uploadFile($event)" /></label></div></header>
+  @if (state.error()) { <p class="page-error" role="alert">{{ state.error() }}</p> }
+  <section class="ui-card ui-card--flush">
+    <div class="ui-filter-bar"><label class="ui-search"><span class="sr-only">Search media</span><input type="search" placeholder="Search media…" [value]="search()" (input)="onSearch($any($event.target).value)" /></label><button class="media-clear" type="button" (click)="onSearch('')">Clear</button></div>
+    <div class="ui-table-wrap"><table class="ui-table media-table"><thead><tr><th></th><th>Asset</th><th>Type</th><th>Size</th><th>Article usage</th><th>Alt text</th><th>Uploaded</th><th></th></tr></thead><tbody>
+      @for (asset of assets(); track asset.id) {
+        <tr><td><input type="checkbox" [attr.aria-label]="'Select ' + asset.fileName" [checked]="isSelected(asset.id)" (change)="toggleSelection(asset.id)" /></td><td><button class="media-name" type="button" (click)="openAsset(asset.id)"><span class="media-thumb" [style.background-image]="'url(' + asset.fileUrl + ')'" aria-hidden="true"></span><span class="ui-table-title"><strong>{{ asset.fileName }}</strong><small>{{ asset.storageProvider }} · {{ asset.storageKey }}</small></span></button></td><td>{{ asset.mimeType }}</td><td>{{ formatSize(asset.sizeBytes) }}</td><td>{{ usageCount(asset.fileUrl) }}</td><td class="media-alt">{{ asset.altText || 'Not set' }}</td><td>{{ asset.createdAt ? (asset.createdAt | date: 'short') : '—' }}</td><td><button class="button button-secondary" type="button" (click)="openAsset(asset.id)">Details</button></td></tr>
+      } @empty { <tr><td colspan="8" class="media-empty">No media found. Upload an image to get started.</td></tr> }
+    </tbody></table></div>
+    <footer class="ui-table-footer"><span>{{ assets().length }} matching assets</span></footer>
+  </section>
+</section>

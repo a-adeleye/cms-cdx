@@ -10,6 +10,7 @@ describe('AuthorsPageComponent', () => {
   let state: {
     authors: () => Array<{ id: string; siteId: string; name: string; slug: string; bio: string }>;
     selectedSite: () => unknown;
+    articles: () => Array<{ authorId: string }>;
     error: () => null;
     clearError: jasmine.Spy;
     reportError: jasmine.Spy;
@@ -45,6 +46,7 @@ describe('AuthorsPageComponent', () => {
         storageConfig: '{}',
         updatedAt: '2026-05-23T00:00:00.000Z',
       }),
+      articles: () => [{ authorId: 'author-1' }],
       error: () => null,
       clearError: jasmine.createSpy('clearError'),
       reportError: jasmine.createSpy('reportError'),
@@ -64,13 +66,14 @@ describe('AuthorsPageComponent', () => {
   });
 
   it('creates, edits, and deletes authors', async () => {
-    expect(fixture.nativeElement.textContent).toContain('Back to settings');
-    expect(fixture.nativeElement.textContent).toContain('New author');
+    expect(fixture.nativeElement.textContent).toContain('Users');
+    expect(fixture.nativeElement.textContent).not.toContain('Back to settings');
+    expect(fixture.nativeElement.textContent).toContain('Add user');
     expect(fixture.nativeElement.textContent).toContain('Ada Lovelace');
-    expect(fixture.nativeElement.querySelectorAll('.table-row').length).toBeGreaterThan(1);
+    expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBe(1);
 
     const createButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>).find(
-      (button) => button.textContent?.trim() === 'New author',
+      (button) => button.textContent?.includes('Add user'),
     );
     createButton?.click();
     fixture.detectChanges();

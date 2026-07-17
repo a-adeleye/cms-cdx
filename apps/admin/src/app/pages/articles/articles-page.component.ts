@@ -13,7 +13,7 @@ type ArticleFilterOption = {
 @Component({
   selector: 'app-articles-page',
   templateUrl: './articles-page.component.html',
-  styleUrls: ['../../features/pages/page-view.component.css'],
+  styleUrls: ['../../features/pages/page-view.component.css', './articles-page.component.css'],
   standalone: true,
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -24,6 +24,10 @@ export class ArticlesPageComponent {
   readonly feedback = createPageActionFeedback();
 
   readonly articleFilter = signal<ArticleStatus | 'all'>('all');
+  readonly categoryFilter = signal('all');
+  readonly authorFilter = signal('all');
+  readonly articleSearch = signal('');
+  readonly selectedArticleIds = signal<string[]>([]);
   readonly articleFilterOptions: ArticleFilterOption[] = [
     { value: 'all', label: 'All' },
     { value: 'draft', label: 'Draft' },
@@ -35,11 +39,16 @@ export class ArticlesPageComponent {
   readonly filteredArticles = computed(() => {
     const articles = this.state.articles();
     const filter = this.articleFilter();
-    if (filter === 'all') {
-      return articles;
-    }
-
-    return articles.filter((article) => article.status === filter);
+    const category = this.categoryFilter();
+    const author = this.authorFilter();
+    const search = this.articleSearch().trim().toLowerCase();
+    return articles.filter((article) => {
+      const matchesStatus = filter === 'all' || article.status === filter;
+      const matchesCategory = category === 'all' || article.categoryId === category;
+      const matchesAuthor = author === 'all' || article.authorId === author;
+      const matchesSearch = !search || `${article.title} ${article.excerpt} ${article.slug}`.toLowerCase().includes(search);
+      return matchesStatus && matchesCategory && matchesAuthor && matchesSearch;
+    });
   });
 
   constructor() {
@@ -53,48 +62,44 @@ export class ArticlesPageComponent {
     this.articleFilter.set(value);
   }
 
-  async startArticle(): Promise<void> {
+  onSearch(value: string): void {
+    this.articleSearch.set(value);
+  }
+
+  toggleSelection(articleId: string): void {
+    const selected = new Set(this.selectedArticleIds());
+    selected.has(articleId) ? selected.delete(articleId) : selected.add(articleId);
+    this.selectedArticleIds.set([...selected]);
+  }
+
+  toggleAll(): void {
+    const visibleIds = this.filteredArticles().map((article) => article.id);
+    this.selectedArticleIds.set(this.selectedArticleIds().length === visibleIds.length ? [] : visibleIds);
+  }
+
+  isSelected(articleId: string): boolean {
+    return this.selectedArticleIds().includes(articleId);
+  }
+
+  authorName(authorId: string): string {
+    return this.state.authors().find((author) => author.id === authorId)?.name ?? 'Unassigned';
+  }
+
+  categoryName(categoryId: string): string {
+    return this.state.categories().find((category) => category.id === categoryId)?.name ?? 'Uncategorized';
+  }
+
+  startArticle(): void {
     this.state.clearSelectedArticle();
     this.state.clearError();
     this.feedback.clear();
-    void this.router.navigate(['/articles/editor']);
+    void this.router.navigate(['/content/articles/new']);
   }
 
-  async openArticle(articleId: string): Promise<void> {
-    try {
-      this.state.clearError();
-      await this.state.selectArticle(articleId);
-      this.feedback.clear();
-      void this.router.navigate(['/articles/editor']);
-    } catch (error) {
-      this.feedback.error(this.buildErrorMessage('Unable to open article.', error));
-    }
+  openArticle(articleId: string): void {
+    this.state.clearError();
+    this.feedback.clear();
+    void this.router.navigate(['/content/articles', articleId, 'edit']);
   }
 
-  async toggleFeatured(articleId: string): Promise<void> {
-    try {
-      this.state.clearError();
-      this.feedback.loading('Updating featured state...');
-      await this.state.toggleFeatured(articleId);
-      this.feedback.success('Featured state updated successfully.');
-    } catch (error) {
-      this.feedback.error(this.buildErrorMessage('Unable to update featured state.', error));
-    }
-  }
-
-  async setStatus(articleId: string, status: ArticleStatus): Promise<void> {
-    try {
-      this.state.clearError();
-      this.feedback.loading('Updating article status...');
-      await this.state.setArticleStatus(articleId, status);
-      this.feedback.success('Article status updated successfully.');
-    } catch (error) {
-      this.feedback.error(this.buildErrorMessage('Unable to update article status.', error));
-    }
-  }
-
-  private buildErrorMessage(message: string, error: unknown): string {
-    const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
-    return `${message}${detail}`;
-  }
 }

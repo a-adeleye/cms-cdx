@@ -43,11 +43,6 @@ interface SiteDraftInput {
   templateKey: string;
 }
 
-interface TemplateDraftInput {
-  name: string;
-  slug: string;
-}
-
 interface CategoryDraftInput {
   id?: string;
   name: string;
@@ -71,6 +66,12 @@ const EMPTY_SITE: SiteRecord = {
   slug: '',
   domain: '',
   blogPath: '/articles',
+  description: '',
+  contentContext: 'standalone_blog',
+  logoMediaId: '',
+  logoUrl: '',
+  faviconMediaId: '',
+  faviconUrl: '',
   status: 'inactive',
   templateKey: 'default-blog',
   themeConfig: '{}',
@@ -144,11 +145,15 @@ export class WorkspaceStateService {
     const published = articles.filter((article) => article.status === 'published').length;
     const review = articles.filter((article) => article.status === 'review').length;
     const drafts = articles.filter((article) => article.status === 'draft').length;
+    const builds = this.builds();
+    const latestBuild = builds[0];
 
     return [
-      { label: 'Published articles', value: String(published), detail: 'Live on the selected site' },
-      { label: 'Review queue', value: String(review), detail: 'Waiting for human approval' },
-      { label: 'Drafts', value: String(drafts), detail: 'Ready for editing or AI assistance' },
+      { label: 'Published', value: String(published), detail: 'Live articles' },
+      { label: 'Drafts', value: String(drafts), detail: 'Work in progress' },
+      { label: 'Review queue', value: String(review), detail: 'Needs review' },
+      { label: 'Deployments', value: latestBuild?.status === 'failed' ? 'Attention' : 'Healthy', detail: latestBuild ? 'Latest build recorded' : 'Ready to deploy' },
+      { label: 'Media assets', value: String(this.mediaAssets().length), detail: 'Images and documents' },
     ];
   });
 
@@ -234,6 +239,10 @@ export class WorkspaceStateService {
       slug: input.slug,
       domain: input.domain,
       blogPath: input.blogPath,
+      description: '',
+      contentContext: 'standalone_blog',
+      logoMediaId: '',
+      faviconMediaId: '',
       status: 'active',
       templateKey: input.templateKey,
       themeConfig: '{"tone":"professional"}',
@@ -249,16 +258,6 @@ export class WorkspaceStateService {
     return site;
   }
 
-  async createTemplate(input: TemplateDraftInput): Promise<TemplateRecord> {
-    const template = await this.api.createTemplate({
-      name: input.name,
-      slug: input.slug,
-    });
-
-    await this.loadWorkspace(this.selectedSiteId() || undefined);
-    return template;
-  }
-
   async updateSite(siteId: string, patch: Partial<SiteRecord>): Promise<SiteRecord> {
     const current = this.findSite(siteId) ?? this.selectedSite();
     const site = await this.api.updateSite(siteId, {
@@ -266,6 +265,10 @@ export class WorkspaceStateService {
       slug: patch.slug ?? current.slug,
       domain: patch.domain ?? current.domain,
       blogPath: patch.blogPath ?? current.blogPath,
+      description: patch.description ?? current.description ?? '',
+      contentContext: patch.contentContext ?? current.contentContext,
+      logoMediaId: patch.logoMediaId ?? current.logoMediaId ?? '',
+      faviconMediaId: patch.faviconMediaId ?? current.faviconMediaId ?? '',
       status: patch.status ?? current.status,
       templateKey: patch.templateKey ?? current.templateKey,
       themeConfig: patch.themeConfig ?? current.themeConfig,
@@ -554,24 +557,11 @@ export class WorkspaceStateService {
 
   async triggerBuild(buildType: BuildType, articleIds: string[] = []): Promise<BuildRecord> {
     const site = this.selectedSite();
-    const build = await this.api.createBuild(site.id, buildType, articleIds);
-    await this.loadWorkspace(site.id);
-    return build;
-  }
-
-  async uploadMedia(fileName: string, fileUrl: string, altText: string): Promise<MediaAssetRecord> {
-    const site = this.selectedSite();
-    const media = await this.api.createMediaAsset(site.id, {
-      fileName,
-      fileUrl,
-      mimeType: 'image/jpeg',
-      sizeBytes: 180_000,
-      storageProvider: (site.storageConfig ?? '').includes('r2') ? 'r2' : 'minio',
-      storageKey: `${site.slug || 'site'}/${fileName}`,
-      altText,
-    });
-    await this.loadWorkspace(site.id);
-    return media;
+    try {
+      return await this.api.createBuild(site.id, buildType, articleIds);
+    } finally {
+      await this.loadWorkspace(site.id);
+    }
   }
 
   async uploadMediaFile(file: File, altText: string): Promise<MediaAssetRecord> {

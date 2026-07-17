@@ -14,6 +14,7 @@ RUN go build -o /out/api ./cmd/api
 
 FROM node:22.16.0-alpine
 WORKDIR /app
+RUN apk add --no-cache ca-certificates git
 COPY --from=build /out/api /app/api
 COPY --from=node-dependencies /workspace/node_modules /app/node_modules
 COPY --from=node-dependencies /workspace/apps/builder /app/builder

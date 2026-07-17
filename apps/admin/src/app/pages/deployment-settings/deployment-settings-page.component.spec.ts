@@ -1,118 +1,48 @@
-import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ReactiveFormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { DeploymentSettingsPageComponent } from './deployment-settings-page.component';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 
 describe('DeploymentSettingsPageComponent', () => {
   let fixture: ComponentFixture<DeploymentSettingsPageComponent>;
-  let state: WorkspaceStateService;
-  let resolveUpdateSelectedSite: (() => void) | null;
+  let state: jasmine.SpyObj<WorkspaceStateService>;
 
   beforeEach(async () => {
-    resolveUpdateSelectedSite = null;
-    const selectedSite = {
-      id: 'site-example',
-      name: 'Example Site',
-      slug: 'example',
-      domain: 'https://example.test',
-      blogPath: '/articles',
-      status: 'active' as const,
-      templateKey: 'default-blog',
-      themeConfig: '{"tone":"professional"}',
-      deployProvider: 'firebase',
-      deployConfig: '',
-      previewDeployProvider: 'cloudflare',
-      previewDeployConfig: '',
-      aiConfig: '',
-      storageConfig: '',
-      updatedAt: '2026-05-23T00:00:00.000Z',
-    };
-
-    state = {
-      selectedSite: jasmine.createSpy('selectedSite').and.returnValue(selectedSite),
-      error: jasmine.createSpy('error').and.returnValue(null),
-      clearError: jasmine.createSpy('clearError'),
-      updateSelectedSite: jasmine.createSpy('updateSelectedSite').and.callFake(
-        () =>
-          new Promise<void>((resolve) => {
-            resolveUpdateSelectedSite = resolve;
-          }),
-      ),
-      reportError: jasmine.createSpy('reportError'),
-    } as unknown as WorkspaceStateService;
-
-    await TestBed.configureTestingModule({
-      imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, DeploymentSettingsPageComponent],
-      providers: [{ provide: WorkspaceStateService, useValue: state }],
-    }).compileComponents();
-
+    state = jasmine.createSpyObj<WorkspaceStateService>('WorkspaceStateService', ['selectedSite', 'builds', 'error', 'updateSelectedSite']);
+    state.selectedSite.and.returnValue({ id: 'site-1', name: 'Example', deployProvider: 'none', deployConfig: '{}', previewDeployProvider: 'none', previewDeployConfig: '{}', aiConfig: '{}', storageConfig: '{}', deploymentWarnings: [] } as never);
+    state.builds.and.returnValue([]);
+    state.error.and.returnValue(null);
+    state.updateSelectedSite.and.resolveTo();
+    await TestBed.configureTestingModule({ imports: [RouterTestingModule, DeploymentSettingsPageComponent], providers: [{ provide: WorkspaceStateService, useValue: state }] }).compileComponents();
     fixture = TestBed.createComponent(DeploymentSettingsPageComponent);
-    fixture.detectChanges();
-    await fixture.whenStable();
     fixture.detectChanges();
   });
 
-  it('loads default templates and saves deployment settings', async () => {
-    expect(fixture.nativeElement.textContent).toContain('Deployment settings');
-    expect(fixture.nativeElement.textContent).toContain('firebase');
-
-    const submitButton = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-    submitButton?.click();
-    fixture.detectChanges();
-
-    expect(submitButton?.disabled).toBeTrue();
-    expect(fixture.nativeElement.textContent).toContain('Saving deployment settings...');
-
-    resolveUpdateSelectedSite?.();
-
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(state.updateSelectedSite).toHaveBeenCalledWith({
-      deployConfig: JSON.stringify(
-        {
-          provider: 'firebase',
-          projectId: '',
-          siteId: '',
-          serviceAccountSecretRef: '',
-        },
-        null,
-        2,
-      ),
-      previewDeployConfig: JSON.stringify(
-        {
-          provider: 'cloudflare',
-          accountId: '',
-          projectName: '',
-          apiTokenSecretRef: '',
-        },
-        null,
-        2,
-      ),
-      aiConfig: JSON.stringify(
-        {
-          provider: '',
-          model: '',
-          tone: '',
-          brand_context: '',
-        },
-        null,
-        2,
-      ),
-      storageConfig: JSON.stringify(
-        {
-          provider: '',
-          bucket: '',
-          region: '',
-          prefix: '',
-          public_url: '',
-        },
-        null,
-        2,
-      ),
+  it('serializes typed repository settings for each channel', async () => {
+    fixture.componentInstance.deploymentSettingsForm.patchValue({
+      deployProvider: 'git_repository', productionRepositoryUrl: 'https://github.com/example/site.git',
+      productionBranch: 'main', productionContentPath: 'public/blog', productionTokenSecretRef: 'GITHUB_TOKEN',
     });
-    expect(fixture.nativeElement.textContent).toContain('Deployment settings saved successfully.');
+    await fixture.componentInstance.saveDeploymentSettings();
+    expect(state.updateSelectedSite).toHaveBeenCalledWith(jasmine.objectContaining({
+      deployProvider: 'git_repository',
+      deployConfig: JSON.stringify({ repositoryUrl: 'https://github.com/example/site.git', branch: 'main', contentPath: 'public/blog', tokenSecretRef: 'GITHUB_TOKEN', publicUrl: '' }, null, 2),
+    }));
+  });
+
+  it('shows only supported deployment modes', () => {
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Cloudflare Pages');
+    expect(text).toContain('Firebase');
+    expect(text).toContain('Repository branch');
+    expect(text).not.toContain('Netlify');
+  });
+
+  it('stacks grouped fields only inside the preview card', () => {
+    const cards = fixture.nativeElement.querySelectorAll('.deployment-config-card');
+    expect(cards[0].classList).toContain('deployment-config-card--production');
+    expect(cards[0].classList).not.toContain('deployment-config-card--preview');
+    expect(cards[1].classList).toContain('deployment-config-card--preview');
+    expect(cards[2].classList).toContain('deployment-config-card--latest');
   });
 });

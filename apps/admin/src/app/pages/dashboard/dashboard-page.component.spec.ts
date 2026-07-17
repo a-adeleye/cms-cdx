@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { RouterTestingModule } from '@angular/router/testing';
 import { DashboardPageComponent } from './dashboard-page.component';
 
 describe('DashboardPageComponent', () => {
@@ -7,7 +8,7 @@ describe('DashboardPageComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CommonModule, DashboardPageComponent],
+      imports: [CommonModule, RouterTestingModule, DashboardPageComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DashboardPageComponent);
@@ -57,21 +58,53 @@ describe('DashboardPageComponent', () => {
         updatedAt: '2026-05-23T00:00:00.000Z',
       },
     ]);
+    fixture.componentRef.setInput('recentBuilds', []);
     fixture.detectChanges();
   });
 
-  it('renders the selected site and recent article list', () => {
+  it('renders the current site and recent article list', () => {
     expect(fixture.nativeElement.textContent).toContain('Drafts');
     expect(fixture.nativeElement.textContent).toContain('Example Site');
     expect(fixture.nativeElement.textContent).toContain('First article');
+    expect(fixture.nativeElement.textContent).toContain('Deployment status');
+    const newArticleLink = fixture.nativeElement.querySelector('.hero-actions a') as HTMLAnchorElement | null;
+    expect(newArticleLink?.getAttribute('href')).toContain('/content/articles/new');
   });
 
   it('emits the article id when a recent article is clicked', () => {
     spyOn(fixture.componentInstance.articleSelected, 'emit');
 
-    const articleButton = fixture.nativeElement.querySelector('.list-item') as HTMLButtonElement | null;
+    const articleButton = fixture.nativeElement.querySelector('.dashboard-article-title') as HTMLButtonElement | null;
     articleButton?.click();
 
     expect(fixture.componentInstance.articleSelected.emit).toHaveBeenCalledWith('article-1');
+  });
+
+  it('renders failed and empty deployment states without claiming they are healthy', () => {
+    fixture.componentRef.setInput('recentBuilds', [
+      {
+        id: 'failed-production-build',
+        siteId: 'site-example',
+        status: 'failed',
+        buildType: 'published',
+        logs: 'Deployment failed.',
+        outputPath: '',
+        deployProvider: 'netlify',
+        deployStatus: 'failed',
+        deployUrl: '',
+        startedAt: '2026-05-23T10:00:00.000Z',
+        finishedAt: '2026-05-23T10:01:00.000Z',
+      },
+    ]);
+    fixture.detectChanges();
+
+    const environments = fixture.nativeElement.querySelectorAll('.deployment-environment') as NodeListOf<HTMLElement>;
+    expect(environments[0].textContent).toContain('Failed');
+    expect(environments[0].textContent).not.toContain('Healthy');
+    expect(environments[1].textContent).toContain('Not deployed');
+    expect(environments[1].textContent).not.toContain('Healthy');
+    expect(fixture.nativeElement.textContent).toContain('Deployment failed');
+    expect(fixture.nativeElement.textContent).not.toContain('Deployment succeeded');
+    expect(fixture.nativeElement.textContent).not.toContain('Open Site');
   });
 });

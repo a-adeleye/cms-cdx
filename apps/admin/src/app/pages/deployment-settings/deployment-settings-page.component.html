@@ -1,105 +1,38 @@
-<section class="page">
-  <header class="hero">
-    <p class="eyebrow">Configuration</p>
-    <div class="hero-row">
-      <div>
-        <h1>Deployment settings</h1>
-        <p class="page-description">
-          Configure the active site's deployment payloads, AI provider settings, and storage settings.
-        </p>
-      </div>
+<section class="ui-page deployment-settings-page">
+  <header class="ui-page-header"><div><h1>Deployment settings</h1><p class="ui-page-description">Choose how preview and production builds are delivered.</p></div><button class="button button-primary" type="button" [disabled]="feedback.isBusy()" (click)="saveDeploymentSettings()">{{ feedback.isBusy() ? 'Saving…' : 'Save deployment settings' }}</button></header>
+  @if (state.error()) { <p class="page-error" role="alert">{{ state.error() }}</p> }
+  @if (feedback.state(); as status) { @if (status.kind !== 'idle') { <p class="page-status" [class.page-status--success]="status.kind === 'success'" [class.page-status--error]="status.kind === 'error'" role="status">{{ status.message }}</p> } }
+  @if (state.selectedSite().deploymentWarnings?.length) { <section class="page-warning"><h2>Configuration checks</h2><ul>@for (warning of state.selectedSite().deploymentWarnings; track warning) { <li>{{ warning }}</li> }</ul></section> }
 
-      <div class="hero-actions">
-        <a class="button button-secondary" routerLink="/settings">Back to settings</a>
-      </div>
-    </div>
-  </header>
-
-  @if (state.error()) {
-    <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
-  }
-
-  @if (feedback.state(); as feedbackState) {
-    @if (feedbackState.kind !== 'idle' && feedbackState.message) {
-      <p
-        class="page-status"
-        [class.page-status--loading]="feedbackState.kind === 'loading'"
-        [class.page-status--success]="feedbackState.kind === 'success'"
-        [class.page-status--error]="feedbackState.kind === 'error'"
-        [attr.role]="feedbackState.kind === 'error' ? 'alert' : 'status'"
-        [attr.aria-live]="feedbackState.kind === 'error' ? 'assertive' : 'polite'"
-      >
-        @if (feedbackState.kind === 'loading') {
-          <span class="page-status__spinner" aria-hidden="true"></span>
-        }
-        <span class="page-status__message">{{ feedbackState.message }}</span>
-      </p>
+  <form class="deployment-settings-layout" [formGroup]="deploymentSettingsForm" (ngSubmit)="saveDeploymentSettings()">
+    @for (channel of ['production', 'preview']; track channel) {
+      <article class="ui-card deployment-config-card" [class.deployment-config-card--production]="channel === 'production'" [class.deployment-config-card--preview]="channel === 'preview'">
+        <section class="deployment-config-section form-grid">
+          <div><h2>{{ channel === 'production' ? 'Production' : 'Preview' }}</h2><p>{{ channel === 'production' ? 'Publishes approved articles to the live destination.' : 'Builds selected content without changing publication status.' }}</p></div>
+          <label [for]="channel + '-provider'">Deployment mode
+            <select [id]="channel + '-provider'" [formControlName]="channel === 'production' ? 'deployProvider' : 'previewDeployProvider'" (change)="resetDeploymentConfig($any(channel))">
+              @for (option of deployProviderOptions; track option.value) { <option [value]="option.value">{{ option.label }}</option> }
+            </select>
+          </label>
+          @switch (provider($any(channel))) {
+            @case ('cloudflare_pages') {
+              <div class="field-row"><label>Pages project name<input [formControlName]="channel + 'ProjectName'" placeholder="my-site" /></label><label>Branch name<input [formControlName]="channel + 'Branch'" /></label></div>
+              <p class="field-help">The API server uses CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID; credentials are never stored here.</p>
+            }
+            @case ('firebase') {
+              <div class="field-row"><label>Firebase site ID<input [formControlName]="channel + 'FirebaseSiteId'" /></label><label>Service-account environment variable<input [formControlName]="channel + 'SecretRef'" placeholder="FIREBASE_SERVICE_ACCOUNT_JSON" /></label></div>
+              <label>Public URL (optional)<input type="url" [formControlName]="channel + 'PublicUrl'" placeholder="https://site.web.app" /></label>
+            }
+            @case ('git_repository') {
+              <label>Repository URL<input type="url" [formControlName]="channel + 'RepositoryUrl'" placeholder="https://github.com/owner/landing-site.git" /><small>HTTPS Git host allowed by the API server. Do not put a token in this URL.</small></label>
+              <div class="field-row"><label>Target branch<input [formControlName]="channel + 'Branch'" /></label><label>CMS-owned blog directory<input [formControlName]="channel + 'ContentPath'" placeholder="public/blog" /><small>Only this directory is replaced.</small></label></div>
+              <div class="field-row"><label>Token environment variable (optional)<input [formControlName]="channel + 'TokenSecretRef'" placeholder="GITHUB_PUSH_TOKEN" /></label><label>Deployed URL (optional)<input type="url" [formControlName]="channel + 'PublicUrl'" /></label></div>
+            }
+            @default { <p class="field-help">Builds remain available locally and no external provider is called.</p> }
+          }
+        </section>
+      </article>
     }
-  }
-
-  <section class="two-column">
-    <article class="panel">
-      <h2>Update deployment settings</h2>
-      <p class="muted">
-        The provider itself is selected in site settings. This page stores the provider-specific JSON values.
-      </p>
-
-      <form
-        class="form-grid"
-        [formGroup]="deploymentSettingsForm"
-        (ngSubmit)="saveDeploymentSettings()"
-        [attr.aria-busy]="feedback.isBusy()"
-      >
-        <label>
-          <span>Production deployment config</span>
-          <textarea rows="6" formControlName="deployConfig"></textarea>
-          <small class="field-help">Uses the provider selected on the site settings page.</small>
-        </label>
-
-        <label>
-          <span>Preview deployment config</span>
-          <textarea rows="6" formControlName="previewDeployConfig"></textarea>
-          <small class="field-help">Used for preview builds and preview hosting.</small>
-        </label>
-
-        <label>
-          <span>AI config</span>
-          <textarea rows="6" formControlName="aiConfig"></textarea>
-          <small class="field-help">Stores provider, model, tone, and brand context.</small>
-        </label>
-
-        <label>
-          <span>Storage config</span>
-          <textarea rows="6" formControlName="storageConfig"></textarea>
-          <small class="field-help">Stores S3-compatible upload settings for the current site.</small>
-        </label>
-
-        <button class="button button-primary" type="submit" [disabled]="feedback.isBusy()">
-          {{ feedback.isBusy() ? 'Saving...' : 'Save deployment settings' }}
-        </button>
-      </form>
-    </article>
-
-    <article class="panel">
-      <h2>Current site context</h2>
-      <dl class="definition-list">
-        <div>
-          <dt>Name</dt>
-          <dd>{{ state.selectedSite().name }}</dd>
-        </div>
-        <div>
-          <dt>Production provider</dt>
-          <dd>{{ state.selectedSite().deployProvider || 'none' }}</dd>
-        </div>
-        <div>
-          <dt>Preview provider</dt>
-          <dd>{{ state.selectedSite().previewDeployProvider || 'none' }}</dd>
-        </div>
-        <div>
-          <dt>Template</dt>
-          <dd>{{ state.selectedSite().templateKey }}</dd>
-        </div>
-      </dl>
-    </article>
-  </section>
+    <article class="ui-card deployment-config-card deployment-config-card--latest"><section class="deployment-config-section"><h2>Latest deployment</h2><p><strong>{{ latestBuildStatus() }}</strong>@if (latestBuild(); as build) { · {{ build.buildType === 'published' ? 'Production' : 'Preview' }} · {{ build.deployProvider || 'local' }} }</p>@if (latestBuild()?.deployRevision) { <p>Revision <code>{{ latestBuild()?.deployRevision }}</code></p> }<div class="hero-actions"><a class="button button-secondary" routerLink="/publishing">Publish</a><a class="button button-secondary" routerLink="/publishing/history">View history</a></div></section></article>
+  </form>
 </section>

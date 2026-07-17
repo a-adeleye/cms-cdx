@@ -1,0 +1,10 @@
+.ai-settings-form {
+  display: grid;
+  gap: 1rem;
+  max-width: 48rem;
+}
+
+.ai-settings-form label {
+  display: grid;
+  gap: .45rem;
+}

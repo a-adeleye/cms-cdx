@@ -25,10 +25,11 @@ type CloudflarePagesAdapter struct {
 }
 
 func (a CloudflarePagesAdapter) Deploy(ctx context.Context, site models.Site, build models.Build, outputPath string) (*DeployResult, error) {
-	if site.DeployProvider == "" || site.DeployProvider == "none" {
+	provider, deployConfig := providerConfigForBuild(site, build)
+	if provider == "none" {
 		return &DeployResult{Provider: "none", Message: "deployment not configured"}, nil
 	}
-	if site.DeployProvider != "cloudflare_pages" {
+	if !strings.EqualFold(provider, "cloudflare_pages") {
 		return &DeployResult{Provider: "none", Message: "deployment is managed by the configured provider"}, nil
 	}
 	if a.APIToken == "" || a.AccountID == "" {
@@ -38,7 +39,7 @@ func (a CloudflarePagesAdapter) Deploy(ctx context.Context, site models.Site, bu
 		return nil, fmt.Errorf("deployment output directory is unavailable")
 	}
 
-	projectName, productionBranch, err := pagesConfig(site.DeployConfig)
+	projectName, productionBranch, err := pagesConfig(deployConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +66,7 @@ func (a CloudflarePagesAdapter) Deploy(ctx context.Context, site models.Site, bu
 	if url == "" {
 		return nil, fmt.Errorf("Cloudflare Pages deployment completed without a preview URL")
 	}
-	if err := verifyDeployment(deployCtx, url, outputPath); err != nil {
+	if err := verifyDeployment(deployCtx, url, site.BlogPath, outputPath); err != nil {
 		return nil, err
 	}
 	return &DeployResult{Provider: "cloudflare_pages", URL: url, Message: message + "\nPost-deploy verification passed."}, nil
@@ -106,18 +107,16 @@ func childEnvironment(values ...string) []string {
 	return append(environment, values...)
 }
 
-func verifyDeployment(ctx context.Context, deploymentURL, outputPath string) error {
+func verifyDeployment(ctx context.Context, deploymentURL, blogPath, outputPath string) error {
 	parsedURL, err := url.Parse(deploymentURL)
 	if err != nil || parsedURL.Scheme != "https" || !strings.HasSuffix(parsedURL.Hostname(), ".pages.dev") {
 		return fmt.Errorf("Cloudflare Pages returned an invalid deployment URL")
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	paths := []string{"/", "/articles/"}
-	if articlePath, err := firstArticlePath(outputPath); err != nil {
+	paths, err := deploymentVerificationPaths(blogPath, outputPath)
+	if err != nil {
 		return err
-	} else if articlePath != "" {
-		paths = append(paths, articlePath)
 	}
 	for _, path := range paths {
 		if err := verifyPath(ctx, client, deploymentURL+path); err != nil {
@@ -127,8 +126,23 @@ func verifyDeployment(ctx context.Context, deploymentURL, outputPath string) err
 	return nil
 }
 
-func firstArticlePath(outputPath string) (string, error) {
-	entries, err := os.ReadDir(filepath.Join(outputPath, "articles"))
+func deploymentVerificationPaths(blogPath, outputPath string) ([]string, error) {
+	canonicalBlogPath, err := models.CanonicalBlogPath(blogPath)
+	if err != nil {
+		return nil, fmt.Errorf("validate blog path for post-deploy verification: %w", err)
+	}
+
+	paths := []string{"/", canonicalBlogPath + "/"}
+	if articlePath, err := firstArticlePath(outputPath, canonicalBlogPath); err != nil {
+		return nil, err
+	} else if articlePath != "" {
+		paths = append(paths, articlePath)
+	}
+	return paths, nil
+}
+
+func firstArticlePath(outputPath, blogPath string) (string, error) {
+	entries, err := os.ReadDir(filepath.Join(outputPath, filepath.FromSlash(strings.TrimPrefix(blogPath, "/"))))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", nil
@@ -137,8 +151,8 @@ func firstArticlePath(outputPath string) (string, error) {
 	}
 	for _, entry := range entries {
 		if entry.IsDir() {
-			if _, err := os.Stat(filepath.Join(outputPath, "articles", entry.Name(), "index.html")); err == nil {
-				return "/articles/" + entry.Name() + "/", nil
+			if _, err := os.Stat(filepath.Join(outputPath, filepath.FromSlash(strings.TrimPrefix(blogPath, "/")), entry.Name(), "index.html")); err == nil {
+				return blogPath + "/" + entry.Name() + "/", nil
 			}
 		}
 	}

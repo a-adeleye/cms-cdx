@@ -7,7 +7,6 @@
       </div>
 
       <div class="hero-actions">
-        <a class="button button-secondary" routerLink="/settings">Back to settings</a>
         <button class="button button-primary" type="button" (click)="openCreateSiteModal()">Create site</button>
       </div>
     </div>
@@ -60,38 +59,40 @@
               <input type="text" formControlName="name" />
             </label>
             <label>
-              <span>Slug</span>
-              <input
-                type="text"
-                formControlName="slug"
-                aria-describedby="site-create-slug-help site-create-slug-error"
-                [attr.aria-invalid]="siteCreateForm.controls.slug.invalid && siteCreateForm.controls.slug.touched ? 'true' : null"
-              />
-              <small id="site-create-slug-help" class="field-help">Use lowercase letters, numbers, and hyphens only.</small>
-              @if (siteCreateForm.controls.slug.touched && siteCreateForm.controls.slug.errors?.['required']) {
-                <p id="site-create-slug-error" class="field-error" role="alert">Slug is required.</p>
-              } @else if (siteCreateForm.controls.slug.touched && siteCreateForm.controls.slug.errors?.['pattern']) {
-                <p id="site-create-slug-error" class="field-error" role="alert">
-                  Slug must use lowercase letters, numbers, and hyphens only.
-                </p>
-              }
-            </label>
-            <label>
               <span>Domain</span>
               <input type="url" formControlName="domain" />
             </label>
-            <label>
-              <span>Blog path</span>
-              <input type="text" formControlName="blogPath" />
-            </label>
-            <label>
-              <span>Template</span>
-              <select formControlName="templateKey">
-                @for (option of templateOptions(); track option.value) {
-                  <option [value]="option.value">{{ option.label }}</option>
-                }
-              </select>
-            </label>
+
+            <details class="site-advanced">
+              <summary>Advanced options</summary>
+              <div class="form-grid site-advanced__fields">
+                <label>
+                  <span>Slug</span>
+                  <input
+                    type="text"
+                    formControlName="slug"
+                    aria-describedby="site-create-slug-help site-create-slug-error"
+                    [attr.aria-invalid]="siteCreateForm.controls.slug.invalid && siteCreateForm.controls.slug.touched ? 'true' : null"
+                  />
+                  <small id="site-create-slug-help" class="field-help">Leave blank to derive it from the name. Use lowercase letters, numbers, and hyphens only.</small>
+                  @if (siteCreateForm.controls.slug.touched && siteCreateForm.controls.slug.errors?.['pattern']) {
+                    <p id="site-create-slug-error" class="field-error" role="alert">Slug must use lowercase letters, numbers, and hyphens only.</p>
+                  }
+                </label>
+                <label>
+                  <span>Template</span>
+                  <select formControlName="templateKey">
+                    @for (option of templateOptions(); track option.value) {
+                      <option [value]="option.value">{{ option.label }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  <span>Blog path</span>
+                  <input type="text" formControlName="blogPath" />
+                </label>
+              </div>
+            </details>
             @if (siteCreateForm.invalid && siteCreateForm.touched) {
               <p class="field-error" role="alert">Fix the highlighted fields to create the site.</p>
             }

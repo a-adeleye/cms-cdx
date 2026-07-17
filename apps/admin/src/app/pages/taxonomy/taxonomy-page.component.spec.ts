@@ -100,10 +100,10 @@ describe('TaxonomyPageComponent', () => {
 
     it('renders the category description field and uses category CRUD actions', async () => {
       expect(fixture.nativeElement.textContent).toContain('Categories');
-      expect(fixture.nativeElement.textContent).toContain('New category');
+      expect(fixture.nativeElement.textContent).toContain('Add category');
       expect(fixture.nativeElement.textContent).toContain('Description');
       expect(fixture.nativeElement.querySelector('textarea[formcontrolname="description"]')).toBeTruthy();
-      expect(fixture.nativeElement.querySelectorAll('.table-row').length).toBe(1);
+      expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBe(1);
 
       fixture.componentInstance.form.controls.name.setValue('Editorial');
       fixture.componentInstance.form.controls.description.setValue('Editorial content');
@@ -149,11 +149,12 @@ describe('TaxonomyPageComponent', () => {
       fixture.detectChanges();
     });
 
-    it('hides the description field and uses tag CRUD actions', async () => {
+    it('renders optional tag metadata and uses tag CRUD actions', async () => {
       expect(fixture.nativeElement.textContent).toContain('Tags');
-      expect(fixture.nativeElement.textContent).not.toContain('New tag');
+      expect(fixture.nativeElement.textContent).toContain('Add tag');
+      expect(fixture.nativeElement.textContent).toContain('Description');
       expect(fixture.nativeElement.querySelector('textarea[formcontrolname="description"]')).toBeNull();
-      expect(fixture.nativeElement.querySelectorAll('.table-row').length).toBe(1);
+      expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBe(1);
 
       fixture.componentInstance.form.controls.name.setValue('Launch');
       await fixture.componentInstance.save();

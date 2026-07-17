@@ -61,7 +61,7 @@ type NoopBuilder struct{}
 
 func (NoopBuilder) GenerateSite(ctx context.Context, content SiteContent, options GenerateOptions) (string, error) {
 	if options.Preview {
-		return "dist/preview/site", nil
+		return "dist/preview/" + content.Site.Slug, nil
 	}
 	return "dist/sites/" + content.Site.Slug, nil
 }

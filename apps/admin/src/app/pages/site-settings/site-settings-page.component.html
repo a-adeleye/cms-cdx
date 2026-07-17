@@ -1,103 +1,28 @@
-<section class="page">
-  <header class="hero">
-    <p class="eyebrow">Configuration</p>
-    <div class="hero-row">
-      <div>
-        <h1>Site settings</h1>
-      </div>
-
-      <div class="hero-actions">
-        <a class="button button-secondary" routerLink="/settings">Back to settings</a>
-      </div>
-    </div>
+<section class="ui-page site-settings-page">
+  <header class="ui-page-header">
+    <div><h1>Site configuration</h1><p class="ui-page-description">The identity, URL, template, and assets used by every generated build.</p></div>
+    <div class="hero-actions"><a class="button button-secondary" [href]="selectedSiteUrl()" target="_blank" rel="noreferrer">Open site ↗</a><button class="button button-primary" type="button" [disabled]="feedback.isBusy()" (click)="save()">{{ feedback.isBusy() ? 'Saving…' : 'Save configuration' }}</button></div>
   </header>
+  @if (state.error()) { <p class="page-error" role="alert">{{ state.error() }}</p> }
+  @if (feedback.state(); as status) { @if (status.kind !== 'idle') { <p class="page-status" [class.page-status--success]="status.kind === 'success'" [class.page-status--error]="status.kind === 'error'" role="status">{{ status.message }}</p> } }
 
-  @if (state.error()) {
-    <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
-  }
-
-  @if (feedback.state(); as feedbackState) {
-    @if (feedbackState.kind !== 'idle' && feedbackState.message) {
-      <p
-        class="page-status"
-        [class.page-status--loading]="feedbackState.kind === 'loading'"
-        [class.page-status--success]="feedbackState.kind === 'success'"
-        [class.page-status--error]="feedbackState.kind === 'error'"
-        [attr.role]="feedbackState.kind === 'error' ? 'alert' : 'status'"
-        [attr.aria-live]="feedbackState.kind === 'error' ? 'assertive' : 'polite'"
-      >
-        @if (feedbackState.kind === 'loading') {
-          <span class="page-status__spinner" aria-hidden="true"></span>
-        }
-        <span class="page-status__message">{{ feedbackState.message }}</span>
-      </p>
-    }
-  }
-
-  <section class="two-column">
-    <article class="panel">
-      <h2>Update site settings</h2>
-      <form class="form-grid" [formGroup]="siteSettingsForm" (ngSubmit)="saveSiteSettings()" [attr.aria-busy]="feedback.isBusy()">
-        <label>
-          <span>Template</span>
-          <select formControlName="templateKey">
-            @for (option of templateOptions(); track option.value) {
-              <option [value]="option.value">{{ option.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          <span>Theme config</span>
-          <textarea rows="4" formControlName="themeConfig"></textarea>
-        </label>
-        <label>
-          <span>Deployment provider</span>
-          <select formControlName="deployProvider">
-            @for (option of deployProviderOptions; track option.value) {
-              <option [value]="option.value">{{ option.label }}</option>
-            }
-          </select>
-          <small class="field-help">Configure the selected provider on the deployment settings page.</small>
-        </label>
-        <label>
-          <span>Preview deployment provider</span>
-          <select formControlName="previewDeployProvider">
-            @for (option of deployProviderOptions; track option.value) {
-              <option [value]="option.value">{{ option.label }}</option>
-            }
-          </select>
-          <small class="field-help">Configure the selected provider on the deployment settings page.</small>
-        </label>
-        <button class="button button-primary" type="submit" [disabled]="feedback.isBusy()">
-          {{ feedback.isBusy() ? 'Saving...' : 'Save settings' }}
-        </button>
-      </form>
+  <form class="settings-content" [formGroup]="form" (ngSubmit)="save()">
+    <article class="ui-card settings-section-content form-grid">
+      <div><h2>Site identity</h2><p class="muted">This content is rendered into the published blog.</p></div>
+      <label>Site name<input type="text" formControlName="name" /></label>
+      <label>Description<textarea rows="3" formControlName="description"></textarea><small>{{ form.controls.description.value.length }} / 180</small></label>
+      <label>Blog context<select formControlName="contentContext"><option value="application_blog">Application blog</option><option value="standalone_blog">Standalone blog</option></select><small>@if (form.controls.contentContext.value === 'application_blog') { AI writing will prioritize search intent, product relevance, and conversion-aware calls to action. } @else { AI writing will prioritize helpful, editorial, and audience-focused articles. }</small></label>
+      <div class="field-row"><label>Public site URL<input type="url" formControlName="domain" placeholder="https://www.example.com" /></label><label>Blog path<input type="text" formControlName="blogPath" placeholder="/blog" /><small>For a repository deployment, this path is generated into the configured repository directory.</small></label></div>
+      <div class="field-row"><label>Template<select formControlName="templateKey">@for (option of templateOptions(); track option.value) { <option [value]="option.value">{{ option.label }}</option> }</select></label><label>Accent color<input type="color" formControlName="accentColor" /></label></div>
     </article>
 
-    <article class="panel">
-      <h2>Current site</h2>
-      <dl class="definition-list">
-        <div>
-          <dt>Name</dt>
-          <dd>{{ state.selectedSite().name }}</dd>
-        </div>
-        <div>
-          <dt>Domain</dt>
-          <dd>{{ state.selectedSite().domain }}</dd>
-        </div>
-        <div>
-          <dt>Template</dt>
-          <dd>{{ state.selectedSite().templateKey }}</dd>
-        </div>
-        <div>
-          <dt>Production deploy</dt>
-          <dd>{{ state.selectedSite().deployProvider || 'none' }}</dd>
-        </div>
-        <div>
-          <dt>Preview deploy</dt>
-          <dd>{{ state.selectedSite().previewDeployProvider || 'none' }}</dd>
-        </div>
-      </dl>
+    <article class="ui-card settings-section-content">
+      <div><h2>Brand assets</h2><p class="muted">Uploaded files are stored in the media library and referenced by generated pages.</p></div>
+      <div class="settings-brand-assets">
+        <label><span>Logo</span><div class="brand-upload">@if (state.selectedSite().logoUrl) { <img [src]="state.selectedSite().logoUrl" alt="Current site logo" /> } @else { <span class="brand-upload__logo">{{ form.controls.name.value.charAt(0) || 'S' }}</span> }<span>PNG, JPEG, GIF, or WebP up to 12 MB.<input #logoInput type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden (change)="uploadBrandAsset('logo', $event)" /><button class="button button-secondary" type="button" [disabled]="feedback.isBusy()" (click)="logoInput.click()">Upload logo</button></span></div></label>
+        <label><span>Favicon</span><div class="brand-upload">@if (state.selectedSite().faviconUrl) { <img [src]="state.selectedSite().faviconUrl" alt="Current favicon" /> } @else { <span class="brand-upload__favicon">{{ form.controls.name.value.charAt(0) || 'S' }}</span> }<span>Use a square PNG or WebP for best results.<input #faviconInput type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden (change)="uploadBrandAsset('favicon', $event)" /><button class="button button-secondary" type="button" [disabled]="feedback.isBusy()" (click)="faviconInput.click()">Upload favicon</button></span></div></label>
+      </div>
     </article>
-  </section>
+    <div class="hero-actions"><a class="button button-secondary" routerLink="/configuration/templates">View template previews</a><a class="button button-secondary" routerLink="/configuration/deployment">Configure deployment</a><button class="button button-primary" type="submit" [disabled]="feedback.isBusy()">Save configuration</button></div>
+  </form>
 </section>

@@ -40,9 +40,23 @@ test('Astro renders formatting while keeping hostile Markdown inert', () => {
     assert.equal(build.status, 0, `${build.stdout}\n${build.stderr}`);
 
     const html = readFileSync(join(outputDirectory, 'index.html'), 'utf8');
-    assert.equal(readFileSync(join(outputDirectory, 'landing', 'index.html'), 'utf8').includes('Thoughts that'), true);
-    assert.equal(readFileSync(join(outputDirectory, 'articles', 'index.html'), 'utf8').includes('All Articles'), true);
-    assert.equal(readFileSync(join(outputDirectory, 'article', 'index.html'), 'utf8').includes('On this page'), true);
+    const landingHtml = readFileSync(join(outputDirectory, 'landing', 'index.html'), 'utf8');
+    const articlesHtml = readFileSync(join(outputDirectory, 'articles', 'index.html'), 'utf8');
+    const articleHtml = readFileSync(join(outputDirectory, 'article', 'index.html'), 'utf8');
+    assert.equal(landingHtml.includes('Thoughts that'), true);
+    assert.equal(articlesHtml.includes('All Articles'), true);
+    assert.equal(articleHtml.includes('On this page'), true);
+    for (const renderedPage of [landingHtml, articlesHtml, articleHtml]) {
+      assert.match(renderedPage, /href="https:\/\/anonime\.io\/#top"/);
+      assert.match(renderedPage, /href="https:\/\/anonime\.io\/#how-it-works"/);
+      assert.match(renderedPage, /href="https:\/\/anonime\.io\/pricing"/);
+      assert.match(renderedPage, /href="https:\/\/anonime\.io\/blog"/);
+      assert.match(renderedPage, /data-anonime-theme-control/);
+      assert.match(renderedPage, /Built with <strong>privacy by design\.<\/strong>/);
+      assert.match(renderedPage, /Hosted with privacy-first infra/);
+      assert.match(renderedPage, /© 2026 Anonime, Inc\. All rights reserved\./);
+    }
+    assert.match(landingHtml, /localStorage\.setItem\(storageKey, theme\)/);
     assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
     assert.doesNotMatch(html, /javascript:alert/);
     assert.doesNotMatch(html, /Beyond Encryption: Zero-Knowledge Architecture/);

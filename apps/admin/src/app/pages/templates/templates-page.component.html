@@ -1,85 +1,14 @@
-<section class="page">
-  <header class="hero">
-    <p class="eyebrow">Configuration</p>
-    <div class="hero-row">
-      <div>
-        <h1>Templates</h1>
-        <p class="page-description">Register a template folder slug so sites can select it in site settings.</p>
-      </div>
-
-      <div class="hero-actions">
-        <a class="button button-secondary" routerLink="/settings">Back to settings</a>
-      </div>
-    </div>
-  </header>
-
-  @if (state.error()) {
-    <p class="page-error" role="alert" aria-live="polite">{{ state.error() }}</p>
-  }
-
-  @if (feedback.state(); as feedbackState) {
-    @if (feedbackState.kind !== 'idle' && feedbackState.message) {
-      <p
-        class="page-status"
-        [class.page-status--loading]="feedbackState.kind === 'loading'"
-        [class.page-status--success]="feedbackState.kind === 'success'"
-        [class.page-status--error]="feedbackState.kind === 'error'"
-        [attr.role]="feedbackState.kind === 'error' ? 'alert' : 'status'"
-        [attr.aria-live]="feedbackState.kind === 'error' ? 'assertive' : 'polite'"
-      >
-        @if (feedbackState.kind === 'loading') {
-          <span class="page-status__spinner" aria-hidden="true"></span>
-        }
-        <span class="page-status__message">{{ feedbackState.message }}</span>
-      </p>
-    }
-  }
-
-  <section class="two-column">
-    <article class="panel">
-      <h2>Add template</h2>
-      <p class="muted">The slug must match the folder name under `packages/templates`.</p>
-
-      <form class="form-grid" [formGroup]="templateForm" (ngSubmit)="saveTemplate()" [attr.aria-busy]="feedback.isBusy()">
-        <label>
-          <span>Name</span>
-          <input type="text" formControlName="name" />
-        </label>
-
-        <label>
-          <span>Slug</span>
-          <input type="text" formControlName="slug" />
-          <small class="field-help">Use lowercase letters, numbers, and hyphens only.</small>
-        </label>
-
-        @if (templateForm.invalid && templateForm.touched) {
-          <p class="field-error" role="alert">Fix the highlighted fields to save the template.</p>
-        }
-
-        <button class="button button-primary" type="submit" [disabled]="feedback.isBusy()">
-          {{ feedback.isBusy() ? 'Saving...' : 'Save template' }}
-        </button>
-      </form>
-    </article>
-
-    <article class="panel">
-      <div class="toolbar">
-        <div>
-          <h2>Registered templates</h2>
-          <p class="muted">{{ templates().length }} available template options</p>
-        </div>
-      </div>
-
-      <div class="stack">
-        @for (template of templates(); track template.slug) {
-          <article class="list-card">
-            <strong>{{ template.name }}</strong>
-            <span>{{ template.slug }}</span>
-          </article>
-        } @empty {
-          <p class="muted">No templates have been registered yet.</p>
-        }
-      </div>
-    </article>
+<section class="ui-page templates-page">
+  <header class="ui-page-header"><div><h1>Templates</h1><p class="ui-page-description">Choose from templates that are implemented by the production renderer.</p></div><a class="button button-secondary" routerLink="/configuration/site-settings">Site configuration</a></header>
+  @if (state.error()) { <p class="page-error" role="alert">{{ state.error() }}</p> }
+  @if (feedback.state(); as status) { @if (status.kind !== 'idle') { <p class="page-status" [class.page-status--success]="status.kind === 'success'" [class.page-status--error]="status.kind === 'error'">{{ status.message }}</p> } }
+  <section class="ui-card template-filters"><label class="ui-search"><span class="sr-only">Search templates</span><input type="search" placeholder="Search templates…" [value]="search()" (input)="search.set($any($event.target).value)" /></label></section>
+  <section class="template-grid">
+    @for (template of templates(); track template.slug) {
+      <article class="ui-card template-card">
+        <div class="template-preview template-preview--live"><iframe [src]="previewUrl(template.slug)" [title]="template.name + ' live template preview'" loading="lazy" sandbox="allow-same-origin"></iframe></div>
+        <div class="template-card__body"><div><h2>{{ template.name }} @if (template.slug === state.selectedSite().templateKey) { <span class="ui-badge ui-badge--success ui-badge--square">Active</span> }</h2><p>Rendered by the same code used for preview and production builds.</p></div><div class="template-card__actions">@if (template.slug === state.selectedSite().templateKey) { <span class="button button-secondary" aria-disabled="true">Selected</span> } @else { <button class="button button-primary" type="button" [disabled]="feedback.isBusy()" (click)="selectTemplate(template.slug)">Use template</button> }</div></div>
+      </article>
+    } @empty { <p class="muted">No implemented templates match your search.</p> }
   </section>
 </section>

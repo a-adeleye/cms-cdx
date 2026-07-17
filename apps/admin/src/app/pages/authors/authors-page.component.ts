@@ -1,17 +1,16 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterModule } from '@angular/router';
-import { SummaryMetric } from '../../features/pages/page-view.types';
 import { AuthorRecord } from '../../features/pages/pages.model';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
+import { siteHostname } from '../../features/pages/external-url';
 
 @Component({
   selector: 'app-authors-page',
   templateUrl: './authors-page.component.html',
-  styleUrl: '../../features/pages/page-view.component.css',
+  styleUrls: ['../../features/pages/page-view.component.css', './authors-page.component.css'],
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuthorsPageComponent {
@@ -19,13 +18,12 @@ export class AuthorsPageComponent {
   readonly state = inject(WorkspaceStateService);
 
   readonly editingId = signal<string>('');
-  readonly metrics = computed<SummaryMetric[]>(() => [
-    { label: 'Authors', value: String(this.state.authors().length), detail: 'Contributors available for attribution.' },
-    { label: 'Editors', value: '1', detail: 'Editorial operators with review access.' },
-  ]);
-
-  readonly highlights = ['Contributor attribution', 'Role management', 'Reusable profiles'];
-  readonly authors = computed(() => this.state.authors());
+  readonly search = signal('');
+  readonly authors = computed(() => {
+    const search = this.search().trim().toLowerCase();
+    return this.state.authors().filter((author) => !search || `${author.name} ${author.slug} ${author.bio}`.toLowerCase().includes(search));
+  });
+  readonly selectedSiteHost = computed(() => siteHostname(this.state.selectedSite().domain));
 
   readonly form = this.fb.nonNullable.group({
     id: [''],
@@ -68,24 +66,21 @@ export class AuthorsPageComponent {
   }
 
   async remove(author: AuthorRecord): Promise<void> {
-    const confirmed = this.confirmDelete(author);
-    if (!confirmed) {
+    if (!this.confirmDelete(author)) {
       return;
     }
 
     try {
       this.state.clearError();
       await this.state.deleteAuthor(author.id);
-      if (this.editingId() === author.id) {
-        this.resetForm();
-      }
+      this.resetForm();
     } catch (error) {
       this.reportActionError('Unable to delete author.', error);
     }
   }
 
-  authorDetail(author: AuthorRecord): string {
-    return author.bio ? author.bio : 'No bio provided.';
+  articleCount(authorId: string): number {
+    return this.state.articles().filter((article) => article.authorId === authorId).length;
   }
 
   private resetForm(): void {
@@ -101,11 +96,7 @@ export class AuthorsPageComponent {
   }
 
   private confirmDelete(author: AuthorRecord): boolean {
-    if (typeof globalThis.confirm !== 'function') {
-      return true;
-    }
-
-    return globalThis.confirm(`Delete ${author.name}? This cannot be undone.`);
+    return typeof globalThis.confirm !== 'function' || globalThis.confirm(`Delete ${author.name}? This cannot be undone.`);
   }
 
   private reportActionError(message: string, error: unknown): void {

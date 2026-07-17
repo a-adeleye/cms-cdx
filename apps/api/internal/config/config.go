@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 type Config struct {
@@ -28,6 +29,7 @@ type Config struct {
 	BuildOutputRoot     string
 	NPMCommand          string
 	WranglerCommand     string
+	GitAllowedHosts     []string
 }
 
 func Load() Config {
@@ -50,6 +52,7 @@ func Load() Config {
 		BuildOutputRoot:     getEnv("BUILD_OUTPUT_ROOT", "/tmp/cms-builder-builds"),
 		NPMCommand:          getEnv("NPM_COMMAND", "npm"),
 		WranglerCommand:     getEnv("WRANGLER_COMMAND", "wrangler"),
+		GitAllowedHosts:     splitCSV(getEnv("GIT_ALLOWED_HOSTS", "github.com,gitlab.com")),
 	}
 }
 
@@ -59,6 +62,9 @@ func (c Config) Validate() error {
 	}
 	if c.BuilderDirectory == "" || c.BuildOutputRoot == "" || c.NPMCommand == "" || c.WranglerCommand == "" {
 		return fmt.Errorf("builder configuration cannot be empty")
+	}
+	if len(c.GitAllowedHosts) == 0 {
+		return fmt.Errorf("GIT_ALLOWED_HOSTS must contain at least one hostname")
 	}
 	if info, err := os.Stat(c.BuilderDirectory); err != nil || !info.IsDir() {
 		return fmt.Errorf("BUILDER_DIRECTORY must reference a directory")
@@ -81,6 +87,16 @@ func (c Config) Validate() error {
 		}
 	}
 	return nil
+}
+
+func splitCSV(value string) []string {
+	items := make([]string, 0)
+	for _, item := range strings.Split(value, ",") {
+		if item = strings.ToLower(strings.TrimSpace(item)); item != "" {
+			items = append(items, item)
+		}
+	}
+	return items
 }
 
 func getEnv(name, fallback string) string {

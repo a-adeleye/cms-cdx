@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -41,6 +43,12 @@ type siteResponse struct {
 	Slug                  string   `json:"slug"`
 	Domain                string   `json:"domain"`
 	BlogPath              string   `json:"blogPath"`
+	Description           string   `json:"description"`
+	ContentContext        string   `json:"contentContext"`
+	LogoMediaID           string   `json:"logoMediaId"`
+	LogoURL               string   `json:"logoUrl"`
+	FaviconMediaID        string   `json:"faviconMediaId"`
+	FaviconURL            string   `json:"faviconUrl"`
 	Status                string   `json:"status"`
 	TemplateKey           string   `json:"templateKey"`
 	ThemeConfig           string   `json:"themeConfig"`
@@ -55,10 +63,11 @@ type siteResponse struct {
 }
 
 type templateResponse struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Slug      string `json:"slug"`
-	UpdatedAt string `json:"updatedAt"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Slug       string `json:"slug"`
+	UpdatedAt  string `json:"updatedAt"`
+	PreviewURL string `json:"previewUrl"`
 }
 
 type landingSectionResp struct {
@@ -119,11 +128,6 @@ type tagResponse struct {
 	Slug   string `json:"slug"`
 }
 
-type templateUpsertRequest struct {
-	Name string `json:"name"`
-	Slug string `json:"slug"`
-}
-
 type mediaAssetResponse struct {
 	ID              string `json:"id"`
 	SiteID          string `json:"siteId"`
@@ -134,6 +138,7 @@ type mediaAssetResponse struct {
 	StorageProvider string `json:"storageProvider"`
 	StorageKey      string `json:"storageKey"`
 	AltText         string `json:"altText"`
+	CreatedAt       string `json:"createdAt"`
 }
 
 type buildResponse struct {
@@ -146,6 +151,7 @@ type buildResponse struct {
 	DeployProvider string  `json:"deployProvider"`
 	DeployStatus   string  `json:"deployStatus"`
 	DeployURL      string  `json:"deployUrl"`
+	DeployRevision string  `json:"deployRevision"`
 	StartedAt      *string `json:"startedAt"`
 	FinishedAt     *string `json:"finishedAt"`
 }
@@ -155,6 +161,10 @@ type siteUpsertRequest struct {
 	Slug                  string `json:"slug"`
 	Domain                string `json:"domain"`
 	BlogPath              string `json:"blogPath"`
+	Description           string `json:"description"`
+	ContentContext        string `json:"contentContext"`
+	LogoMediaID           string `json:"logoMediaId"`
+	FaviconMediaID        string `json:"faviconMediaId"`
 	Status                string `json:"status"`
 	TemplateKey           string `json:"templateKey"`
 	ThemeConfig           string `json:"themeConfig"`
@@ -272,25 +282,7 @@ func (a *API) templates(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"items": items})
 	case http.MethodPost:
-		var payload templateUpsertRequest
-		if err := decodeJSON(r, &payload); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid template payload"})
-			return
-		}
-		template, err := a.createTemplate(r.Context(), payload)
-		if err != nil {
-			if errors.Is(err, errValidation) {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-				return
-			}
-			if isUniqueViolation(err) {
-				writeJSON(w, http.StatusConflict, map[string]string{"error": "template slug already exists"})
-				return
-			}
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to create template"})
-			return
-		}
-		writeJSON(w, http.StatusCreated, template)
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "templates must be implemented in the production renderer"})
 	default:
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 	}
@@ -880,12 +872,29 @@ func (a *API) handleMediaRoutes(w http.ResponseWriter, r *http.Request, siteID s
 				return
 			}
 
-			mimeType := strings.TrimSpace(header.Header.Get("Content-Type"))
-			if mimeType == "" {
-				mimeType = http.DetectContentType(contents)
+			// Never trust the multipart Content-Type supplied by the client. Detect the
+			// payload from its bytes and allow only formats supported by the CMS.
+			mimeType := http.DetectContentType(contents)
+			allowedImageTypes := map[string]bool{
+				"image/gif":  true,
+				"image/jpeg": true,
+				"image/png":  true,
+				"image/webp": true,
 			}
-			if !strings.HasPrefix(mimeType, "image/") {
+			if !allowedImageTypes[mimeType] {
 				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "only image uploads are supported"})
+				return
+			}
+			extensionTypes := map[string]string{
+				".gif":  "image/gif",
+				".jpeg": "image/jpeg",
+				".jpg":  "image/jpeg",
+				".png":  "image/png",
+				".webp": "image/webp",
+			}
+			extension := strings.ToLower(filepath.Ext(header.Filename))
+			if extensionTypes[extension] != mimeType {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file extension does not match image content"})
 				return
 			}
 
@@ -1043,6 +1052,12 @@ func (a *API) listSites(ctx context.Context) ([]siteResponse, error) {
 			slug,
 			COALESCE(domain, ''),
 			blog_path,
+			COALESCE(description, ''),
+			content_context,
+			COALESCE(logo_media_id::text, ''),
+			COALESCE((SELECT file_url FROM media_assets WHERE id = sites.logo_media_id), ''),
+			COALESCE(favicon_media_id::text, ''),
+			COALESCE((SELECT file_url FROM media_assets WHERE id = sites.favicon_media_id), ''),
 			status,
 			template_key,
 			COALESCE(theme_config::text, '{}'),
@@ -1065,7 +1080,7 @@ func (a *API) listSites(ctx context.Context) ([]siteResponse, error) {
 	for rows.Next() {
 		var site siteResponse
 		var updatedAt time.Time
-		if err := rows.Scan(&site.ID, &site.Name, &site.Slug, &site.Domain, &site.BlogPath, &site.Status, &site.TemplateKey, &site.ThemeConfig, &site.DeployProvider, &site.DeployConfig, &site.PreviewDeployProvider, &site.PreviewDeployConfig, &site.AIConfig, &site.StorageConfig, &updatedAt); err != nil {
+		if err := rows.Scan(&site.ID, &site.Name, &site.Slug, &site.Domain, &site.BlogPath, &site.Description, &site.ContentContext, &site.LogoMediaID, &site.LogoURL, &site.FaviconMediaID, &site.FaviconURL, &site.Status, &site.TemplateKey, &site.ThemeConfig, &site.DeployProvider, &site.DeployConfig, &site.PreviewDeployProvider, &site.PreviewDeployConfig, &site.AIConfig, &site.StorageConfig, &updatedAt); err != nil {
 			return nil, err
 		}
 		site.UpdatedAt = updatedAt.Format(time.RFC3339)
@@ -1084,6 +1099,12 @@ func (a *API) getSite(ctx context.Context, siteID string) (siteResponse, error) 
 			slug,
 			COALESCE(domain, ''),
 			blog_path,
+			COALESCE(description, ''),
+			content_context,
+			COALESCE(logo_media_id::text, ''),
+			COALESCE((SELECT file_url FROM media_assets WHERE id = sites.logo_media_id), ''),
+			COALESCE(favicon_media_id::text, ''),
+			COALESCE((SELECT file_url FROM media_assets WHERE id = sites.favicon_media_id), ''),
 			status,
 			template_key,
 			COALESCE(theme_config::text, '{}'),
@@ -1100,7 +1121,7 @@ func (a *API) getSite(ctx context.Context, siteID string) (siteResponse, error) 
 
 	var site siteResponse
 	var updatedAt time.Time
-	if err := row.Scan(&site.ID, &site.Name, &site.Slug, &site.Domain, &site.BlogPath, &site.Status, &site.TemplateKey, &site.ThemeConfig, &site.DeployProvider, &site.DeployConfig, &site.PreviewDeployProvider, &site.PreviewDeployConfig, &site.AIConfig, &site.StorageConfig, &updatedAt); err != nil {
+	if err := row.Scan(&site.ID, &site.Name, &site.Slug, &site.Domain, &site.BlogPath, &site.Description, &site.ContentContext, &site.LogoMediaID, &site.LogoURL, &site.FaviconMediaID, &site.FaviconURL, &site.Status, &site.TemplateKey, &site.ThemeConfig, &site.DeployProvider, &site.DeployConfig, &site.PreviewDeployProvider, &site.PreviewDeployConfig, &site.AIConfig, &site.StorageConfig, &updatedAt); err != nil {
 		return siteResponse{}, err
 	}
 	site.UpdatedAt = updatedAt.Format(time.RFC3339)
@@ -1127,32 +1148,10 @@ func (a *API) listTemplates(ctx context.Context) ([]templateResponse, error) {
 			return nil, err
 		}
 		item.UpdatedAt = updatedAt.Format(time.RFC3339)
+		item.PreviewURL = "/api/v1/template-previews/" + item.Slug
 		items = append(items, item)
 	}
 	return items, rows.Err()
-}
-
-func (a *API) createTemplate(ctx context.Context, payload templateUpsertRequest) (templateResponse, error) {
-	name := strings.TrimSpace(payload.Name)
-	slug := strings.TrimSpace(payload.Slug)
-	if name == "" || slug == "" {
-		return templateResponse{}, fmt.Errorf("%w: template name and slug are required", errValidation)
-	}
-	if !templateSlugPattern.MatchString(slug) {
-		return templateResponse{}, fmt.Errorf("%w: template slug must use lowercase letters, numbers, and hyphens only", errValidation)
-	}
-
-	var item templateResponse
-	var updatedAt time.Time
-	if err := a.Services.DB.QueryRowContext(ctx, `
-		INSERT INTO templates (name, slug)
-		VALUES ($1, $2)
-		RETURNING id::text, name, slug, updated_at
-	`, name, slug).Scan(&item.ID, &item.Name, &item.Slug, &updatedAt); err != nil {
-		return templateResponse{}, err
-	}
-	item.UpdatedAt = updatedAt.Format(time.RFC3339)
-	return item, nil
 }
 
 func (a *API) createSite(ctx context.Context, payload siteUpsertRequest) (siteResponse, error) {
@@ -1177,11 +1176,11 @@ func (a *API) createSite(ctx context.Context, payload siteUpsertRequest) (siteRe
 	var updatedAt time.Time
 	err = tx.QueryRowContext(ctx, `
 		INSERT INTO sites (
-			name, slug, domain, blog_path, status, template_key, theme_config, deploy_provider, deploy_config, preview_deploy_provider, preview_deploy_config, ai_config, storage_config
+			name, slug, domain, blog_path, description, content_context, status, template_key, theme_config, deploy_provider, deploy_config, preview_deploy_provider, preview_deploy_config, ai_config, storage_config
 		)
-		VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7::jsonb, NULLIF($8, ''), $9::jsonb, NULLIF($10, ''), $11::jsonb, $12::jsonb, $13::jsonb)
+		VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9::jsonb, NULLIF($10, ''), $11::jsonb, NULLIF($12, ''), $13::jsonb, $14::jsonb, $15::jsonb)
 		RETURNING id::text, updated_at
-	`, payload.Name, payload.Slug, payload.Domain, fallbackString(payload.BlogPath, "/articles"), fallbackString(payload.Status, "active"), fallbackString(payload.TemplateKey, "default-blog"), fallbackJSON(payload.ThemeConfig, `{"tone":"professional"}`), payload.DeployProvider, fallbackJSON(payload.DeployConfig, `{}`), payload.PreviewDeployProvider, fallbackJSON(payload.PreviewDeployConfig, `{}`), fallbackJSON(payload.AIConfig, `{}`), fallbackJSON(payload.StorageConfig, `{}`)).Scan(&siteID, &updatedAt)
+	`, payload.Name, payload.Slug, payload.Domain, fallbackString(payload.BlogPath, "/articles"), strings.TrimSpace(payload.Description), siteContentContext(payload.ContentContext), fallbackString(payload.Status, "active"), fallbackString(payload.TemplateKey, "default-blog"), fallbackJSON(payload.ThemeConfig, `{"tone":"professional"}`), payload.DeployProvider, fallbackJSON(payload.DeployConfig, `{}`), payload.PreviewDeployProvider, fallbackJSON(payload.PreviewDeployConfig, `{}`), fallbackJSON(payload.AIConfig, `{}`), fallbackJSON(payload.StorageConfig, `{}`)).Scan(&siteID, &updatedAt)
 	if err != nil {
 		return siteResponse{}, err
 	}
@@ -1204,6 +1203,9 @@ func (a *API) updateSite(ctx context.Context, siteID string, payload siteUpsertR
 	if err := a.templateExists(ctx, fallbackString(payload.TemplateKey, "default-blog")); err != nil {
 		return siteResponse{}, err
 	}
+	if err := a.validateBrandingAssets(ctx, siteID, payload.LogoMediaID, payload.FaviconMediaID); err != nil {
+		return siteResponse{}, err
+	}
 
 	result, err := a.Services.DB.ExecContext(ctx, `
 		UPDATE sites
@@ -1212,18 +1214,22 @@ func (a *API) updateSite(ctx context.Context, siteID string, payload siteUpsertR
 			slug = $3,
 			domain = NULLIF($4, ''),
 			blog_path = $5,
-			status = $6,
-			template_key = $7,
-			theme_config = $8::jsonb,
-			deploy_provider = NULLIF($9, ''),
-			deploy_config = $10::jsonb,
-			preview_deploy_provider = NULLIF($11, ''),
-			preview_deploy_config = $12::jsonb,
-			ai_config = $13::jsonb,
-			storage_config = $14::jsonb,
+			description = $6,
+			content_context = COALESCE(NULLIF($7, ''), content_context),
+			logo_media_id = NULLIF($8, '')::uuid,
+			favicon_media_id = NULLIF($9, '')::uuid,
+			status = $10,
+			template_key = $11,
+			theme_config = $12::jsonb,
+			deploy_provider = NULLIF($13, ''),
+			deploy_config = $14::jsonb,
+			preview_deploy_provider = NULLIF($15, ''),
+			preview_deploy_config = $16::jsonb,
+			ai_config = $17::jsonb,
+			storage_config = $18::jsonb,
 			updated_at = NOW()
 		WHERE id = $1
-	`, siteID, payload.Name, payload.Slug, payload.Domain, fallbackString(payload.BlogPath, "/articles"), fallbackString(payload.Status, "active"), fallbackString(payload.TemplateKey, "default-blog"), fallbackJSON(payload.ThemeConfig, `{}`), payload.DeployProvider, fallbackJSON(payload.DeployConfig, `{}`), payload.PreviewDeployProvider, fallbackJSON(payload.PreviewDeployConfig, `{}`), fallbackJSON(payload.AIConfig, `{}`), fallbackJSON(payload.StorageConfig, `{}`))
+	`, siteID, payload.Name, payload.Slug, payload.Domain, fallbackString(payload.BlogPath, "/articles"), strings.TrimSpace(payload.Description), strings.TrimSpace(payload.ContentContext), payload.LogoMediaID, payload.FaviconMediaID, fallbackString(payload.Status, "active"), fallbackString(payload.TemplateKey, "default-blog"), fallbackJSON(payload.ThemeConfig, `{}`), payload.DeployProvider, fallbackJSON(payload.DeployConfig, `{}`), payload.PreviewDeployProvider, fallbackJSON(payload.PreviewDeployConfig, `{}`), fallbackJSON(payload.AIConfig, `{}`), fallbackJSON(payload.StorageConfig, `{}`))
 	if err != nil {
 		return siteResponse{}, err
 	}
@@ -1237,15 +1243,111 @@ func validateSitePayload(payload siteUpsertRequest) error {
 	if strings.TrimSpace(payload.Name) == "" || strings.TrimSpace(payload.Slug) == "" {
 		return fmt.Errorf("%w: name and slug are required", errValidation)
 	}
-	if strings.TrimSpace(payload.DeployProvider) != "cloudflare_pages" {
-		return nil
+	if _, err := models.CanonicalBlogPath(payload.BlogPath); err != nil {
+		return fmt.Errorf("%w: %v", errValidation, err)
 	}
-	if blogPath := fallbackString(payload.BlogPath, "/articles"); blogPath != "/articles" {
-		return fmt.Errorf("%w: Cloudflare Pages builds currently require blogPath /articles", errValidation)
+	if context := strings.TrimSpace(payload.ContentContext); context != "" && !models.IsValidSiteContentContext(context) {
+		return fmt.Errorf("%w: contentContext must be application_blog or standalone_blog", errValidation)
+	}
+	if err := validateAIConfig(payload.AIConfig); err != nil {
+		return err
+	}
+	if err := validateDeploymentConfig(payload.DeployProvider, payload.DeployConfig); err != nil {
+		return err
+	}
+	return validateDeploymentConfig(payload.PreviewDeployProvider, payload.PreviewDeployConfig)
+}
+
+func validateAIConfig(rawConfig string) error {
+	var values map[string]any
+	if err := json.Unmarshal([]byte(fallbackJSON(rawConfig, `{}`)), &values); err != nil {
+		return fmt.Errorf("%w: AI config must be JSON", errValidation)
+	}
+	for key := range values {
+		if key != "provider" && key != "model" && key != "apiKeySecretRef" && key != "baseUrl" {
+			return fmt.Errorf("%w: unsupported AI configuration field %q", errValidation, key)
+		}
+	}
+	provider := configValue(values, "provider")
+	switch provider {
+	case "", "none", "openai", "anthropic", "google":
+	case "openai_compatible":
+		baseURL, err := url.Parse(configValue(values, "baseUrl"))
+		if err != nil || baseURL.Scheme != "https" || baseURL.User != nil || baseURL.Hostname() == "" {
+			return fmt.Errorf("%w: compatible AI provider requires an HTTPS baseUrl without credentials", errValidation)
+		}
+	default:
+		return fmt.Errorf("%w: unsupported AI provider %q", errValidation, provider)
+	}
+	if secretRef := configValue(values, "apiKeySecretRef"); secretRef != "" && !regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,127}$`).MatchString(secretRef) {
+		return fmt.Errorf("%w: apiKeySecretRef must be an environment variable name", errValidation)
+	}
+	return nil
+}
+
+func siteContentContext(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return string(models.SiteContentContextStandaloneBlog)
+	}
+	return strings.TrimSpace(value)
+}
+
+func validateDeploymentConfig(provider, rawConfig string) error {
+	provider = fallbackString(strings.TrimSpace(provider), "none")
+	var values map[string]any
+	if err := json.Unmarshal([]byte(fallbackJSON(rawConfig, `{}`)), &values); err != nil {
+		return fmt.Errorf("%w: deployment config must be JSON", errValidation)
+	}
+	switch provider {
+	case "none":
+		return nil
+	case "cloudflare_pages":
+		return validateCloudflarePagesConfig(provider, rawConfig)
+	case "firebase":
+		if configValue(values, "siteId") == "" && configValue(values, "projectId") == "" {
+			return fmt.Errorf("%w: Firebase deployment requires siteId or projectId", errValidation)
+		}
+		if configValue(values, "serviceAccountSecretRef") == "" {
+			return fmt.Errorf("%w: Firebase deployment requires serviceAccountSecretRef", errValidation)
+		}
+		return nil
+	case "git_repository":
+		repositoryURL := configValue(values, "repositoryUrl")
+		parsed, err := url.Parse(repositoryURL)
+		if err != nil || parsed.Scheme != "https" || parsed.User != nil || parsed.Hostname() == "" {
+			return fmt.Errorf("%w: repositoryUrl must be an HTTPS URL without credentials", errValidation)
+		}
+		if configValue(values, "branch") == "" || configValue(values, "contentPath") == "" {
+			return fmt.Errorf("%w: repository deployment requires branch and contentPath", errValidation)
+		}
+		if _, err := deploySafeRelativePath(configValue(values, "contentPath")); err != nil {
+			return fmt.Errorf("%w: %v", errValidation, err)
+		}
+		return nil
+	default:
+		return fmt.Errorf("%w: unsupported deployment provider %q", errValidation, provider)
+	}
+}
+
+func deploySafeRelativePath(value string) (string, error) {
+	cleaned := filepath.Clean(filepath.FromSlash(strings.TrimSpace(value)))
+	if cleaned == "." || filepath.IsAbs(cleaned) || cleaned == ".." || strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) || strings.Contains(cleaned, ".git") {
+		return "", errors.New("contentPath must be a safe relative directory")
+	}
+	return cleaned, nil
+}
+
+func isCloudflarePagesProvider(provider string) bool {
+	return strings.EqualFold(strings.TrimSpace(provider), "cloudflare_pages")
+}
+
+func validateCloudflarePagesConfig(provider, rawConfig string) error {
+	if !isCloudflarePagesProvider(provider) {
+		return nil
 	}
 
 	var deployConfig map[string]any
-	if err := json.Unmarshal([]byte(fallbackJSON(payload.DeployConfig, `{}`)), &deployConfig); err != nil {
+	if err := json.Unmarshal([]byte(fallbackJSON(rawConfig, `{}`)), &deployConfig); err != nil {
 		return fmt.Errorf("%w: deployment config must be JSON", errValidation)
 	}
 	for key := range deployConfig {
@@ -1253,8 +1355,8 @@ func validateSitePayload(payload siteUpsertRequest) error {
 			return fmt.Errorf("%w: Cloudflare deployment config only supports projectName and productionBranch", errValidation)
 		}
 	}
-	projectName, _ := deployConfig["projectName"].(string)
-	if !cloudflareProjectName.MatchString(strings.TrimSpace(projectName)) {
+	projectName, isString := deployConfig["projectName"].(string)
+	if !isString {
 		return fmt.Errorf("%w: Cloudflare deployment config requires a valid projectName", errValidation)
 	}
 	if branch, ok := deployConfig["productionBranch"]; ok {
@@ -1262,6 +1364,9 @@ func validateSitePayload(payload siteUpsertRequest) error {
 		if !isString || strings.ContainsAny(value, "\r\n") {
 			return fmt.Errorf("%w: Cloudflare deployment config has an invalid productionBranch", errValidation)
 		}
+	}
+	if !cloudflareProjectName.MatchString(strings.TrimSpace(projectName)) {
+		return fmt.Errorf("%w: Cloudflare deployment config requires a valid projectName", errValidation)
 	}
 	return nil
 }
@@ -1276,8 +1381,6 @@ func requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 }
 
 var cloudflareProjectName = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,58}[a-z0-9]$|^[a-z0-9]$`)
-
-var templateSlugPattern = regexp.MustCompile(`^[a-z0-9-]+$`)
 
 func (a *API) templateExists(ctx context.Context, slug string) error {
 	slug = strings.TrimSpace(slug)
@@ -2000,7 +2103,8 @@ func (a *API) listMediaAssets(ctx context.Context, siteID string) ([]mediaAssetR
 			COALESCE(size_bytes, 0),
 			storage_provider,
 			COALESCE(storage_key, ''),
-			COALESCE(alt_text, '')
+			COALESCE(alt_text, ''),
+			created_at
 		FROM media_assets
 		WHERE site_id = $1
 		ORDER BY created_at DESC
@@ -2013,9 +2117,11 @@ func (a *API) listMediaAssets(ctx context.Context, siteID string) ([]mediaAssetR
 	items := make([]mediaAssetResponse, 0)
 	for rows.Next() {
 		var item mediaAssetResponse
-		if err := rows.Scan(&item.ID, &item.SiteID, &item.FileName, &item.FileURL, &item.MimeType, &item.SizeBytes, &item.StorageProvider, &item.StorageKey, &item.AltText); err != nil {
+		var createdAt time.Time
+		if err := rows.Scan(&item.ID, &item.SiteID, &item.FileName, &item.FileURL, &item.MimeType, &item.SizeBytes, &item.StorageProvider, &item.StorageKey, &item.AltText, &createdAt); err != nil {
 			return nil, err
 		}
+		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		items = append(items, item)
 	}
 	return items, rows.Err()
@@ -2169,16 +2275,18 @@ func (a *API) uploadMediaAsset(ctx context.Context, siteID, fileName string, con
 
 func (a *API) persistMediaAsset(ctx context.Context, siteID string, payload mediaUpsertRequest) (mediaAssetResponse, error) {
 	var item mediaAssetResponse
+	var createdAt time.Time
 	err := a.Services.DB.QueryRowContext(ctx, `
 		INSERT INTO media_assets (
 			site_id, file_name, file_url, mime_type, size_bytes, storage_provider, storage_key, alt_text
 		)
 		VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, 0), $6, NULLIF($7, ''), NULLIF($8, ''))
-		RETURNING id::text, site_id::text, file_name, file_url, COALESCE(mime_type, ''), COALESCE(size_bytes, 0), storage_provider, COALESCE(storage_key, ''), COALESCE(alt_text, '')
-	`, siteID, payload.FileName, payload.FileURL, payload.MimeType, payload.SizeBytes, fallbackString(payload.StorageProvider, "s3"), payload.StorageKey, payload.AltText).Scan(&item.ID, &item.SiteID, &item.FileName, &item.FileURL, &item.MimeType, &item.SizeBytes, &item.StorageProvider, &item.StorageKey, &item.AltText)
+		RETURNING id::text, site_id::text, file_name, file_url, COALESCE(mime_type, ''), COALESCE(size_bytes, 0), storage_provider, COALESCE(storage_key, ''), COALESCE(alt_text, ''), created_at
+	`, siteID, payload.FileName, payload.FileURL, payload.MimeType, payload.SizeBytes, fallbackString(payload.StorageProvider, "s3"), payload.StorageKey, payload.AltText).Scan(&item.ID, &item.SiteID, &item.FileName, &item.FileURL, &item.MimeType, &item.SizeBytes, &item.StorageProvider, &item.StorageKey, &item.AltText, &createdAt)
 	if err != nil {
 		return mediaAssetResponse{}, err
 	}
+	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	return item, nil
 }
 
@@ -2209,6 +2317,7 @@ func (a *API) listBuilds(ctx context.Context, siteID string) ([]buildResponse, e
 			COALESCE(deploy_provider, ''),
 			COALESCE(deploy_status, ''),
 			COALESCE(deploy_url, ''),
+			COALESCE(deploy_revision, ''),
 			started_at,
 			finished_at
 		FROM builds
@@ -2225,7 +2334,7 @@ func (a *API) listBuilds(ctx context.Context, siteID string) ([]buildResponse, e
 		var item buildResponse
 		var startedAt sql.NullTime
 		var finishedAt sql.NullTime
-		if err := rows.Scan(&item.ID, &item.SiteID, &item.Status, &item.BuildType, &item.Logs, &item.OutputPath, &item.DeployProvider, &item.DeployStatus, &item.DeployURL, &startedAt, &finishedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.SiteID, &item.Status, &item.BuildType, &item.Logs, &item.OutputPath, &item.DeployProvider, &item.DeployStatus, &item.DeployURL, &item.DeployRevision, &startedAt, &finishedAt); err != nil {
 			return nil, err
 		}
 		if startedAt.Valid {
@@ -2253,6 +2362,7 @@ func (a *API) getBuild(ctx context.Context, buildID string) (buildResponse, erro
 			COALESCE(deploy_provider, ''),
 			COALESCE(deploy_status, ''),
 			COALESCE(deploy_url, ''),
+			COALESCE(deploy_revision, ''),
 			started_at,
 			finished_at
 		FROM builds
@@ -2262,7 +2372,7 @@ func (a *API) getBuild(ctx context.Context, buildID string) (buildResponse, erro
 	var item buildResponse
 	var startedAt sql.NullTime
 	var finishedAt sql.NullTime
-	if err := row.Scan(&item.ID, &item.SiteID, &item.Status, &item.BuildType, &item.Logs, &item.OutputPath, &item.DeployProvider, &item.DeployStatus, &item.DeployURL, &startedAt, &finishedAt); err != nil {
+	if err := row.Scan(&item.ID, &item.SiteID, &item.Status, &item.BuildType, &item.Logs, &item.OutputPath, &item.DeployProvider, &item.DeployStatus, &item.DeployURL, &item.DeployRevision, &startedAt, &finishedAt); err != nil {
 		return buildResponse{}, err
 	}
 	if startedAt.Valid {
@@ -2286,22 +2396,39 @@ func (a *API) createBuild(ctx context.Context, siteID string, payload buildCreat
 	if err != nil {
 		return buildResponse{}, err
 	}
+	buildSite := site
+	provider := fallbackString(site.DeployProvider, "none")
+	if buildType == "preview" {
+		provider = fallbackString(site.PreviewDeployProvider, provider)
+	}
+
+	var buildID string
+	if err := a.Services.DB.QueryRowContext(ctx, `
+		INSERT INTO builds (site_id, status, build_type, logs, deploy_provider, deploy_status, started_at)
+		VALUES ($1, 'running', $2, 'Build started.', $3, 'pending', NOW())
+		RETURNING id::text
+	`, siteID, buildType, provider).Scan(&buildID); err != nil {
+		return buildResponse{}, err
+	}
+	fail := func(cause error) (buildResponse, error) {
+		message := strings.TrimSpace(cause.Error())
+		failureCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_, _ = a.Services.DB.ExecContext(failureCtx, `
+			UPDATE builds SET status = 'failed', deploy_status = 'failed', logs = $2, finished_at = NOW() WHERE id = $1
+		`, buildID, message)
+		return buildResponse{}, cause
+	}
 
 	if buildType == "published" && len(payload.ArticleIDs) > 0 {
 		if err := a.publishArticles(ctx, siteID, payload.ArticleIDs); err != nil {
-			return buildResponse{}, err
+			return fail(err)
 		}
 	}
 
 	content, err := a.siteBuildContent(ctx, siteID, buildType == "published")
 	if err != nil {
-		return buildResponse{}, err
-	}
-
-	buildSite := site
-	if buildType == "preview" {
-		buildSite.DeployProvider = fallbackString(site.PreviewDeployProvider, site.DeployProvider)
-		buildSite.DeployConfig = site.PreviewDeployConfig
+		return fail(err)
 	}
 
 	outputPath, err := a.Services.Builder.GenerateSite(ctx, content, builder.GenerateOptions{
@@ -2310,10 +2437,11 @@ func (a *API) createBuild(ctx context.Context, siteID string, payload buildCreat
 		ArticleIDs: payload.ArticleIDs,
 	})
 	if err != nil {
-		return buildResponse{}, err
+		return fail(err)
 	}
 
 	build := models.Build{
+		ID:         buildID,
 		SiteID:     siteID,
 		Status:     "success",
 		BuildType:  buildType,
@@ -2322,52 +2450,35 @@ func (a *API) createBuild(ctx context.Context, siteID string, payload buildCreat
 	}
 	deployResult, err := a.Services.Deploy.Deploy(ctx, buildSite, build, outputPath)
 	if err != nil {
-		return buildResponse{}, err
+		return fail(err)
 	}
 
 	deployProvider := fallbackString(buildSite.DeployProvider, "none")
 	deployStatus := "deployed"
 	deployURL := ""
+	deployRevision := ""
 	if deployResult != nil {
 		deployProvider = fallbackString(deployResult.Provider, deployProvider)
 		deployStatus = "deployed"
 		deployURL = strings.TrimSpace(deployResult.URL)
+		deployRevision = strings.TrimSpace(deployResult.Revision)
 		if message := strings.TrimSpace(deployResult.Message); message != "" {
 			build.Logs = strings.TrimSpace(build.Logs + " " + message)
 		}
 	}
 
-	var item buildResponse
-	now := time.Now().UTC().Format(time.RFC3339)
-	var startedAt sql.NullTime
-	var finishedAt sql.NullTime
-	err = a.Services.DB.QueryRowContext(ctx, `
-		INSERT INTO builds (
-			site_id, status, build_type, logs, output_path, deploy_provider, deploy_status, deploy_url, started_at, finished_at
-		)
-		VALUES ($1, 'success', $2, $3, $4, $5, $6, $7, NOW(), NOW())
-		RETURNING id::text, site_id::text, status, build_type, logs, output_path, COALESCE(deploy_provider, ''), COALESCE(deploy_status, ''), COALESCE(deploy_url, ''), started_at, finished_at
-	`, siteID, buildType, build.Logs, outputPath, deployProvider, deployStatus, deployURL).Scan(&item.ID, &item.SiteID, &item.Status, &item.BuildType, &item.Logs, &item.OutputPath, &item.DeployProvider, &item.DeployStatus, &item.DeployURL, &startedAt, &finishedAt)
+	err = func() error {
+		_, updateErr := a.Services.DB.ExecContext(ctx, `
+			UPDATE builds SET status = 'success', logs = $2, output_path = $3, deploy_provider = $4,
+				deploy_status = $5, deploy_url = $6, deploy_revision = $7, finished_at = NOW()
+			WHERE id = $1
+		`, buildID, build.Logs, outputPath, deployProvider, deployStatus, deployURL, deployRevision)
+		return updateErr
+	}()
 	if err != nil {
-		return buildResponse{}, err
+		return fail(err)
 	}
-	item.DeployProvider = deployProvider
-	item.DeployStatus = deployStatus
-	item.DeployURL = deployURL
-	item.Logs = build.Logs
-	if startedAt.Valid {
-		value := startedAt.Time.UTC().Format(time.RFC3339)
-		item.StartedAt = &value
-	} else {
-		item.StartedAt = &now
-	}
-	if finishedAt.Valid {
-		value := finishedAt.Time.UTC().Format(time.RFC3339)
-		item.FinishedAt = &value
-	} else {
-		item.FinishedAt = &now
-	}
-	return item, nil
+	return a.getBuild(ctx, buildID)
 }
 
 func buildLogs(buildType string, articleCount int) string {
@@ -2546,6 +2657,12 @@ func (a *API) getSiteModel(ctx context.Context, siteID string) (models.Site, err
 			slug,
 			COALESCE(domain, ''),
 			blog_path,
+			COALESCE(description, ''),
+			content_context,
+			COALESCE(logo_media_id::text, ''),
+			COALESCE((SELECT file_url FROM media_assets WHERE id = sites.logo_media_id), ''),
+			COALESCE(favicon_media_id::text, ''),
+			COALESCE((SELECT file_url FROM media_assets WHERE id = sites.favicon_media_id), ''),
 			status,
 			template_key,
 			COALESCE(theme_config::text, '{}'),
@@ -2567,7 +2684,7 @@ func (a *API) getSiteModel(ctx context.Context, siteID string) (models.Site, err
 	var previewDeployConfig string
 	var aiConfig string
 	var storageConfig string
-	if err := row.Scan(&site.ID, &site.Name, &site.Slug, &site.Domain, &site.BlogPath, &site.Status, &site.TemplateKey, &themeConfig, &site.DeployProvider, &deployConfig, &site.PreviewDeployProvider, &previewDeployConfig, &aiConfig, &storageConfig, &site.CreatedAt, &site.UpdatedAt); err != nil {
+	if err := row.Scan(&site.ID, &site.Name, &site.Slug, &site.Domain, &site.BlogPath, &site.Description, &site.ContentContext, &site.LogoMediaID, &site.LogoURL, &site.FaviconMediaID, &site.FaviconURL, &site.Status, &site.TemplateKey, &themeConfig, &site.DeployProvider, &deployConfig, &site.PreviewDeployProvider, &previewDeployConfig, &aiConfig, &storageConfig, &site.CreatedAt, &site.UpdatedAt); err != nil {
 		return models.Site{}, err
 	}
 	site.ThemeConfig = parseJSONMap(themeConfig)
@@ -2576,6 +2693,23 @@ func (a *API) getSiteModel(ctx context.Context, siteID string) (models.Site, err
 	site.AIConfig = parseJSONMap(aiConfig)
 	site.StorageConfig = parseJSONMap(storageConfig)
 	return site, nil
+}
+
+func (a *API) validateBrandingAssets(ctx context.Context, siteID string, mediaIDs ...string) error {
+	for _, mediaID := range mediaIDs {
+		mediaID = strings.TrimSpace(mediaID)
+		if mediaID == "" {
+			continue
+		}
+		var exists bool
+		if err := a.Services.DB.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM media_assets WHERE id = $1 AND site_id = $2)`, mediaID, siteID).Scan(&exists); err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("%w: branding assets must belong to the selected site", errValidation)
+		}
+	}
+	return nil
 }
 
 func parseJSONMap(raw string) map[string]any {
@@ -2594,9 +2728,41 @@ func parseJSONMap(raw string) map[string]any {
 }
 
 func deploymentWarningsForSite(site siteResponse) []string {
-	warnings := make([]string, 0, 2)
+	warnings := make([]string, 0, 4)
 	warnings = append(warnings, firebaseDeploymentWarnings("production", site.DeployProvider, site.DeployConfig)...)
 	warnings = append(warnings, firebaseDeploymentWarnings("preview", site.PreviewDeployProvider, site.PreviewDeployConfig)...)
+	warnings = append(warnings, cloudflarePagesDeploymentWarnings("production", site.DeployProvider, site.DeployConfig)...)
+	warnings = append(warnings, cloudflarePagesDeploymentWarnings("preview", site.PreviewDeployProvider, site.PreviewDeployConfig)...)
+	warnings = append(warnings, repositoryDeploymentWarnings("production", site.DeployProvider, site.DeployConfig)...)
+	warnings = append(warnings, repositoryDeploymentWarnings("preview", site.PreviewDeployProvider, site.PreviewDeployConfig)...)
+	return warnings
+}
+
+func repositoryDeploymentWarnings(channel, provider, rawConfig string) []string {
+	if !strings.EqualFold(strings.TrimSpace(provider), "git_repository") {
+		return nil
+	}
+	values := parseJSONMap(rawConfig)
+	secretRef := strings.TrimSpace(configValue(values, "tokenSecretRef"))
+	if secretRef != "" && strings.TrimSpace(os.Getenv(secretRef)) == "" {
+		return []string{fmt.Sprintf("Repository %s deploy secret %s is not set on the API server.", channel, secretRef)}
+	}
+	return nil
+}
+
+func cloudflarePagesDeploymentWarnings(channel, provider, rawConfig string) []string {
+	if !isCloudflarePagesProvider(provider) {
+		return nil
+	}
+
+	values := parseJSONMap(rawConfig)
+	warnings := make([]string, 0, 2)
+	if !cloudflareProjectName.MatchString(strings.TrimSpace(configValue(values, "projectName"))) {
+		warnings = append(warnings, fmt.Sprintf("Cloudflare Pages %s deployment config is missing a valid projectName.", channel))
+	}
+	if strings.TrimSpace(os.Getenv("CLOUDFLARE_API_TOKEN")) == "" || strings.TrimSpace(os.Getenv("CLOUDFLARE_ACCOUNT_ID")) == "" {
+		warnings = append(warnings, fmt.Sprintf("Cloudflare Pages %s deployment requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID on the API server.", channel))
+	}
 	return warnings
 }
 

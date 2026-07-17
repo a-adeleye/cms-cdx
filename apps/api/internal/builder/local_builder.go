@@ -107,6 +107,10 @@ func (b LocalBuilder) GenerateSite(ctx context.Context, content SiteContent, opt
 	if strings.TrimSpace(content.Site.Slug) == "" {
 		return "", errors.New("site slug is required")
 	}
+	blogPath, err := models.CanonicalBlogPath(content.Site.BlogPath)
+	if err != nil {
+		return "", fmt.Errorf("invalid blog path: %w", err)
+	}
 
 	articles := content.Articles
 	if options.Preview && len(options.ArticleIDs) > 0 {
@@ -141,7 +145,7 @@ func (b LocalBuilder) GenerateSite(ctx context.Context, content SiteContent, opt
 		Theme:            themeForSite(content.Site),
 		Preview:          options.Preview,
 		BuildType:        buildTypeLabel(options.Preview),
-		BasePath:         normalizedBlogPath(content.Site.BlogPath),
+		BasePath:         blogPath,
 		PublicBaseURL:    publicBaseURL(content.Site),
 		Title:            content.Site.Name,
 		Description:      siteDescription(content.Site),
@@ -163,11 +167,12 @@ func (b LocalBuilder) GenerateSite(ctx context.Context, content SiteContent, opt
 	if err := writeFile(filepath.Join(outputPath, "index.html"), renderHomePage(rendered)); err != nil {
 		return "", err
 	}
-	if err := writeFile(filepath.Join(outputPath, "articles", "index.html"), renderArticlesPage(rendered)); err != nil {
+	blogOutputPath := filepath.Join(outputPath, filepath.FromSlash(strings.TrimPrefix(rendered.BasePath, "/")))
+	if err := writeFile(filepath.Join(blogOutputPath, "index.html"), renderArticlesPage(rendered)); err != nil {
 		return "", err
 	}
 	for _, article := range articles {
-		articleDir := filepath.Join(outputPath, "articles", safePathSegment(article.Slug))
+		articleDir := filepath.Join(blogOutputPath, safePathSegment(article.Slug))
 		if err := writeFile(filepath.Join(articleDir, "index.html"), renderArticlePage(rendered, article)); err != nil {
 			return "", err
 		}
@@ -187,20 +192,9 @@ func (b LocalBuilder) GenerateSite(ctx context.Context, content SiteContent, opt
 
 func buildOutputPath(root string, site models.Site, preview bool) string {
 	if preview {
-		return filepath.Join(root, "preview", "site")
+		return filepath.Join(root, "preview", safePathSegment(site.Slug))
 	}
 	return filepath.Join(root, "sites", safePathSegment(site.Slug))
-}
-
-func normalizedBlogPath(value string) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return "/articles"
-	}
-	if !strings.HasPrefix(value, "/") {
-		value = "/" + value
-	}
-	return strings.TrimRight(value, "/")
 }
 
 func buildTypeLabel(preview bool) string {
@@ -211,6 +205,9 @@ func buildTypeLabel(preview bool) string {
 }
 
 func siteDescription(site models.Site) string {
+	if value := strings.TrimSpace(site.Description); value != "" {
+		return value
+	}
 	if brand, ok := site.ThemeConfig["brand"].(string); ok && strings.TrimSpace(brand) != "" {
 		return brand
 	}
@@ -341,6 +338,13 @@ func renderHomePage(site renderedSite) string {
 func renderDefaultHomePage(site renderedSite) string {
 	var body strings.Builder
 	body.WriteString(`<section class="hero">`)
+	if logo := strings.TrimSpace(site.Site.LogoURL); logo != "" {
+		body.WriteString(`<img class="site-logo" src="`)
+		body.WriteString(html.EscapeString(logo))
+		body.WriteString(`" alt="`)
+		body.WriteString(html.EscapeString(site.Site.Name))
+		body.WriteString(` logo">`)
+	}
 	body.WriteString(`<p class="eyebrow">`)
 	body.WriteString(html.EscapeString(strings.ToUpper(site.BuildType)))
 	body.WriteString(` BUILD</p>`)
@@ -562,6 +566,11 @@ func renderDocument(site renderedSite, title, body, canonical string) string {
 	var builder strings.Builder
 	builder.WriteString(`<!doctype html><html lang="en"><head><meta charset="utf-8">`)
 	builder.WriteString(`<meta name="viewport" content="width=device-width, initial-scale=1">`)
+	if favicon := strings.TrimSpace(site.Site.FaviconURL); favicon != "" {
+		builder.WriteString(`<link rel="icon" href="`)
+		builder.WriteString(html.EscapeString(favicon))
+		builder.WriteString(`">`)
+	}
 	builder.WriteString(`<title>`)
 	builder.WriteString(html.EscapeString(pageTitle(site, title)))
 	builder.WriteString(`</title>`)
@@ -638,6 +647,7 @@ func baseStyles() string {
 			border-radius: 24px;
 			box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
 		}
+		.site-logo { display: block; max-width: 180px; max-height: 64px; object-fit: contain; margin-bottom: 20px; }
 		.hero {
 			padding: 40px;
 		}

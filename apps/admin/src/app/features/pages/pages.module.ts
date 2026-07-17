@@ -5,12 +5,15 @@ import { RouterModule } from '@angular/router';
 import { PageViewComponent } from './page-view.component';
 import { PagesRoutingModule } from './pages-routing.module';
 import { DashboardPageComponent } from '../../pages/dashboard/dashboard-page.component';
-import { SettingsPageComponent } from '../../pages/settings/settings-page.component';
 import { ArticlesPageComponent } from '../../pages/articles/articles-page.component';
 import { ArticleEditorPageComponent } from '../../pages/article-editor/article-editor-page.component';
 import { ArticleDetailsPageComponent } from '../../pages/article-details/article-details-page.component';
 import { DeploymentSettingsPageComponent } from '../../pages/deployment-settings/deployment-settings-page.component';
 import { PublishingPageComponent } from '../../pages/publishing/publishing-page.component';
+import { MediaLibraryPageComponent } from '../../pages/media-library/media-library-page.component';
+import { MediaAssetDetailsPageComponent } from '../../pages/media-asset-details/media-asset-details-page.component';
+import { DeploymentHistoryPageComponent } from '../../pages/deployment-history/deployment-history-page.component';
+import { DeploymentDetailsPageComponent } from '../../pages/deployment-details/deployment-details-page.component';
 
 @NgModule({
   declarations: [PageViewComponent],
@@ -20,12 +23,15 @@ import { PublishingPageComponent } from '../../pages/publishing/publishing-page.
     RouterModule,
     PagesRoutingModule,
     DashboardPageComponent,
-    SettingsPageComponent,
     ArticlesPageComponent,
     ArticleEditorPageComponent,
     ArticleDetailsPageComponent,
     DeploymentSettingsPageComponent,
     PublishingPageComponent,
+    MediaLibraryPageComponent,
+    MediaAssetDetailsPageComponent,
+    DeploymentHistoryPageComponent,
+    DeploymentDetailsPageComponent,
   ],
 })
 export class PagesModule {}

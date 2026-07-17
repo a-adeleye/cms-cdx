@@ -14,7 +14,9 @@ The article template renders a bounded Markdown subset (headings, paragraphs, em
 
 Supplied CMS articles require a lowercase hyphenated `slug` and a non-empty `title`; the read-page entry also requires non-empty `contentMarkdown`. Malformed content fails the build with a safe validation message. Listing-only omissions use neutral derived values and never borrow preview-fixture metadata.
 
-The template renders its own visible header and footer. A builder integration should select the three entry points from a fixed template registry and must not wrap them in the generic `BaseLayout` header.
+The template renders the production Anonime header and footer with absolute product-site navigation. Its accessible theme control switches every page between light and dark themes, uses the operating-system preference on first visit, and persists an explicit choice in browser storage. The CSS-only control path still works when a preview sandbox blocks scripts.
+
+A builder integration should select the three entry points from a fixed template registry and must not wrap them in the generic `BaseLayout` header.
 
 ## Verification
 

@@ -1,34 +1,42 @@
 ---
+import Brand from './Brand.astro';
 import Icon from './Icon.astro';
 
 const { site, active = 'blog' } = Astro.props;
+const navigation = [
+  { label: 'Home', href: 'https://anonime.io/#top' },
+  { label: 'How it Works', href: 'https://anonime.io/#how-it-works' },
+  { label: 'Plans & Pricing', href: 'https://anonime.io/pricing' },
+  { label: 'Blog', href: 'https://anonime.io/blog', key: 'blog' },
+];
 ---
 
 <header class="anonime-header">
   <div class="anonime-container anonime-header-inner">
-    <a class="anonime-brand" href="/" aria-label={`${site.name} home`}>
-      <span class="anonime-brand-mark"><Icon name="shield" size={18} strokeWidth={2.2} /></span>
-      <span>{site.name}</span>
-    </a>
+    <Brand site={site} />
     <nav class="anonime-primary-nav" aria-label="Primary navigation">
-      <a href="/#features">Features</a>
-      <a href="/#pricing">Pricing</a>
-      <a class:list={{ 'is-active': active === 'blog' }} href={`${site.blogPath}/`}>Blog</a>
+      {navigation.map((item) => (
+        <a class:list={{ 'is-active': item.key === active }} href={item.href}>{item.label}</a>
+      ))}
     </nav>
     <div class="anonime-header-actions">
-      <span class="anonime-icon-button anonime-theme-button" aria-hidden="true">
-        <Icon name="moon" size={17} />
-      </span>
-      <a class="anonime-button anonime-button-small" href="#get-started">Get Started</a>
+      <div class="anonime-theme-toggle">
+        <input id="anonime-theme-control" class="anonime-theme-input" data-anonime-theme-control type="checkbox" aria-label="Switch to dark mode" />
+        <label class="anonime-icon-button anonime-theme-button" for="anonime-theme-control" title="Toggle dark mode">
+          <Icon name="moon" size={18} class="anonime-theme-moon" />
+          <Icon name="sun" size={18} class="anonime-theme-sun" />
+        </label>
+      </div>
+      <a class="anonime-login-link" href="https://app.anonime.io">Log in</a>
+      <a class="anonime-header-cta" href="https://app.anonime.io">Get Started</a>
       <details class="anonime-mobile-nav">
         <summary class="anonime-icon-button anonime-menu-button" aria-label="Open navigation">
           <Icon name="menu" size={20} />
         </summary>
         <nav aria-label="Mobile navigation">
-          <a href="/#features">Features</a>
-          <a href="/#pricing">Pricing</a>
-          <a href={`${site.blogPath}/`}>Blog</a>
-          <a href="#get-started">Get Started</a>
+          {navigation.map((item) => <a href={item.href}>{item.label}</a>)}
+          <a href="https://app.anonime.io">Log in</a>
+          <a href="https://app.anonime.io">Get Started</a>
         </nav>
       </details>
     </div>

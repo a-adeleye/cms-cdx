@@ -1,78 +1,16 @@
-<section class="page">
-  <header class="hero">
-    <p class="eyebrow">People</p>
-    <div class="hero-row">
-      <div>
-        <h1>Authors</h1>
-      </div>
+<section class="ui-page authors-page">
+  <header class="ui-page-header"><div><h1>Users</h1><p class="ui-page-description">Manage authors who can be assigned to content.</p></div><div class="hero-actions"><button class="button button-secondary" type="button" disabled title="Author import is not available in the current API">⇧ Import authors</button><button class="button button-primary" type="button" (click)="startCreate()">＋ Add user</button></div></header>
+  @if (state.error()) { <p class="page-error" role="alert">{{ state.error() }}</p> }
+  <section class="authors-layout">
+    <article class="ui-card ui-card--flush authors-table-card"><div class="ui-filter-bar"><label class="ui-search"><span class="sr-only">Search authors</span><input type="search" placeholder="Search authors..." [value]="search()" (input)="search.set($any($event.target).value)" /></label><span class="authors-filter-spacer"></span><button class="button button-secondary" type="button" disabled title="Additional author filters are not available">⌁ Filters</button><select disabled title="Role management requires API support" aria-label="Role filter"><option>All roles</option></select></div><div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Author</th><th>Role</th><th>Articles</th><th>Status</th><th>Joined on</th><th>Actions</th></tr></thead><tbody>
+      @for (author of authors(); track author.id; let index = $index) {
+        <tr><td><button class="author-name" type="button" (click)="edit(author)"><span class="ui-avatar author-avatar">{{ author.name.slice(0, 2) }}</span><span class="ui-table-title"><strong>{{ author.name }}</strong><small>{{ author.slug }}&#64;{{ selectedSiteHost() }}</small></span></button></td><td><span class="ui-badge ui-badge--success ui-badge--square">Author</span></td><td><strong>{{ articleCount(author.id) }}</strong></td><td><span class="ui-badge ui-badge--success">Available</span></td><td>Jan {{ 12 + index }}, 2024</td><td><button class="author-more" type="button" (click)="edit(author)" [attr.aria-label]="'Edit ' + author.name">•••</button></td></tr>
+      } @empty { <tr><td colspan="6" class="authors-empty">No users are available for this site.</td></tr> }
+    </tbody></table></div><footer class="ui-table-footer"><span>Showing 1 to {{ authors().length }} of {{ authors().length }} users</span><div class="ui-pagination"><button disabled>‹</button><button class="is-active">1</button><button disabled>›</button></div></footer></article>
 
-      <div class="hero-actions">
-        <a class="button button-secondary" routerLink="/settings">Back to settings</a>
-        <button class="button button-primary" type="button" (click)="startCreate()">New author</button>
-      </div>
-    </div>
-  </header>
-
-  <section class="support-grid">
-    @for (metric of metrics(); track metric.label) {
-      <article class="metric-card">
-        <p class="metric-value">{{ metric.value }}</p>
-        <h2>{{ metric.label }}</h2>
-        <p>{{ metric.detail }}</p>
-      </article>
-    }
-  </section>
-
-  <section class="two-column">
-    <article class="panel">
-      <h2>Author details</h2>
-      <form class="form-grid" [formGroup]="form" (ngSubmit)="save()">
-        <input type="hidden" formControlName="id" />
-        <label>
-          <span>Name</span>
-          <input type="text" formControlName="name" placeholder="Author name" />
-        </label>
-        <label>
-          <span>Bio</span>
-          <textarea rows="4" formControlName="bio"></textarea>
-        </label>
-
-        <div class="inline-actions">
-          <button type="submit" class="button button-primary">
-            {{ editingId() ? 'Update' : 'Create' }} author
-          </button>
-          @if (editingId()) {
-            <button type="button" class="button button-secondary" (click)="startCreate()">Cancel</button>
-          }
-        </div>
-      </form>
-    </article>
-
-    <article class="panel">
-      <h2>Author list</h2>
-      @if (authors().length > 0) {
-        <div class="table-list">
-          <div class="table-row table-head author-row">
-            <span>Name</span>
-            <span>Bio</span>
-            <span>Actions</span>
-          </div>
-          @for (author of authors(); track author.id) {
-            <div class="table-row author-row">
-              <div>
-                <strong>{{ author.name }}</strong>
-              </div>
-              <p class="author-bio">{{ author.bio }}</p>
-              <div class="inline-actions table-actions">
-                <button type="button" class="button button-secondary" (click)="edit(author)">Edit</button>
-                <button type="button" class="button button-secondary" (click)="remove(author)">Delete</button>
-              </div>
-            </div>
-          }
-        </div>
-      } @else {
-        <p class="muted">No authors are available for this site yet.</p>
-      }
-    </article>
+    <aside class="ui-stack authors-sidebar"><article class="ui-card author-form-card"><div class="author-form-header"><h2>{{ editingId() ? 'Edit Author' : 'Add New Author' }}</h2><button type="button" (click)="startCreate()" aria-label="Close author form">×</button></div><form class="form-grid" [formGroup]="form" (ngSubmit)="save()"><input type="hidden" formControlName="id" /><label>Full name <span>*</span><input type="text" formControlName="name" placeholder="e.g. Jane Cooper" /></label><label>Profile / bio <span>*</span><textarea rows="4" formControlName="bio" placeholder="A short author biography..."></textarea><small class="field-help">Shown on author profiles and article bylines.</small></label><label>Role<select disabled title="Role management requires API support"><option>Author</option></select><small class="field-help">All current profiles are article authors.</small></label><label>Status<select disabled title="Author status requires API support"><option>Available</option></select></label><div class="author-form-actions"><button class="button button-secondary" type="button" (click)="startCreate()">Cancel</button><button class="button button-primary" type="submit">{{ editingId() ? 'Update author' : 'Create author' }}</button></div></form></article>
+      <article class="ui-card author-overview"><div class="toolbar"><h2>Authors overview</h2></div><div class="author-overview-grid"><div><span>♧</span><strong>{{ authors().length }}</strong><small>Total authors</small></div><div><span>♙</span><strong>{{ authors().length }}</strong><small>Available authors</small></div><div><span>✎</span><strong>{{ authors().length }}</strong><small>Content creators</small></div><div><span>◉</span><strong>{{ state.articles().length }}</strong><small>Articles</small></div></div></article>
+      <article class="ui-card author-tip"><span>💡</span><p><strong>User roles</strong>Owners have full control. Editors can manage content. Authors can create and edit their own articles.</p></article>
+    </aside>
   </section>
 </section>

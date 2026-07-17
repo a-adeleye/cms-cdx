@@ -12,6 +12,7 @@ func renderAnonimeHomePage(site renderedSite) string {
 	body.WriteString(renderAnonimeHeader(site))
 	body.WriteString(renderAnonimeHero(site))
 	body.WriteString(renderAnonimeArticleIndex(site))
+	body.WriteString(renderAnonimePricingCallout())
 	body.WriteString(renderAnonimeFooter(site))
 	body.WriteString(`</div></section>`)
 	return renderDocument(site, "Home", body.String(), site.PublicBaseURL+"/")
@@ -41,21 +42,36 @@ func renderAnonimeArticlePage(site renderedSite, article ArticleContent) string 
 func renderAnonimeHeader(site renderedSite) string {
 	var body strings.Builder
 	body.WriteString(`<header class="anonime-header">`)
-	body.WriteString(`<a class="anonime-brand" href="/">`)
-	body.WriteString(`<span class="anonime-brand-mark" aria-hidden="true">`)
-	body.WriteString(`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="M12 2.5 20 6.8v6.8c0 4.6-3.4 7.7-8 8.9-4.6-1.2-8-4.3-8-8.9V6.8L12 2.5Z" fill="currentColor" /><path d="M9.2 12.2a2.8 2.8 0 1 1 5.6 0c0 1.1-.6 2.1-1.5 2.6l.3 2.3h-3.2l.3-2.3a2.8 2.8 0 0 1-1.5-2.6Z" fill="#fff" opacity=".92" /></svg>`)
-	body.WriteString(`</span><span>anonime</span></a>`)
+	body.WriteString(renderAnonimeBrand(site))
 	body.WriteString(`<nav class="anonime-nav" aria-label="Primary">`)
-	body.WriteString(`<a href="#features">Features</a>`)
-	body.WriteString(`<a href="#pricing">Pricing</a>`)
-	body.WriteString(`<a href="`)
-	body.WriteString(html.EscapeString(articlesPath(site)))
-	body.WriteString(`" aria-current="page">Blog</a>`)
+	body.WriteString(`<a href="https://anonime.io/#top">Home</a>`)
+	body.WriteString(`<a href="https://anonime.io/#how-it-works">How it Works</a>`)
+	body.WriteString(`<a href="https://anonime.io/pricing">Plans &amp; Pricing</a>`)
+	body.WriteString(`<a href="https://anonime.io/blog" aria-current="page">Blog</a>`)
 	body.WriteString(`</nav>`)
 	body.WriteString(`<div class="anonime-header-actions">`)
-	body.WriteString(`<button class="anonime-icon-button" type="button" aria-label="Toggle theme"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" aria-hidden="true"><path d="M20.5 13.4A8.7 8.7 0 0 1 10.6 3.5a8.6 8.6 0 1 0 9.9 9.9Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg></button>`)
-	body.WriteString(`<a class="anonime-button anonime-button-primary" href="#get-started">Get Started</a>`)
+	body.WriteString(`<div class="anonime-theme-control"><input class="anonime-theme-checkbox" type="checkbox" id="anonime-theme-toggle"><label class="anonime-theme-toggle" for="anonime-theme-toggle"><span class="anonime-visually-hidden">Toggle dark mode</span><svg class="anonime-theme-moon" viewBox="0 0 24 24" width="19" height="19" fill="none" aria-hidden="true"><path d="M20.5 13.4A8.7 8.7 0 0 1 10.6 3.5a8.6 8.6 0 1 0 9.9 9.9Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg><svg class="anonime-theme-sun" viewBox="0 0 24 24" width="19" height="19" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2M12 19.5v2M4.5 12h-2M21.5 12h-2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></label></div>`)
+	body.WriteString(`<a class="anonime-login-link" href="https://app.anonime.io">Log in</a>`)
+	body.WriteString(`<a class="anonime-button anonime-button-outline" href="https://app.anonime.io">Get Started</a>`)
+	body.WriteString(`<details class="anonime-mobile-nav"><summary aria-label="Open navigation"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></summary><nav aria-label="Mobile navigation"><a href="https://anonime.io/#top">Home</a><a href="https://anonime.io/#how-it-works">How it Works</a><a href="https://anonime.io/pricing">Plans &amp; Pricing</a><a href="https://anonime.io/blog">Blog</a><a href="https://app.anonime.io">Log in</a><a href="https://app.anonime.io">Get Started</a></nav></details>`)
 	body.WriteString(`</div></header>`)
+	return body.String()
+}
+
+func renderAnonimeBrand(site renderedSite) string {
+	var body strings.Builder
+	body.WriteString(`<a class="anonime-brand" href="https://anonime.io/#top">`)
+	if logo := strings.TrimSpace(site.Site.LogoURL); logo != "" {
+		body.WriteString(`<img class="anonime-brand-mark" src="`)
+		body.WriteString(html.EscapeString(logo))
+		body.WriteString(`" alt=""><span>`)
+		body.WriteString(html.EscapeString(site.Site.Name))
+		body.WriteString(`</span></a>`)
+	} else {
+		body.WriteString(`<span class="anonime-brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M12 3.2c-4.5 0-7.4 3.3-7.4 7.7 0 4.6 3.1 8.2 7.4 10 4.3-1.8 7.4-5.4 7.4-10 0-4.4-2.9-7.7-7.4-7.7Z" fill="currentColor"/><path d="M9 7.5c1.7 2 2.2 4.5 1.7 7.6M15 7.5c-1.7 2-2.2 4.5-1.7 7.6" stroke="#38c493" stroke-width="2" stroke-linecap="round"/></svg></span><span>`)
+		body.WriteString(html.EscapeString(site.Site.Name))
+		body.WriteString(`</span></a>`)
+	}
 	return body.String()
 }
 
@@ -107,8 +123,6 @@ func renderAnonimeHero(site renderedSite) string {
 	}
 
 	body.WriteString(renderAnonimeTopicRow(site.Articles))
-	body.WriteString(renderAnonimeArticleIndex(site))
-	body.WriteString(renderAnonimePricingCallout())
 	return body.String()
 }
 
@@ -431,12 +445,12 @@ func renderAnonimePagination() string {
 func renderAnonimeFooter(site renderedSite) string {
 	var body strings.Builder
 	body.WriteString(`<footer class="anonime-footer">`)
-	body.WriteString(`<section class="anonime-footer-brand"><a class="anonime-brand" href="/"><span class="anonime-brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="M12 2.5 20 6.8v6.8c0 4.6-3.4 7.7-8 8.9-4.6-1.2-8-4.3-8-8.9V6.8L12 2.5Z" fill="currentColor" /><path d="M9.2 12.2a2.8 2.8 0 1 1 5.6 0c0 1.1-.6 2.1-1.5 2.6l.3 2.3h-3.2l.3-2.3a2.8 2.8 0 0 1-1.5-2.6Z" fill="#fff" opacity=".92" /></svg></span><span>anonime</span></a><p>Private communication without permanent trails.</p><div class="anonime-social-row" aria-label="Social links"><a class="anonime-social-link" href="#" aria-label="X"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M17.5 4.5 13.4 9l5.9 10.5h-4.2L10.9 12.8l-4.7 6.7H2.4l4.4-6.1L1 4.5h4.3l4.7 8.6 5.9-8.6h1.6Z" fill="currentColor" /></svg></a><a class="anonime-social-link" href="#" aria-label="LinkedIn"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M6.8 8.6H3.7V20h3.1V8.6ZM5.2 3.8A1.8 1.8 0 1 0 5.2 7a1.8 1.8 0 0 0 0-3.2ZM20.3 20h-3.1v-5.8c0-1.4 0-3.2-2-3.2s-2.3 1.6-2.3 3.1V20h-3.1V8.6h3v1.6h.1c.4-.8 1.4-1.8 3-1.8 3.2 0 3.8 2.1 3.8 4.8V20Z" fill="currentColor" /></svg></a><a class="anonime-social-link" href="#" aria-label="GitHub"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M12 2.3a9.7 9.7 0 0 0-3 .5 9.8 9.8 0 0 0-1 .4 10 10 0 0 0-5.8 9.1c0 4.2 2.6 7.9 6.5 9.3.5.1.7-.2.7-.5v-1.8c-2.7.6-3.3-1.1-3.3-1.1-.4-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 0 1.6 1 1.6 1 .9 1.5 2.4 1.1 3 .8.1-.7.4-1.1.7-1.3-2.1-.2-4.3-1-4.3-4.5 0-1 .4-1.8 1-2.5-.1-.3-.4-1.2.1-2.5 0 0 .8-.2 2.6 1a8.8 8.8 0 0 1 4.8 0c1.8-1.2 2.6-1 2.6-1 .5 1.3.2 2.2.1 2.5.6.7 1 1.5 1 2.5 0 3.6-2.2 4.3-4.3 4.5.5.4.8 1 .8 2.1v3.1c0 .3.2.6.8.5a10 10 0 0 0 6.4-9.3 10 10 0 0 0-5.9-9.1 9.8 9.8 0 0 0-1-.4 9.7 9.7 0 0 0-3-.5Z" fill="currentColor" /></svg></a></div><p class="anonime-footer-note">(c) 2026 Anonime. Your identity, your rules.</p></section>`)
-	body.WriteString(`<nav class="anonime-footer-links" aria-label="Footer navigation"><div><h3>Product</h3><ul><li><a href="#features">Features</a></li><li><a href="#pricing">Pricing</a></li><li><a href="#security">Security</a></li><li><a href="#nyns">Nyns</a></li></ul></div><div><h3>Resources</h3><ul><li><a href="`)
-	body.WriteString(html.EscapeString(articlesPath(site)))
-	body.WriteString(`">Blog</a></li><li><a href="#guides">Guides</a></li><li><a href="#help-center">Help Center</a></li><li><a href="#status">Status</a></li></ul></div><div><h3>Company</h3><ul><li><a href="#about">About</a></li><li><a href="#privacy">Privacy</a></li><li><a href="#terms">Terms</a></li><li><a href="#contact">Contact</a></li></ul></div></nav>`)
-	body.WriteString(`<aside class="anonime-footer-card"><div class="anonime-badge anonime-badge-ghost">One platform</div><h3>One platform. Separate lives.</h3><p>Take control of your privacy with end-to-end encrypted communication.</p><a class="anonime-button anonime-button-primary" href="#get-started">Get Started</a></aside>`)
-	body.WriteString(`</footer>`)
+	body.WriteString(`<div class="anonime-footer-main"><section class="anonime-footer-brand">`)
+	body.WriteString(renderAnonimeBrand(site))
+	body.WriteString(`<h2>Private communication<br>without <strong>permanent trails.</strong></h2></section>`)
+	body.WriteString(`<nav class="anonime-footer-links" aria-label="Footer navigation"><div><h3>Product</h3><ul><li><a href="https://anonime.io/#security">Whispers</a></li><li><a href="https://anonime.io/#private-drops">Private Drops</a></li><li><a href="https://anonime.io/#how-it-works">Nyms</a></li><li><a href="https://anonime.io/pricing">Pricing</a></li></ul></div><div><h3>Company</h3><ul><li><a href="https://anonime.io/#about">About</a></li><li><a href="https://anonime.io/blog">Blog</a></li><li><a href="https://anonime.io/contact">Contact</a></li></ul></div><div><h3>Legal</h3><ul><li><a href="https://anonime.io/privacy">Privacy Policy</a></li><li><a href="https://anonime.io/terms">Terms of Service</a></li><li><a href="https://anonime.io/security">Security</a></li><li><a href="https://anonime.io/acceptable-usage-policy">Acceptable Use Policy</a></li><li><a href="https://anonime.io/data-processing">Data Processing</a></li></ul></div></nav></div>`)
+	body.WriteString(`<section class="anonime-privacy-proof" aria-labelledby="anonime-privacy-proof-title"><p id="anonime-privacy-proof-title">Built with <strong>privacy by design.</strong></p><div class="anonime-privacy-features"><div class="anonime-privacy-feature"><span class="anonime-privacy-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3M6.5 10h11v9h-11z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>End-to-end encrypted</span></div><div class="anonime-privacy-feature"><span class="anonime-privacy-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5 19 7v5.8c0 4-2.9 6.7-7 7.7-4.1-1-7-3.7-7-7.7V7l7-3.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span><span>No personal data required</span></div><div class="anonime-privacy-feature"><span class="anonime-privacy-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.7"/><path d="m7 7 10 10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><span>No logs. No tracking.</span></div><div class="anonime-privacy-feature"><span class="anonime-privacy-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="5" width="14" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="5" y="14" width="14" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="M8 7.5h.01M8 16.5h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span>Hosted with privacy-first infra</span></div></div></section>`)
+	body.WriteString(`<div class="anonime-footer-bottom"><p>&copy; 2026 Anonime, Inc. All rights reserved.</p><p class="anonime-footer-tagline">Your privacy is your right. <strong>We protect it every day.</strong></p><a class="anonime-footer-x" href="https://x.com/anonimehq" aria-label="Anonime on X"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M17.5 4.5 13.4 9l5.9 10.5h-4.2L10.9 12.8l-4.7 6.7H2.4l4.4-6.1L1 4.5h4.3l4.7 8.6 5.9-8.6h1.6Z" fill="currentColor"/></svg></a></div></footer>`)
 	return body.String()
 }
 
@@ -448,40 +462,60 @@ func anonimeStyles() string {
 				radial-gradient(circle at 84% 12%, rgba(16, 178, 108, 0.08), transparent 18%),
 				linear-gradient(180deg, #ffffff 0%, #f7fbfa 100%);
 			color: #0f1728;
-			font-family: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			font-family: Inter, Manrope, "Segoe UI", Helvetica, Arial, sans-serif;
 		}
 		body.anonime-layout .page-shell {
-			width: min(1110px, calc(100vw - 32px));
+			width: min(1200px, calc(100vw - 32px));
 			padding: 18px 0 32px;
 		}
 		.anonime-template {
 			position: relative;
 			isolation: isolate;
 		}
+		.anonime-template, .anonime-template * { box-sizing: border-box; }
 		.anonime-template a { text-decoration: none; color: inherit; }
 		.anonime-template img { display: block; max-width: 100%; }
 		.anonime-shell { width: 100%; }
 		.anonime-header {
 			display: flex;
+			width: min(1096px, 100%);
+			margin-inline: auto;
 			align-items: center;
 			justify-content: space-between;
 			gap: 24px;
-			padding: 10px 0 24px;
+			padding: 10px 0 30px;
 		}
 		.anonime-brand { display: inline-flex; align-items: center; gap: 12px; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.04em; }
 		.anonime-brand-mark {
-			width: 34px; height: 34px; display: grid; place-items: center; border-radius: 12px;
-			background: linear-gradient(180deg, #19c27b 0%, #0b9461 100%); color: #fff; box-shadow: 0 10px 22px rgba(16, 178, 108, 0.24);
+			width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 999px; object-fit: contain;
+			background: #38c493; color: #071620; box-shadow: 0 10px 22px rgba(16, 178, 108, 0.18);
 		}
-		.anonime-nav { display: inline-flex; align-items: center; gap: 30px; color: #334155; }
+		.anonime-nav { display: inline-flex; align-items: center; justify-content: center; gap: clamp(20px, 3vw, 42px); color: #172238; font-size: 0.92rem; }
 		.anonime-nav a { position: relative; padding: 8px 2px; }
 		.anonime-nav a[aria-current="page"] { color: #10b26c; font-weight: 700; }
 		.anonime-nav a[aria-current="page"]::after {
 			content: ""; position: absolute; left: 50%; bottom: -4px; width: 18px; height: 2px; border-radius: 999px;
 			transform: translateX(-50%); background: #10b26c;
 		}
-		.anonime-header-actions { display: inline-flex; align-items: center; gap: 14px; }
-		.anonime-icon-button, .anonime-button, .anonime-pill, .anonime-pagination-button, .anonime-help-button, .anonime-social-link {
+		.anonime-header-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 14px; }
+		.anonime-login-link { color: #177a59; font-size: 0.9rem; font-weight: 700; white-space: nowrap; }
+		.anonime-button-outline { color: #177a59; border: 1px solid #169568; background: transparent; box-shadow: none; }
+		.anonime-theme-control { position: relative; display: inline-flex; }
+		.anonime-theme-checkbox { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
+		.anonime-theme-toggle { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 999px; color: #536079; cursor: pointer; transition: color 160ms ease, background-color 160ms ease, transform 160ms ease; }
+		.anonime-theme-toggle:hover { color: #059669; background: rgba(16, 178, 108, 0.08); }
+		.anonime-theme-checkbox:focus-visible + .anonime-theme-toggle { outline: 3px solid rgba(16, 178, 108, 0.35); outline-offset: 3px; }
+		.anonime-theme-sun { display: none; }
+		.anonime-theme-checkbox:checked + .anonime-theme-toggle .anonime-theme-moon { display: none; }
+		.anonime-theme-checkbox:checked + .anonime-theme-toggle .anonime-theme-sun { display: block; }
+		.anonime-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+		.anonime-mobile-nav { position: relative; display: none; }
+		.anonime-mobile-nav summary { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 999px; color: #536079; cursor: pointer; list-style: none; }
+		.anonime-mobile-nav summary::-webkit-details-marker { display: none; }
+		.anonime-mobile-nav nav { position: absolute; z-index: 20; top: 50px; right: 0; width: 218px; display: grid; gap: 4px; padding: 12px; border: 1px solid rgba(18, 28, 43, 0.1); border-radius: 16px; background: rgba(255, 255, 255, 0.98); box-shadow: 0 18px 45px rgba(15, 23, 42, 0.14); }
+		.anonime-mobile-nav nav a { padding: 10px 12px; border-radius: 10px; color: #172238; font-size: 0.9rem; }
+		.anonime-mobile-nav nav a:hover { color: #087d58; background: rgba(16, 178, 108, 0.08); }
+		.anonime-icon-button, .anonime-button, .anonime-pill, .anonime-pagination-button, .anonime-help-button {
 			border: 0; cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background-color 160ms ease;
 		}
 		.anonime-icon-button {
@@ -494,12 +528,12 @@ func anonimeStyles() string {
 		.anonime-button-primary { color: #fff; background: linear-gradient(180deg, #19c27b 0%, #0b9461 100%); box-shadow: 0 16px 34px rgba(16, 178, 108, 0.24); }
 		.anonime-button-secondary { color: #059669; background: rgba(16, 178, 108, 0.08); }
 		.anonime-hero {
-			display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); align-items: center; gap: 40px; padding: 26px 0 30px;
+			display: grid; grid-template-columns: 42% 58%; align-items: center; gap: 0; padding: 26px 0 30px;
 		}
 		.anonime-eyebrow { margin: 0 0 14px; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #10b26c; }
 		.anonime-title, .anonime-featured-title, .anonime-article-heading { margin: 0; letter-spacing: -0.06em; }
-		.anonime-title { font-size: clamp(2.8rem, 5.6vw, 4.8rem); line-height: 0.98; }
-		.anonime-title strong { color: #10b26c; font-style: italic; }
+		.anonime-title { font-size: clamp(3rem, 4.1vw, 3.75rem); line-height: 1.04; }
+		.anonime-title strong { color: #10b26c; font-style: normal; }
 		.anonime-subtitle { margin: 18px 0 0; max-width: 46ch; font-size: 1.03rem; line-height: 1.8; color: #5b6474; }
 		.anonime-hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
 		.anonime-hero-art {
@@ -562,7 +596,7 @@ func anonimeStyles() string {
 		}
 		.anonime-pill.is-active { border-color: rgba(16, 178, 108, 0.18); color: #059669; background: rgba(16, 178, 108, 0.08); }
 		.anonime-content-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; align-items: start; margin-top: 24px; }
-		.anonime-card, .anonime-panel, .anonime-callout, .anonime-footer-card, .anonime-article-footer-card { border: 1px solid rgba(18, 28, 43, 0.1); background: rgba(255, 255, 255, 0.92); box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04); backdrop-filter: blur(8px); border-radius: 24px; }
+		.anonime-card, .anonime-panel, .anonime-callout, .anonime-article-footer-card { border: 1px solid rgba(18, 28, 43, 0.1); background: rgba(255, 255, 255, 0.92); box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04); backdrop-filter: blur(8px); border-radius: 24px; }
 		.anonime-panel { padding: 20px; }
 		.anonime-panel-title { margin: 0 0 16px; font-size: 1rem; letter-spacing: -0.03em; }
 		.anonime-panel-title.is-tight { margin-bottom: 0; }
@@ -598,19 +632,31 @@ func anonimeStyles() string {
 			min-width: 36px; min-height: 36px; padding: 0 12px; border-radius: 11px; border: 1px solid rgba(18, 28, 43, 0.1); background: rgba(255, 255, 255, 0.9); color: #334155;
 		}
 		.anonime-pagination-button.is-active { border-color: rgba(16, 178, 108, 0.18); color: #059669; background: rgba(16, 178, 108, 0.08); }
-		.anonime-footer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px; margin-top: 24px; padding: 22px 0 12px; }
-		.anonime-footer-brand { max-width: 260px; }
-		.anonime-footer-brand p, .anonime-footer-card p, .anonime-featured-summary, .anonime-muted { color: #5b6474; }
-		.anonime-social-row { display: flex; gap: 10px; margin-top: 20px; }
-		.anonime-social-link { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 999px; color: #334155; background: rgba(255, 255, 255, 0.84); border: 1px solid rgba(18, 28, 43, 0.1); }
-		.anonime-footer-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-		.anonime-footer-links h3 { margin: 0 0 12px; font-size: 0.92rem; }
-		.anonime-footer-links ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; color: #5b6474; }
-		.anonime-footer-card { align-self: start; padding: 18px; border-radius: 20px; }
-		.anonime-footer-card h3 { margin: 10px 0 8px; font-size: 1.02rem; line-height: 1.25; }
-		.anonime-footer-card p { margin: 0 0 14px; line-height: 1.7; }
-		.anonime-footer-card .anonime-button { width: 100%; }
-		.anonime-footer-note { margin-top: 6px; color: #5b6474; font-size: 0.84rem; }
+		.anonime-footer { width: min(1530px, calc(100vw - 32px)); margin: 64px 0 0 50%; padding: 0; transform: translateX(-50%); }
+		.anonime-footer-main { display: grid; min-height: 374px; padding: 49px 55px 47px; grid-template-columns: minmax(540px, 1.35fr) minmax(600px, 1.15fr); gap: 72px; align-items: start; border-bottom: 1px solid rgba(29, 77, 65, 0.12); }
+		.anonime-footer-brand { max-width: 760px; }
+		.anonime-footer-brand .anonime-brand { color: #35bb8d; font-size: 1.9rem; }
+		.anonime-footer-brand h2 { margin: 64px 0 0; font-size: clamp(2.3rem, 4vw, 3.65rem); line-height: 1.08; letter-spacing: -0.05em; }
+		.anonime-footer-brand h2 strong { color: #2c9b73; font-weight: 700; }
+		.anonime-footer-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+		.anonime-footer-links > div { min-height: 276px; padding: 2px 34px; border-left: 1px solid rgba(29, 77, 65, 0.1); }
+		.anonime-footer-links > div:first-child { border-left: 0; }
+		.anonime-footer-links h3 { margin: 0 0 26px; color: #26986f; font-size: 0.79rem; letter-spacing: 0.02em; text-transform: uppercase; }
+		.anonime-footer-links h3::after { content: ""; display: block; width: 63px; height: 1px; margin-top: 12px; background: #26986f; }
+		.anonime-footer-links ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 22px; color: #43536b; font-size: 0.94rem; }
+		.anonime-privacy-proof { min-height: 196px; padding: 29px 36px 30px; border-bottom: 1px solid rgba(29, 77, 65, 0.12); }
+		.anonime-privacy-proof > p { margin: 0 0 28px; text-align: center; color: #24324a; }
+		.anonime-privacy-proof > p strong, .anonime-footer-tagline strong { color: #078f5d; }
+		.anonime-privacy-features { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+		.anonime-privacy-feature { display: flex; align-items: center; gap: 16px; min-height: 84px; padding: 10px 22px; border-left: 1px solid rgba(29, 77, 65, 0.12); color: #43536b; font-size: 0.92rem; }
+		.anonime-privacy-feature:first-child { border-left: 0; }
+		.anonime-privacy-icon { width: 52px; height: 52px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid rgba(27, 159, 107, 0.18); border-radius: 12px; color: #169f6c; background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(191,239,215,.92)); box-shadow: 0 8px 24px rgba(8, 122, 79, 0.17); }
+		.anonime-privacy-icon svg { width: 23px; height: 23px; }
+		.anonime-footer-bottom { display: grid; min-height: 156px; padding: 21px 55px 32px; grid-template-columns: 1fr auto 1fr; align-items: start; color: #74829a; font-size: 0.84rem; }
+		.anonime-footer-bottom p { margin: 0; }
+		.anonime-footer-x { display: grid; place-items: center; width: 36px; height: 36px; justify-self: end; color: #3d4b61; }
+		.anonime-footer-tagline { align-self: end; color: #63718a; text-align: center; font-size: 0.84rem; }
+		.anonime-featured-summary, .anonime-muted { color: #5b6474; }
 		.anonime-article-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; align-items: start; }
 		.anonime-article-main { min-width: 0; }
 		.anonime-article-header { padding: 24px 0 0; }
@@ -645,23 +691,113 @@ func anonimeStyles() string {
 		.anonime-article-related-card .anonime-sidebar-title { font-size: 0.92rem; }
 		.anonime-article-related-card .anonime-sidebar-meta { margin-top: 4px; color: #5b6474; }
 		.anonime-muted { color: #5b6474; }
-		@media (max-width: 1080px) {
-			.anonime-content-grid, .anonime-article-layout, .anonime-footer { grid-template-columns: 1fr; }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) {
+			color-scheme: dark;
+			color: #edf6f2;
+			background:
+				radial-gradient(circle at 18% 2%, rgba(16, 178, 108, 0.12), transparent 24%),
+				radial-gradient(circle at 84% 12%, rgba(16, 178, 108, 0.08), transparent 18%),
+				linear-gradient(180deg, #08100e 0%, #0b1512 100%);
+		}
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-brand,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-nav,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-title,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-title,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-panel-title,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-heading,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-callout-title,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-footer-brand h2,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-privacy-proof > p { color: #edf6f2; }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-subtitle,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-excerpt,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-footer,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-intro,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-body,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-topic-entry,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-toc-list,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-sidebar-meta,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-related-card .anonime-sidebar-meta,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-muted,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-footer-links ul,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-privacy-feature,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-footer-bottom,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-footer-tagline { color: #a9b8b1; }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-card,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-panel,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-callout:not(.dark) { border-color: rgba(191, 239, 215, 0.13); background: rgba(16, 28, 24, 0.94); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18); }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-pill,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-pagination-button,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-help-button,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-toolbar .anonime-icon-button { border-color: rgba(191, 239, 215, 0.14); color: #c4d2cd; background: rgba(17, 31, 26, 0.9); }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-button-outline { border-color: #36bd8d; color: #64d4ab; background: transparent; }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-login-link,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-theme-toggle,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-mobile-nav summary { color: #64d4ab; }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-mobile-nav nav { border-color: rgba(191, 239, 215, 0.14); background: rgba(17, 31, 26, 0.98); }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-mobile-nav nav a { color: #edf6f2; }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-art::before,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-art::after,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-card,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-small { background: rgba(18, 36, 29, 0.78); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22); }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-body h2,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-body h3,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-body blockquote { color: #edf6f2; }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-body blockquote,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-inline-callout { background: rgba(16, 178, 108, 0.1); }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-callout-icon,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-privacy-icon { border-color: rgba(73, 211, 159, 0.22); background: linear-gradient(180deg, rgba(29, 64, 51, 0.96), rgba(13, 42, 32, 0.96)); }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-footer-links > div,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-privacy-proof,
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-privacy-feature { border-color: rgba(191, 239, 215, 0.13); }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-footer-x { color: #c5d2cd; }
+		@media (max-width: 1240px) {
+			.anonime-footer-main { padding-inline: 24px; grid-template-columns: minmax(390px, 1fr) minmax(520px, 1.25fr); gap: 38px; }
+			.anonime-footer-links > div { padding-inline: 22px; }
+			.anonime-privacy-feature { padding-inline: 20px; }
+		}
+		@media (max-width: 1020px) {
+			.anonime-footer-main { min-height: 0; grid-template-columns: 1fr; gap: 42px; }
+			.anonime-footer-brand h2 { margin-top: 38px; }
+		}
+		@media (max-width: 920px) {
+			.anonime-content-grid, .anonime-article-layout { grid-template-columns: 1fr; }
 			.anonime-sidebar-panel, .anonime-article-sidebar { position: static; }
 			.anonime-featured-inner, .anonime-article-card { grid-template-columns: 1fr; }
 			.anonime-hero { grid-template-columns: 1fr; }
 		}
 		@media (max-width: 820px) {
-			.anonime-header { flex-wrap: wrap; justify-content: center; }
-			.anonime-nav { order: 3; width: 100%; justify-content: center; gap: 18px; }
-			.anonime-featured, .anonime-panel, .anonime-card, .anonime-callout, .anonime-footer-card, .anonime-article-footer-card { border-radius: 20px; }
-			.anonime-footer-links { grid-template-columns: 1fr; }
+			.anonime-nav, .anonime-login-link, .anonime-button-outline { display: none; }
+			.anonime-mobile-nav { display: block; }
+			.anonime-featured, .anonime-panel, .anonime-card, .anonime-callout, .anonime-article-footer-card { border-radius: 20px; }
+			.anonime-privacy-proof { padding-inline: 16px; }
+			.anonime-privacy-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+			.anonime-privacy-feature:nth-child(3) { border-left: 0; }
 		}
 		@media (max-width: 620px) {
-			.anonime-shell { width: min(1110px, calc(100vw - 20px)); }
-			.anonime-header-actions { width: 100%; justify-content: space-between; }
-			.anonime-featured-copy, .anonime-panel, .anonime-card, .anonime-callout, .anonime-footer-card, .anonime-article-footer-card { padding-left: 16px; padding-right: 16px; }
+			.anonime-shell { width: 100%; }
+			.anonime-header { gap: 12px; padding-bottom: 20px; }
+			.anonime-header-actions { gap: 8px; }
+			.anonime-brand { gap: 8px; font-size: 1.2rem; }
+			.anonime-brand-mark { width: 34px; height: 34px; }
+			.anonime-header-actions .anonime-button { min-height: 38px; padding-inline: 11px; font-size: 0.82rem; }
+			.anonime-theme-toggle { width: 36px; height: 36px; }
+			.anonime-login-link { font-size: 0.82rem; }
+			.anonime-featured-copy, .anonime-panel, .anonime-card, .anonime-callout, .anonime-article-footer-card { padding-left: 16px; padding-right: 16px; }
 			.anonime-article-card { padding: 12px; }
+			.anonime-footer { margin-top: 42px; }
+			.anonime-footer-main { padding: 0 14px 34px; }
+			.anonime-footer-brand h2 { font-size: 2.1rem; }
+			.anonime-footer-links { grid-template-columns: 1fr; }
+			.anonime-footer-links > div { min-height: 0; padding: 24px 0; border-left: 0; border-top: 1px solid rgba(29, 77, 65, 0.12); }
+			.anonime-footer-links > div:first-child { border-top: 0; }
+			.anonime-footer-links ul { gap: 14px; }
+			.anonime-footer-bottom { min-height: 176px; padding-inline: 14px; grid-template-columns: 1fr auto; }
+			.anonime-footer-tagline { grid-column: 1 / -1; grid-row: 2; text-align: left; }
+		}
+		@media (max-width: 420px) {
+			.anonime-privacy-features { grid-template-columns: 1fr; }
+			.anonime-privacy-feature { border-left: 0; border-top: 1px solid rgba(29, 77, 65, 0.12); }
+			.anonime-privacy-feature:first-child { border-top: 0; }
 		}
 	`
 }

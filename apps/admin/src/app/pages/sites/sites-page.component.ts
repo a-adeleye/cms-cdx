@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
 import {
   DEFAULT_TEMPLATE_SLUG,
   templateSelectOptions,
@@ -15,7 +14,7 @@ import { WorkspaceStateService } from '../../features/pages/workspace-state.serv
   templateUrl: './sites-page.component.html',
   styleUrl: '../../features/pages/page-view.component.css',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SitesPageComponent {
@@ -30,7 +29,7 @@ export class SitesPageComponent {
   readonly editingSiteId = signal<string | null>(null);
   readonly siteCreateForm = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
-    slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9-]+$/)]],
+    slug: ['', [Validators.pattern(/^[a-z0-9-]+$/)]],
     domain: ['', [Validators.required]],
     blogPath: ['/articles', [Validators.required]],
     templateKey: ['default-blog', [Validators.required]],
@@ -122,7 +121,11 @@ export class SitesPageComponent {
 
     try {
       if (mode === 'create') {
-        const site = await this.state.createSite(this.siteCreateForm.getRawValue());
+        const draft = this.siteCreateForm.getRawValue();
+        const site = await this.state.createSite({
+          ...draft,
+          slug: draft.slug.trim() || this.createSlugFromName(draft.name),
+        });
         this.closeSiteDialog();
         this.resetCreateSiteForm();
         await this.state.selectSite(site.id);
@@ -200,6 +203,14 @@ export class SitesPageComponent {
       blogPath: '/articles',
       templateKey: this.templateOptions()[0]?.value || DEFAULT_TEMPLATE_SLUG,
     });
+  }
+
+  private createSlugFromName(name: string): string {
+    return name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
   }
 
   private resetEditSiteForm(site: SiteRecord): void {

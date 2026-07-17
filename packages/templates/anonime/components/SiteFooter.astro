@@ -1,52 +1,78 @@
 ---
+import Brand from './Brand.astro';
 import Icon from './Icon.astro';
 
 const { site } = Astro.props;
+const footerGroups = [
+  {
+    label: 'Product',
+    links: [
+      ['Whispers', 'https://anonime.io/#security'],
+      ['Private Drops', 'https://anonime.io/#private-drops'],
+      ['Nyms', 'https://anonime.io/#how-it-works'],
+      ['Pricing', 'https://anonime.io/pricing'],
+    ],
+  },
+  {
+    label: 'Company',
+    links: [
+      ['About', 'https://anonime.io/#about'],
+      ['Blog', 'https://anonime.io/blog'],
+      ['Contact', 'https://anonime.io/contact'],
+    ],
+  },
+  {
+    label: 'Legal',
+    links: [
+      ['Privacy Policy', 'https://anonime.io/privacy'],
+      ['Terms of Service', 'https://anonime.io/terms'],
+      ['Security', 'https://anonime.io/security'],
+      ['Acceptable Use Policy', 'https://anonime.io/acceptable-usage-policy'],
+      ['Data Processing', 'https://anonime.io/data-processing'],
+    ],
+  },
+];
+const privacyFeatures = [
+  ['lock', 'End-to-end encrypted'],
+  ['privacy', 'No personal data required'],
+  ['ban', 'No logs. No tracking.'],
+  ['server', 'Hosted with privacy-first infra'],
+];
 ---
 
 <footer class="anonime-footer">
-  <div class="anonime-container anonime-footer-grid">
-    <div class="anonime-footer-brand">
-      <a class="anonime-brand" href="/" aria-label={`${site.name} home`}>
-        <span class="anonime-brand-mark"><Icon name="shield" size={16} strokeWidth={2.2} /></span>
-        <span>{site.name}</span>
-      </a>
-      <p>Private communication<br />without permanent trails.</p>
-      <div class="anonime-socials" aria-label="Social media">
-        <a href="#x" aria-label="X"><Icon name="x" size={13} /></a>
-        <a href="#linkedin" aria-label="LinkedIn"><Icon name="linkedin" size={14} /></a>
-        <a href="#github" aria-label="GitHub"><Icon name="github" size={14} /></a>
-      </div>
-      <small>© 2026 Anonime. Your identity, your rules.</small>
+  <div class="anonime-footer-container">
+    <div class="anonime-footer-main">
+      <section class="anonime-footer-statement">
+        <Brand site={site} class="anonime-footer-logo" />
+        <h2>Private communication<br />without <em>permanent trails.</em></h2>
+      </section>
+      <nav class="anonime-footer-directory" aria-label="Footer navigation">
+        {footerGroups.map((group) => (
+          <section class="anonime-footer-group" aria-labelledby={`anonime-footer-${group.label.toLowerCase()}`}>
+            <h3 id={`anonime-footer-${group.label.toLowerCase()}`}>{group.label}</h3>
+            {group.links.map(([label, href]) => <a href={href}>{label}</a>)}
+          </section>
+        ))}
+      </nav>
     </div>
-    <nav class="anonime-footer-nav" aria-label="Product">
-      <strong>Product</strong>
-      <a href="/#features">Features</a>
-      <a href="/#pricing">Pricing</a>
-      <a href="/#security">Security</a>
-      <a href="/#nyms">Nyms</a>
-    </nav>
-    <nav class="anonime-footer-nav" aria-label="Resources">
-      <strong>Resources</strong>
-      <a class="is-accent" href={`${site.blogPath}/`}>Blog</a>
-      <a href="/#guides">Guides</a>
-      <a href="/#help">Help Center</a>
-      <a href="/#status">Status</a>
-    </nav>
-    <nav class="anonime-footer-nav" aria-label="Company">
-      <strong>Company</strong>
-      <a href="/#about">About</a>
-      <a href="/#privacy">Privacy</a>
-      <a href="/#terms">Terms</a>
-      <a href="/#contact">Contact</a>
-    </nav>
-    <aside class="anonime-footer-cta" id="get-started">
-      <div class="anonime-footer-cta-title">
-        <span><Icon name="lock" size={21} /></span>
-        <strong>One platform.<br />Separate lives.</strong>
+
+    <section class="anonime-footer-assurance" aria-label="Privacy guarantees">
+      <p>Built with <strong>privacy by design.</strong></p>
+      <div class="anonime-footer-features">
+        {privacyFeatures.map(([icon, label]) => (
+          <div class="anonime-footer-feature">
+            <span><Icon name={icon} size={20} /></span>
+            <p>{label}</p>
+          </div>
+        ))}
       </div>
-      <p>Take control of your privacy with end-to-end encrypted communication.</p>
-      <a class="anonime-button anonime-button-small" href="#get-started">Get Started</a>
-    </aside>
+    </section>
+
+    <div class="anonime-footer-bottom">
+      <small>© 2026 Anonime, Inc. All rights reserved.</small>
+      <p>Your privacy is your right. <strong>We protect it every day.</strong></p>
+      <a href="https://x.com/anonimehq" aria-label="Anonime on X"><Icon name="x" size={18} /></a>
+    </div>
   </div>
 </footer>

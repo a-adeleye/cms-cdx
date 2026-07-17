@@ -10,6 +10,7 @@ describe('ArticlesPageComponent', () => {
   let router: Router;
 
   const fakeState = {
+    selectedSite: () => ({ name: 'Example Site', blogPath: '/blog' }),
     articles: () => [
       {
         id: 'article-1',
@@ -35,6 +36,8 @@ describe('ArticlesPageComponent', () => {
         updatedAt: '2026-05-23T00:00:00.000Z',
       },
     ],
+    categories: () => [{ id: 'category-1', siteId: 'site-example', name: 'Editorial', slug: 'editorial', description: '' }],
+    authors: () => [{ id: 'author-1', siteId: 'site-example', name: 'Ada Author', slug: 'ada-author', bio: '' }],
     error: () => null,
     clearError: jasmine.createSpy('clearError'),
     reportError: jasmine.createSpy('reportError'),
@@ -45,6 +48,8 @@ describe('ArticlesPageComponent', () => {
   };
 
   beforeEach(async () => {
+    fakeState.clearSelectedArticle.calls.reset();
+    fakeState.selectArticle.calls.reset();
     await TestBed.configureTestingModule({
       imports: [CommonModule, RouterTestingModule, ArticlesPageComponent],
       providers: [{ provide: WorkspaceStateService, useValue: fakeState }],
@@ -58,30 +63,32 @@ describe('ArticlesPageComponent', () => {
     fixture.detectChanges();
   });
 
-  it('renders articles in a single column list', () => {
-    expect(fixture.nativeElement.querySelector('.panel')).toBeTruthy();
+  it('renders articles in a single responsive table', () => {
+    expect(fixture.nativeElement.querySelector('.articles-table-card')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('.two-column')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('First article');
+    expect(fixture.nativeElement.textContent).toContain('Ada Author');
+    expect(fixture.nativeElement.textContent).toContain('Editorial');
   });
 
   it('navigates to the editor when creating a new article', async () => {
-    const button = fixture.nativeElement.querySelector('.hero-actions .button') as HTMLButtonElement | null;
-    button?.click();
+    fixture.componentInstance.startArticle();
 
     await fixture.whenStable();
 
     expect(fakeState.clearSelectedArticle).toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/articles/editor']);
+    expect(router.navigate).toHaveBeenCalledWith(['/content/articles/new']);
+    expect(fakeState.selectArticle).not.toHaveBeenCalled();
   });
 
-  it('shows success feedback after updating an article', async () => {
-    const featureButton = fixture.nativeElement.querySelector('.list-card .button-secondary:nth-child(2)') as HTMLButtonElement | null;
-    featureButton?.click();
+  it('opens an article from the table', async () => {
+    const articleButton = fixture.nativeElement.querySelector('.article-title-cell') as HTMLButtonElement | null;
+    articleButton?.click();
 
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fakeState.toggleFeatured).toHaveBeenCalledWith('article-1');
-    expect(fixture.nativeElement.textContent).toContain('Featured state updated successfully.');
+    expect(fakeState.selectArticle).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/content/articles', 'article-1', 'edit']);
   });
 });

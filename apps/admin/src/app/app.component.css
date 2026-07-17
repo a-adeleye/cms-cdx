@@ -1,31 +1,29 @@
 .shell {
   display: grid;
-  grid-template-columns: 296px 1fr;
+  grid-template-columns: 244px minmax(0, 1fr);
   min-height: 100dvh;
 }
 
 .sidebar {
   position: sticky;
   top: 0;
-  align-self: start;
+  z-index: 5;
+  display: flex;
+  width: 244px;
   height: 100dvh;
+  flex-direction: column;
   overflow-y: auto;
-  display: grid;
-  align-content: start;
-  gap: 22px;
-  padding: 28px 24px;
   border-right: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(18px);
+  background: #fff;
 }
 
 .skip-link {
-  position: absolute;
+  position: fixed;
+  z-index: 100;
   left: 16px;
-  top: -48px;
-  z-index: 10;
-  padding: 10px 16px;
-  border-radius: var(--radius);
+  top: -52px;
+  padding: 10px 14px;
+  border-radius: var(--radius-xs);
   background: var(--accent);
   color: #fff;
   transition: top var(--motion-fast);
@@ -35,87 +33,198 @@
   top: 16px;
 }
 
-.brand-block {
-  display: grid;
-  gap: 6px;
-}
-
-.brand {
-  font-size: 23px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.brand-subtitle,
-.context-meta {
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.context-card {
-  display: grid;
+.sidebar-brand {
+  display: flex;
+  min-height: 86px;
+  align-items: center;
   gap: 10px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  padding: 0 22px;
 }
 
-.context-card label {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
+.sidebar-brand__mark {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  place-items: center;
+  border-radius: 7px;
+  background: #101820;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  font-style: italic;
+  box-shadow: 0 3px 8px rgb(15 23 42 / 0.2);
 }
 
-.context-card select {
+.sidebar-brand__site {
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar-brand select {
   width: 100%;
-}
-
-.auth-card strong,
-.auth-card span {
-  display: block;
+  min-height: 34px;
+  border: 0;
+  padding: 4px 28px 4px 4px;
+  background-color: transparent;
+  background-position: calc(100% - 12px) 50%, calc(100% - 7px) 50%;
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: none;
 }
 
 .sidebar nav {
   display: grid;
-  gap: 8px;
+  gap: 18px;
+  padding: 8px 12px 24px;
 }
 
-.sidebar-logout {
-  margin-top: 8px;
-  justify-self: start;
+.navigation-section {
+  display: grid;
+  gap: 5px;
+}
+
+.navigation-section__title {
+  margin: 0;
+  padding: 0 14px 5px;
+  color: #60708a;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.navigation-section__links {
+  display: grid;
+  gap: 3px;
 }
 
 .sidebar a {
-  padding: 10px 13px;
-  border-radius: var(--radius);
+  position: relative;
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  border-radius: 5px;
+  color: #344054;
+  font-size: 13px;
   font-weight: 500;
-  color: var(--muted);
-  border: 1px solid transparent;
   transition: background-color var(--motion-fast), color var(--motion-fast);
 }
 
+.sidebar a::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 5px;
+  bottom: 5px;
+  width: 2px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.navigation-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .sidebar a:hover {
-  background: var(--surface-soft);
-  color: var(--text);
+  background: #f5f8fc;
+  color: var(--accent);
 }
 
 .sidebar a.is-active {
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-soft);
+  color: var(--accent);
   font-weight: 600;
-  box-shadow: var(--accent-glow);
+}
+
+.sidebar a.is-active::before {
+  background: var(--accent);
+}
+
+.sidebar-footer {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+  padding: 12px 18px 18px;
+  border-top: 1px solid var(--line);
+}
+
+.sidebar-collapse,
+.sidebar-logout {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.sidebar-collapse {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.sidebar-collapse span {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.sidebar-user {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+}
+
+.sidebar-user strong,
+.sidebar-user small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-user strong {
+  font-size: 12px;
+}
+
+.sidebar-user small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: capitalize;
+}
+
+.sidebar-logout {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+}
+
+.sidebar-logout:hover {
+  background: var(--surface-muted);
+  color: var(--danger);
 }
 
 .content {
   width: 100%;
-  max-width: 1180px;
+  min-width: 0;
+  max-width: 1360px;
   margin-inline: auto;
-  padding: 40px 32px 56px;
+  padding: 32px 36px 48px;
 }
 
 @media (max-width: 900px) {
@@ -125,20 +234,45 @@
 
   .sidebar {
     position: static;
+    width: 100%;
     height: auto;
-    overflow-y: visible;
+    max-height: none;
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
 
-  .content {
-    padding: 28px 20px 40px;
+  .sidebar-brand {
+    min-height: 68px;
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .sidebar a,
-  .skip-link {
-    transition: none;
+  .sidebar nav {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 0 16px 14px;
+  }
+
+  .sidebar-dashboard-link,
+  .navigation-section,
+  .navigation-section__links {
+    display: flex;
+    flex: none;
+  }
+
+  .navigation-section__title,
+  .sidebar-footer {
+    display: none;
+  }
+
+  .sidebar a {
+    white-space: nowrap;
+  }
+
+  .sidebar a::before {
+    display: none;
+  }
+
+  .content {
+    padding: 24px 18px 40px;
   }
 }

@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+const anonimeArticlesPerPage = 6
+
 func renderAnonimeHomePage(site renderedSite) string {
 	var body strings.Builder
 	body.WriteString(`<section class="anonime-template"><div class="anonime-shell">`)
@@ -19,14 +21,19 @@ func renderAnonimeHomePage(site renderedSite) string {
 }
 
 func renderAnonimeArticlesPage(site renderedSite) string {
+	return renderAnonimeArticlesPageNumber(site, 1)
+}
+
+func renderAnonimeArticlesPageNumber(site renderedSite, requestedPage int) string {
+	articles, currentPage, totalPages := anonimeArticlePage(site.Articles, requestedPage)
 	var body strings.Builder
 	body.WriteString(`<section class="anonime-template"><div class="anonime-shell">`)
 	body.WriteString(renderAnonimeHeader(site))
 	body.WriteString(renderAnonimeArticlesHero(site))
-	body.WriteString(renderAnonimeArticlesIndex(site))
+	body.WriteString(renderAnonimeArticlesIndex(site, articles, currentPage, totalPages))
 	body.WriteString(renderAnonimeFooter(site))
 	body.WriteString(`</div></section>`)
-	return renderDocument(site, "Articles", body.String(), articlesURL(site))
+	return renderDocument(site, "Articles", body.String(), anonimeArticlesPageURL(site, currentPage))
 }
 
 func renderAnonimeArticlePage(site renderedSite, article ArticleContent) string {
@@ -42,7 +49,7 @@ func renderAnonimeArticlePage(site renderedSite, article ArticleContent) string 
 func renderAnonimeHeader(site renderedSite) string {
 	var body strings.Builder
 	body.WriteString(`<header class="anonime-header">`)
-	body.WriteString(renderAnonimeBrand(site))
+	body.WriteString(renderAnonimeHeaderBrand())
 	body.WriteString(`<nav class="anonime-nav" aria-label="Primary">`)
 	body.WriteString(`<a href="https://anonime.io/#top">Home</a>`)
 	body.WriteString(`<a href="https://anonime.io/#how-it-works">How it Works</a>`)
@@ -56,6 +63,10 @@ func renderAnonimeHeader(site renderedSite) string {
 	body.WriteString(`<details class="anonime-mobile-nav"><summary aria-label="Open navigation"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></summary><nav aria-label="Mobile navigation"><a href="https://anonime.io/#top">Home</a><a href="https://anonime.io/#how-it-works">How it Works</a><a href="https://anonime.io/pricing">Plans &amp; Pricing</a><a href="https://anonime.io/blog">Blog</a><a href="https://app.anonime.io">Log in</a><a href="https://app.anonime.io">Get Started</a></nav></details>`)
 	body.WriteString(`</div></header>`)
 	return body.String()
+}
+
+func renderAnonimeHeaderBrand() string {
+	return `<a class="anonime-brand" href="/" aria-label="Anonime home"><img class="brand-logo" src="https://cdn.anonime.io/anonime-logo.svg" alt="Anonime"></a>`
 }
 
 func renderAnonimeBrand(site renderedSite) string {
@@ -142,9 +153,13 @@ func renderAnonimeArticleIndex(site renderedSite) string {
 	var body strings.Builder
 	body.WriteString(`<section class="anonime-section" id="latest-insights">`)
 	body.WriteString(`<div class="anonime-card anonime-panel">`)
-	body.WriteString(`<div class="anonime-section-header"><h2 class="anonime-panel-title is-tight">Latest insights</h2><a class="anonime-muted anonime-section-link" href="`)
+	body.WriteString(`<div class="anonime-section-header">
+	<h2 class="anonime-panel-title is-tight">Latest insights</h2>
+	<a class="anonime-muted anonime-section-link" href="`)
 	body.WriteString(html.EscapeString(articlesPath(site)))
 	body.WriteString(`">View all articles</a></div></div>`)
+	body.WriteString(`<div class="anonime-content-grid">`)
+	body.WriteString(`<div class="anonime-article-stack">`)
 	if len(site.RecentArticles) == 0 {
 		body.WriteString(`<div class="anonime-panel"><p class="anonime-muted">No published articles yet.</p></div>`)
 	} else {
@@ -157,26 +172,24 @@ func renderAnonimeArticleIndex(site renderedSite) string {
 		}
 	}
 	body.WriteString(`</div>`)
-	body.WriteString(`<div class="anonime-content-grid">`)
-	body.WriteString(`<div class="anonime-article-stack">`)
 	body.WriteString(renderAnonimeSidebar(site))
 	body.WriteString(`</div>`)
 	body.WriteString(`</section>`)
 	return body.String()
 }
 
-func renderAnonimeArticlesIndex(site renderedSite) string {
+func renderAnonimeArticlesIndex(site renderedSite, articles []ArticleContent, currentPage, totalPages int) string {
 	var body strings.Builder
 	body.WriteString(`<section class="anonime-content-grid anonime-section" id="articles-grid">`)
 	body.WriteString(`<div class="anonime-article-stack">`)
-	if len(site.Articles) == 0 {
+	if len(articles) == 0 {
 		body.WriteString(`<div class="anonime-panel"><p class="anonime-muted">No articles available.</p></div>`)
 	} else {
-		for _, article := range site.Articles {
+		for _, article := range articles {
 			body.WriteString(renderAnonimeArticleCard(site, article, false))
 		}
 	}
-	body.WriteString(renderAnonimePagination())
+	body.WriteString(renderAnonimePagination(site, currentPage, totalPages))
 	body.WriteString(`</div>`)
 	body.WriteString(renderAnonimeSidebar(site))
 	body.WriteString(`</section>`)
@@ -203,11 +216,6 @@ func renderAnonimeArticleLayout(site renderedSite, article ArticleContent) strin
 	body.WriteString(`<h1 class="anonime-article-heading">`)
 	body.WriteString(html.EscapeString(article.Title))
 	body.WriteString(`</h1>`)
-	if strings.TrimSpace(article.Excerpt) != "" {
-		body.WriteString(`<p class="anonime-article-intro">`)
-		body.WriteString(html.EscapeString(article.Excerpt))
-		body.WriteString(`</p>`)
-	}
 	body.WriteString(renderAnonimeToolbar(article))
 	body.WriteString(`</header>`)
 	body.WriteString(renderAnonimeFigure(article))
@@ -215,7 +223,6 @@ func renderAnonimeArticleLayout(site renderedSite, article ArticleContent) strin
 	body.WriteString(renderMarkdown(article.ContentMarkdown))
 	body.WriteString(`</div>`)
 	body.WriteString(renderAnonimeFooterCard())
-	body.WriteString(renderAnonimeFeedback())
 	body.WriteString(`</article>`)
 	body.WriteString(renderAnonimeArticleSidebar(site, article))
 	body.WriteString(`</section>`)
@@ -248,19 +255,6 @@ func renderAnonimeSidebar(site renderedSite) string {
 func renderAnonimeArticleSidebar(site renderedSite, current ArticleContent) string {
 	var body strings.Builder
 	body.WriteString(`<aside class="anonime-article-sidebar">`)
-	body.WriteString(`<section class="anonime-panel"><h2 class="anonime-panel-title">On this page</h2><ol class="anonime-article-toc-list">`)
-	for _, entry := range anonimeTocEntries(current) {
-		if entry.Active {
-			body.WriteString(`<li class="is-active"><a href="#`)
-		} else {
-			body.WriteString(`<li><a href="#`)
-		}
-		body.WriteString(html.EscapeString(entry.ID))
-		body.WriteString(`">`)
-		body.WriteString(html.EscapeString(entry.Label))
-		body.WriteString(`</a></li>`)
-	}
-	body.WriteString(`</ol></section>`)
 	body.WriteString(`<section class="anonime-panel"><h2 class="anonime-panel-title">Related Articles</h2><div class="anonime-article-related">`)
 	for _, article := range relatedArticles(site.Articles, current.Slug) {
 		body.WriteString(renderAnonimeCompactArticle(site, article))
@@ -276,7 +270,7 @@ func renderAnonimeHeroArt() string {
 }
 
 func renderAnonimePricingCallout() string {
-	return `<section class="anonime-section anonime-section-spaced" id="pricing"><div class="anonime-callout dark"><div class="anonime-badge anonime-badge-solid">Take back control</div><div class="anonime-article-footer-card is-flat"><div><h3>Conversations are yours. Keep them that way.</h3><p>Private communication deserves a design that feels calm, deliberate, and secure.</p></div><a class="anonime-button anonime-button-primary" href="#get-started">Explore Anonime <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M7 12h10m0 0-4-4m4 4-4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" /></svg></a></div></div></section>`
+	return `<section class="anonime-section anonime-section-spaced" id="pricing"><div class="anonime-callout dark"><div class="anonime-article-footer-card is-flat"><div><h3>Conversations are yours. Keep them that way.</h3><p>Private communication deserves a design that feels calm, deliberate, and secure.</p></div><div><a class="anonime-button anonime-button-primary" href="#get-started">Explore Anonime <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M7 12h10m0 0-4-4m4 4-4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" /></svg></a></div><div>Image here</div></div></div></section>`
 }
 
 func renderAnonimeCallout() string {
@@ -344,7 +338,7 @@ func renderAnonimeCompactArticle(site renderedSite, article ArticleContent) stri
 	body.WriteString(`">`)
 	body.WriteString(html.EscapeString(article.Title))
 	body.WriteString(`</a></h3><p class="anonime-sidebar-meta">`)
-	body.WriteString(html.EscapeString(article.PublishedAt))
+	body.WriteString(html.EscapeString(dateLabel(article)))
 	body.WriteString(` <span class="anonime-meta-separator" aria-hidden="true"></span> `)
 	body.WriteString(html.EscapeString(readTimeLabel(article)))
 	body.WriteString(`</p></div></article>`)
@@ -390,9 +384,6 @@ func renderAnonimeToolbar(article ArticleContent) string {
 	body.WriteString(`</span><span class="anonime-meta-separator" aria-hidden="true"></span><span>`)
 	body.WriteString(html.EscapeString(readTimeLabel(article)))
 	body.WriteString(`</span>`)
-	body.WriteString(`<button class="anonime-icon-button" type="button" aria-label="Bookmark article"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M7 4.8h10v14.7l-5-3.2-5 3.2V4.8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /></svg></button>`)
-	body.WriteString(`<button class="anonime-icon-button" type="button" aria-label="Share article"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M16.5 8.5a2.5 2.5 0 1 0-2.3-3.5 2.5 2.5 0 0 0 2.3 3.5ZM7.5 14.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Zm9-2a2.5 2.5 0 1 0 2.2 3.5 2.5 2.5 0 0 0-2.2-3.5ZM9.5 15.6l5.3-2.8m-5.3-2.8 5.3 2.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg></button>`)
-	body.WriteString(`<button class="anonime-icon-button" type="button" aria-label="Copy link"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M9.2 14.8 14.8 9.2m-5.4 6.8a3 3 0 0 1-4.2 0 3 3 0 0 1 0-4.2l2.1-2.1m8.7-.1 2.1-2.1a3 3 0 0 1 4.2 0 3 3 0 0 1 0 4.2l-2.1 2.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg></button>`)
 	body.WriteString(`</div>`)
 	return body.String()
 }
@@ -417,12 +408,82 @@ func renderAnonimeFooterCard() string {
 	return `<footer class="anonime-article-footer"><div class="anonime-article-footer-card"><div><h3>Your conversations are yours. Keep them that way.</h3><p>Encrypted communication helps protect the people and work that matter most.</p></div><a class="anonime-button" href="#get-started">Explore Anonime <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M7 12h10m0 0-4-4m4 4-4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" /></svg></a></div></footer>`
 }
 
-func renderAnonimeFeedback() string {
-	return `<div class="anonime-article-feedback"><span class="anonime-muted">Was this article helpful?</span><button class="anonime-help-button" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M9.5 11.5V20H6V11.5h3.5Zm1.8-.8 1.6-4.1A2 2 0 0 1 14.8 5h1.4a1.8 1.8 0 0 1 1.7 2.2l-1 4.2H21v2.4a4 4 0 0 1-4 4h-5.5a2 2 0 0 1-1.9-1.4l-1.8-5a1.8 1.8 0 0 1 1.5-2.5Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>Yes</button><button class="anonime-help-button" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M14.5 12.5V4H18v8.5h-3.5Zm-1.8.8-1.6 4.1A2 2 0 0 1 9.2 19H7.8a1.8 1.8 0 0 1-1.7-2.2l1-4.2H3v-2.4a4 4 0 0 1 4-4h5.5a2 2 0 0 1 1.9 1.4l1.8 5a1.8 1.8 0 0 1-1.5 2.5Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>No</button></div>`
+func anonimeArticlePage(articles []ArticleContent, requestedPage int) ([]ArticleContent, int, int) {
+	totalPages := anonimeArticlePageCount(len(articles))
+	if requestedPage < 1 {
+		requestedPage = 1
+	}
+	if requestedPage > totalPages {
+		requestedPage = totalPages
+	}
+
+	start := (requestedPage - 1) * anonimeArticlesPerPage
+	if start >= len(articles) {
+		return nil, requestedPage, totalPages
+	}
+	end := start + anonimeArticlesPerPage
+	if end > len(articles) {
+		end = len(articles)
+	}
+	return articles[start:end], requestedPage, totalPages
 }
 
-func renderAnonimePagination() string {
-	return `<div class="anonime-pagination" aria-label="Pagination"><button class="anonime-pagination-button" type="button" aria-label="Previous page"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M14 7 9 12l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg></button><button class="anonime-pagination-button is-active" type="button">1</button><button class="anonime-pagination-button" type="button">2</button><button class="anonime-pagination-button" type="button">3</button><button class="anonime-pagination-button" type="button">4</button><button class="anonime-pagination-button" type="button">5</button><button class="anonime-pagination-button" type="button">...</button><button class="anonime-pagination-button" type="button">12</button><button class="anonime-pagination-button" type="button" aria-label="Next page"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M10 7 15 12l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg></button></div>`
+func anonimeArticlePageCount(articleCount int) int {
+	if articleCount == 0 {
+		return 1
+	}
+	return (articleCount + anonimeArticlesPerPage - 1) / anonimeArticlesPerPage
+}
+
+func anonimeArticlesPagePath(site renderedSite, page int) string {
+	if page <= 1 {
+		return articlesPath(site)
+	}
+	return strings.TrimRight(articlesPath(site), "/") + "/page/" + fmt.Sprint(page) + "/"
+}
+
+func anonimeArticlesPageURL(site renderedSite, page int) string {
+	return site.PublicBaseURL + anonimeArticlesPagePath(site, page)
+}
+
+func renderAnonimePagination(site renderedSite, currentPage, totalPages int) string {
+	if totalPages <= 1 {
+		return ""
+	}
+
+	var body strings.Builder
+	body.WriteString(`<nav class="anonime-pagination" aria-label="Articles pagination">`)
+	if currentPage > 1 {
+		body.WriteString(renderAnonimePaginationLink(site, currentPage-1, `aria-label="Previous page"`, `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M14 7 9 12l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>`))
+	}
+
+	lastRenderedPage := 0
+	for page := 1; page <= totalPages; page++ {
+		if page != 1 && page != totalPages && (page < currentPage-1 || page > currentPage+1) {
+			continue
+		}
+		if lastRenderedPage > 0 && page-lastRenderedPage > 1 {
+			body.WriteString(`<span class="anonime-pagination-ellipsis" aria-hidden="true">&hellip;</span>`)
+		}
+		if page == currentPage {
+			body.WriteString(`<span class="anonime-pagination-button is-active" aria-current="page">`)
+			body.WriteString(fmt.Sprint(page))
+			body.WriteString(`</span>`)
+		} else {
+			body.WriteString(renderAnonimePaginationLink(site, page, "", fmt.Sprint(page)))
+		}
+		lastRenderedPage = page
+	}
+
+	if currentPage < totalPages {
+		body.WriteString(renderAnonimePaginationLink(site, currentPage+1, `aria-label="Next page"`, `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M10 7 15 12l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>`))
+	}
+	body.WriteString(`</nav>`)
+	return body.String()
+}
+
+func renderAnonimePaginationLink(site renderedSite, page int, attributes, label string) string {
+	return `<a class="anonime-pagination-button" href="` + html.EscapeString(anonimeArticlesPagePath(site, page)) + `" ` + attributes + `>` + label + `</a>`
 }
 
 func renderAnonimeFooter(site renderedSite) string {
@@ -433,7 +494,7 @@ func renderAnonimeFooter(site renderedSite) string {
 	body.WriteString(`<h2>Private communication<br>without <strong>permanent trails.</strong></h2></section>`)
 	body.WriteString(`<nav class="anonime-footer-links" aria-label="Footer navigation"><div><h3>Product</h3><ul><li><a href="https://anonime.io/#security">Whispers</a></li><li><a href="https://anonime.io/#private-drops">Private Drops</a></li><li><a href="https://anonime.io/#how-it-works">Nyms</a></li><li><a href="https://anonime.io/pricing">Pricing</a></li></ul></div><div><h3>Company</h3><ul><li><a href="https://anonime.io/#about">About</a></li><li><a href="https://anonime.io/blog">Blog</a></li><li><a href="https://anonime.io/contact">Contact</a></li></ul></div><div><h3>Legal</h3><ul><li><a href="https://anonime.io/privacy">Privacy Policy</a></li><li><a href="https://anonime.io/terms">Terms of Service</a></li><li><a href="https://anonime.io/security">Security</a></li><li><a href="https://anonime.io/acceptable-usage-policy">Acceptable Use Policy</a></li><li><a href="https://anonime.io/data-processing">Data Processing</a></li></ul></div></nav></div>`)
 	body.WriteString(`<section class="anonime-privacy-proof" aria-labelledby="anonime-privacy-proof-title"><p id="anonime-privacy-proof-title">Built with <strong>privacy by design.</strong></p><div class="anonime-privacy-features"><div class="anonime-privacy-feature"><span class="anonime-privacy-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3M6.5 10h11v9h-11z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>End-to-end encrypted</span></div><div class="anonime-privacy-feature"><span class="anonime-privacy-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5 19 7v5.8c0 4-2.9 6.7-7 7.7-4.1-1-7-3.7-7-7.7V7l7-3.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span><span>No personal data required</span></div><div class="anonime-privacy-feature"><span class="anonime-privacy-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.7"/><path d="m7 7 10 10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><span>No logs. No tracking.</span></div><div class="anonime-privacy-feature"><span class="anonime-privacy-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="5" width="14" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="5" y="14" width="14" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="M8 7.5h.01M8 16.5h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span>Hosted with privacy-first infra</span></div></div></section>`)
-	body.WriteString(`<div class="anonime-footer-bottom"><p>&copy; 2026 Anonime, Inc. All rights reserved.</p><p class="anonime-footer-tagline">Your privacy is your right. <strong>We protect it every day.</strong></p><a class="anonime-footer-x" href="https://x.com/anonimehq" aria-label="Anonime on X"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M17.5 4.5 13.4 9l5.9 10.5h-4.2L10.9 12.8l-4.7 6.7H2.4l4.4-6.1L1 4.5h4.3l4.7 8.6 5.9-8.6h1.6Z" fill="currentColor"/></svg></a></div></footer>`)
+	body.WriteString(`<div class="anonime-footer-bottom"><p>&copy; 2026 Anonime, Inc. All rights reserved.</p><p class="anonime-footer-tagline">Your privacy is your right. <strong>We protect it every day.</strong></p><a class="footer-social-link" href="https://x.com/anonimehq" aria-label="X" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.74l7.73-8.835L1.254 2.25H8.08l4.258 5.622 5.906-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg></a></div></footer>`)
 	return body.String()
 }
 
@@ -445,7 +506,7 @@ func anonimeStyles() string {
 				radial-gradient(circle at 84% 12%, rgba(16, 178, 108, 0.08), transparent 18%),
 				linear-gradient(180deg, #ffffff 0%, #f7fbfa 100%);
 			color: #0f1728;
-			font-family: Inter, Manrope, "Segoe UI", Helvetica, Arial, sans-serif;
+			font-family: Matter, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 		}
 		body.anonime-layout .page-shell {
 			width: min(1200px, calc(100vw - 32px));
@@ -456,13 +517,11 @@ func anonimeStyles() string {
 			isolation: isolate;
 		}
 		.anonime-template, .anonime-template * { box-sizing: border-box; }
-		.anonime-template a { text-decoration: none; color: #057451; font-weight: 500;}
-		.anonime-template a.get-started { border: 1px solid #079868;}
+		.anonime-template a { text-decoration: none; color: #057451; font-weight: 500; font-size: .9rem;}
 		.anonime-template img { display: block; max-width: 100%; }
 		.anonime-shell { width: 100%; }
 		.anonime-header {
 			display: flex;
-			width: min(1096px, 100%);
 			margin-inline: auto;
 			align-items: center;
 			justify-content: space-between;
@@ -470,20 +529,21 @@ func anonimeStyles() string {
 			padding: 10px 0 30px;
 		}
 		.anonime-brand { display: inline-flex; align-items: center; gap: 12px; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.04em; }
+		.brand-logo { width: 200px; height: auto; }
 		.anonime-brand-mark {
 			width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 999px; object-fit: contain;
 			background: #38c493; color: #071620; box-shadow: 0 10px 22px rgba(16, 178, 108, 0.18);
 		}
-		.anonime-nav { display: inline-flex; align-items: center; justify-content: center; gap: clamp(20px, 3vw, 42px); color: #172238; font-size: 0.92rem; }
+		.anonime-nav { display: inline-flex; align-items: center; justify-content: center; gap: clamp(24px, 4vw, 52px); color: #172238; font-size: 0.9rem; }
 		.anonime-nav a { position: relative; padding: 8px 2px; }
 		.anonime-nav a[aria-current="page"] { color: #10b26c;}
 		.anonime-nav a[aria-current="page"]::after {
 			content: ""; position: absolute; left: 50%; bottom: 0; width: 100%; height: 2px; border-radius: 999px;
 			transform: translateX(-50%); background: #10b26c;
 		}
-		.anonime-header-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 14px; }
-		.anonime-login-link { color: #177a59; font-size: 0.9rem; font-weight: 700; white-space: nowrap; }
-		.anonime-button-outline { color: #177a59; border: 1px solid #169568; background: transparent; box-shadow: none; }
+		.anonime-header-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 18px; font-size: .9rem;}
+		.anonime-login-link { color: #177a59; font-size: 0.9rem; font-weight: 700; white-space: nowrap;  padding: 0 22px;}
+		.anonime-button-outline { color: #177a59; border: 1px solid #169568 !important; background: transparent; box-shadow: none; }
 		.anonime-theme-control { position: relative; display: inline-flex; }
 		.anonime-theme-checkbox { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
 		.anonime-theme-toggle { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 999px; color: #536079; cursor: pointer; transition: color 160ms ease, background-color 160ms ease, transform 160ms ease; }
@@ -507,9 +567,9 @@ func anonimeStyles() string {
 		}
 		.anonime-button {
 			display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 42px; padding: 0 18px;
-			border-radius: 6px; font-weight: 500; line-height: 42px; ont-size: .9rem;
+			border-radius: 6px; line-height: 42px; font-size: .9rem;
 		}
-		.anonime-button-primary { color: #fff; background: linear-gradient(180deg, #19c27b 0%, #0b9461 100%);}
+		.anonime-button-primary { color: #fff !important; background: linear-gradient(180deg, #19c27b 0%, #0b9461 100%);}
 		.anonime-button-secondary { color: #059669; background: rgba(16, 178, 108, 0.08); }
 		.anonime-hero {
 			display: grid; grid-template-columns: 58% 42%; align-items: center; gap: 2rem; padding: 26px 0 30px;
@@ -585,65 +645,91 @@ func anonimeStyles() string {
 		}
 		.anonime-pill.is-active { border-color: rgba(16, 178, 108, 0.18); color: #059669; background: rgba(16, 178, 108, 0.08); }
 		.anonime-content-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; align-items: start; margin-top: 24px; }
-		.anonime-card, .anonime-panel, .anonime-callout, .anonime-article-footer-card { border: 1px solid rgba(18, 28, 43, 0.1); background: rgba(255, 255, 255, 0.92); box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04); backdrop-filter: blur(8px); border-radius: 10px; }
 		.anonime-panel { padding: 20px; }
 		.anonime-panel-title { margin: 0 0 16px; font-size: 1rem; letter-spacing: -0.03em; font-weight: 500; }
 		.anonime-panel-title.is-tight { margin-bottom: 0; }
-		.anonime-section-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+		.anonime-section-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
 		.anonime-section-link { font-weight: 500; }
 		.anonime-article-stack { display: grid; gap: 16px; }
-		.anonime-article-card { display: grid; grid-template-columns: minmax(260px, 0.95fr) minmax(0, 1.05fr); gap: 18px; padding: 14px; overflow: hidden; }
+		.anonime-article-card { display: grid; grid-template-areas: "media copy"; grid-template-columns: minmax(260px, 0.95fr) minmax(0, 1.05fr); gap: 18px; padding: 14px; overflow: hidden; }
 		.anonime-article-card.is-compact { grid-template-columns: 72px minmax(0, 1fr); align-items: center; padding: 12px; }
 		.anonime-article-art, .anonime-sidebar-thumb { position: relative; min-height: 176px; border-radius: 10px; overflow: hidden; background: linear-gradient(135deg, rgba(10, 20, 17, 0.94), rgba(7, 68, 52, 0.9));}
+		.anonime-article-card > a:first-child { grid-area: media; min-height: 100%; }
+		.anonime-article-card .anonime-article-art { height: 100%; min-height: 100%; }
+		.anonime-article-card .anonime-article-art img { width: 100%; height: 100%; object-fit: cover; }
 		.anonime-sidebar-thumb { min-height: 64px; border-radius: 14px; }
 		.anonime-article-art::before, .anonime-article-art::after, .anonime-sidebar-thumb::before, .anonime-sidebar-thumb::after { content: ""; position: absolute; border-radius: 999px; background: rgba(16, 178, 108, 0.22); }
 		.anonime-article-art::before { width: 110px; height: 110px; left: 50%; top: 16%; transform: translateX(-50%); box-shadow: 0 0 0 16px rgba(16, 178, 108, 0.12), 0 0 0 40px rgba(16, 178, 108, 0.08); }
 		.anonime-article-art::after { width: 56px; height: 68px; left: 50%; top: 44%; transform: translateX(-50%); border-radius: 16px; background: rgba(255, 255, 255, 0.12); }
-		.anonime-article-copy { min-width: 0; padding: 4px 6px 2px 0; }
+		.anonime-article-copy { grid-area: copy; display: flex; min-width: 0; padding: 4px 0 2px 6px; flex-direction: column;  gap: .5rem;}
 		.anonime-article-category { margin: 0 0 8px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: #10b26c; }
 		.anonime-article-category.is-tight { margin-bottom: 4px; }
 		.anonime-article-title { margin: 0; font-size: 1.34rem; line-height: 1.2; letter-spacing: -0.04em; }
-		.anonime-article-excerpt { margin: 12px 0 0; line-height: 1.72; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
-		.anonime-article-footer { color: #5b6474; }
+		.anonime-article-title a {font-size: 1rem; font-weight: 500;}
+		.anonime-article-excerpt { font-size: .9rem; margin: 12px 0; line-height: 1.72; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+		.anonime-article-footer { margin-top: auto; color: #5b6474; }
 		.anonime-article-arrow { display: inline-grid; place-items: center; width: 34px; height: 34px; margin-left: auto; border-radius: 999px; color: #059669; background: rgba(16, 178, 108, 0.08); }
+		.anonime-sidebar-item { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 12px; align-items: stretch; }
+		.anonime-sidebar-item > a { display: block; min-width: 0; }
+		.anonime-sidebar-item .anonime-sidebar-thumb { width: 100%; height: 100%; min-height: 80px; border-radius: 10px; }
+		.anonime-sidebar-item > div { display: flex; min-width: 0; flex-direction: column; }
+		.anonime-sidebar-item .anonime-sidebar-title { display: -webkit-box; margin: 0; overflow: hidden; color: #0f1728; font-size: .92rem; font-weight: 600; line-height: 1.3; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+		.anonime-sidebar-item .anonime-sidebar-title a { color: inherit; font: inherit; }
+		.anonime-sidebar-item .anonime-sidebar-meta { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; color: #5b6474; font-size: .78rem; white-space: nowrap; }
 		.anonime-sidebar-panel, .anonime-article-sidebar { display: grid; gap: 16px; position: sticky; top: 20px; }
 		.anonime-topic-list { display: grid; gap: 12px; }
 		.anonime-topic-entry { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #334155; font-size: 0.95rem; }
-		.anonime-topic-count { color: #10b26c; font-weight: 800; }
-		.anonime-callout { position: relative; overflow: hidden; padding: 22px; border-radius: 24px; background: linear-gradient(180deg, #ffffff 0%, #edf9f2 100%); }
-		.anonime-callout.dark { color: #fff; background: radial-gradient(circle at 82% 24%, rgba(16, 178, 108, 0.24), transparent 22%), linear-gradient(135deg, #08111a 0%, #0a2a22 54%, #091518 100%); }
-		.anonime-callout-title { margin: 0; max-width: 13ch; font-size: 1.3rem; line-height: 1.1; letter-spacing: -0.05em; }
+		.anonime-topic-entry strong {font-weight: 500;}
+		.anonime-topic-count { color: #10b26c;}
+		.anonime-callout { position: relative; overflow: hidden; padding: 36px 22px; border-radius: 10px; background: linear-gradient(180deg, #ffffff 0%, #edf9f2 100%); }
+		.anonime-callout.dark { margin-top: 1.5rem; color: #fff; background: radial-gradient(circle at 82% 24%, rgba(16, 178, 108, 0.24), transparent 22%), linear-gradient(135deg, #08111a 0%, #0a2a22 54%, #091518 100%); }
+		.anonime-callout-title { margin: 0; max-width: 19ch; font-size: 1.3rem; line-height: 1.1; letter-spacing: -0.05em; font-weight: 500;}
 		.anonime-callout-copy { margin: 12px 0 0; line-height: 1.7; }
 		.anonime-callout.dark .anonime-callout-copy { color: rgba(255, 255, 255, 0.72); }
 		.anonime-callout-actions { margin-top: 18px; }
 		.anonime-pagination { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 18px; }
-		.anonime-pagination-button {
-			min-width: 36px; min-height: 36px; padding: 0 12px; border-radius: 11px; border: 1px solid rgba(18, 28, 43, 0.1); background: rgba(255, 255, 255, 0.9); color: #334155;
+		.anonime-pagination-button {display: grid; place-content: center;
+			min-width: 36px; min-height: 36px; padding: 0 12px; border-radius: 6px; background: rgba(255, 255, 255, 0.9); color: #334155;
 		}
 		.anonime-pagination-button.is-active { border-color: rgba(16, 178, 108, 0.18); color: #059669; background: rgba(16, 178, 108, 0.08); }
+		.anonime-sidebar-list {display: flex; flex-direction: column; gap: 1rem;}
 		.anonime-footer { width: min(1530px, calc(100vw - 32px)); margin: 64px 0 0 50%; padding: 0; transform: translateX(-50%); }
-		.anonime-footer-main { display: grid; min-height: 374px; padding: 49px 55px 47px; grid-template-columns: minmax(540px, 1.35fr) minmax(600px, 1.15fr); gap: 72px; align-items: start; border-bottom: 1px solid rgba(29, 77, 65, 0.12); }
+		.anonime-footer-main { display: flex; align-items: flex-start; gap: 56px; padding-top: 52px; padding-bottom: 48px; border-bottom: 1px solid rgba(29, 77, 65, 0.12); }
 		.anonime-footer-brand { max-width: 760px; }
 		.anonime-footer-brand .anonime-brand { color: #35bb8d; font-size: 1.9rem; }
-		.anonime-footer-brand h2 { margin: 64px 0 0; font-size: clamp(2.3rem, 4vw, 3.65rem); line-height: 1.08; letter-spacing: -0.05em; }
-		.anonime-footer-brand h2 strong { color: #2c9b73; font-weight: 700; }
-		.anonime-footer-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+		.anonime-footer-brand h2 { margin: 64px 0 0; font-size: clamp(2.1rem, 3vw, 3.25rem); line-height: 1.08; letter-spacing: -0.05em; font-weight: 600;}
+		.anonime-footer-brand h2 strong { color: #2c9b73; font-weight: 600; }
+		.anonime-footer-links { flex: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; margin-left: auto; max-width: 820px;}
 		.anonime-footer-links > div { min-height: 276px; padding: 2px 34px; border-left: 1px solid rgba(29, 77, 65, 0.1); }
 		.anonime-footer-links > div:first-child { border-left: 0; }
 		.anonime-footer-links h3 { margin: 0 0 26px; color: #26986f; font-size: 0.79rem; letter-spacing: 0.02em; text-transform: uppercase; }
 		.anonime-footer-links h3::after { content: ""; display: block; width: 63px; height: 1px; margin-top: 12px; background: #26986f; }
 		.anonime-footer-links ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 22px; color: #43536b; font-size: 0.94rem; }
 		.anonime-privacy-proof { min-height: 196px; padding: 29px 36px 30px; border-bottom: 1px solid rgba(29, 77, 65, 0.12); }
+		.anonime-footer-links ul li a {font-weight: 400;}
 		.anonime-privacy-proof > p { margin: 0 0 28px; text-align: center; color: #24324a; }
-		.anonime-privacy-proof > p strong, .anonime-footer-tagline strong { color: #078f5d; }
+		.anonime-privacy-proof > p strong, .anonime-footer-tagline strong { color: #078f5d; font-weight: 500; }
 		.anonime-privacy-features { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 		.anonime-privacy-feature { display: flex; align-items: center; gap: 16px; min-height: 84px; padding: 10px 22px; border-left: 1px solid rgba(29, 77, 65, 0.12); color: #43536b; font-size: 0.92rem; }
 		.anonime-privacy-feature:first-child { border-left: 0; }
-		.anonime-privacy-icon { width: 52px; height: 52px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid rgba(27, 159, 107, 0.18); border-radius: 12px; color: #169f6c; background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(191,239,215,.92)); box-shadow: 0 8px 24px rgba(8, 122, 79, 0.17); }
+		.anonime-privacy-icon { flex: 0 0 auto;
+			display: inline-grid;
+			place-items: center;
+			width: 52px;
+			height: 52px;
+			color: var(--green);
+			background: radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.96) 0 18%, transparent 19%), linear-gradient(180deg, #effaf5 0%, #d8f2e4 58%, #bce6cf 100%);
+			border: 1px solid rgba(7, 152, 104, 0.12);
+			border-radius: 12px;
+			box-shadow: 4 10px 20px rgba(7, 152, 104, 0.12), 0 3px 8px rgba(16, 32, 51, 0.08), inset 0 2px 0 rgba(255, 255, 255, 0.88), inset 0 -6px 10px rgba(7, 152, 104, 0.06);
+			transform: translateY(-1px);
+			transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+		}
 		.anonime-privacy-icon svg { width: 23px; height: 23px; }
 		.anonime-footer-bottom { display: grid; min-height: 156px; padding: 21px 55px 32px; grid-template-columns: 1fr auto 1fr; align-items: start; color: #74829a; font-size: 0.84rem; }
 		.anonime-footer-bottom p { margin: 0; }
-		.anonime-footer-x { display: grid; place-items: center; width: 36px; height: 36px; justify-self: end; color: #3d4b61; }
+		.footer-social-link { display: grid; place-items: center; width: 36px; height: 36px; justify-self: end; color: #3d4b61; }
+		.footer-social-link svg { width: 20px; height: 20px; }
 		.anonime-footer-tagline { align-self: end; color: #63718a; text-align: center; font-size: 0.84rem; }
 		.anonime-featured-summary, .anonime-muted { color: #5b6474; }
 		.anonime-article-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; align-items: start; }
@@ -651,7 +737,7 @@ func anonimeStyles() string {
 		.anonime-article-header { padding: 24px 0 0; }
 		.anonime-breadcrumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; color: #5b6474; font-size: 0.86rem; }
 		.anonime-breadcrumbs a { color: #059669; }
-		.anonime-article-heading { max-width: 15ch; font-size: clamp(2.8rem, 5vw, 4.2rem); line-height: 0.97; }
+		.anonime-article-heading { max-width: 27ch; font-size: clamp(2rem, 2vw, 2rem); line-height: 1.5; font-weight: 500;}
 		.anonime-article-intro { margin: 18px 0 0; max-width: 58ch; font-size: 1.03rem; line-height: 1.8; color: #5b6474; }
 		.anonime-article-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 20px; }
 		.anonime-article-toolbar .anonime-button, .anonime-article-toolbar .anonime-icon-button, .anonime-help-button { border: 1px solid rgba(18, 28, 43, 0.1); background: rgba(255, 255, 255, 0.88); }
@@ -663,10 +749,10 @@ func anonimeStyles() string {
 		.anonime-article-body blockquote { margin: 22px 0; padding: 18px 20px; border-left: 3px solid #10b26c; border-radius: 16px; background: rgba(16, 178, 108, 0.06); color: #0f1728; }
 		.anonime-inline-callout { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; align-items: center; margin: 22px 0; padding: 16px 18px; border-radius: 18px; background: rgba(16, 178, 108, 0.06); }
 		.anonime-callout-icon { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 16px; color: #10b26c; background: rgba(255, 255, 255, 0.9); }
-		.anonime-article-footer-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px; align-items: center; padding: 22px 24px; border-radius: 22px; color: #fff; background: linear-gradient(135deg, #081115 0%, #04231c 55%, #081513 100%); box-shadow: 0 30px 90px rgba(14, 23, 38, 0.16); }
+		.anonime-article-footer-card { display: grid; grid-template-columns: minmax(0, 1fr) 1fr 1fr; gap: 20px; align-items: center; padding: 22px 24px; border-radius: 10px; color: #fff; background: linear-gradient(135deg, #081115 0%, #04231c 55%, #081513 100%); box-shadow: 0 30px 90px rgba(14, 23, 38, 0.16); }
 		.anonime-article-footer-card.is-flat { padding: 0; background: transparent; box-shadow: none; }
-		.anonime-article-footer-card p { margin: 0; max-width: 32ch; color: rgba(255, 255, 255, 0.8); line-height: 1.7; }
-		.anonime-article-footer-card h3 { margin: 0 0 8px; font-size: 1.35rem; line-height: 1.12; letter-spacing: -0.05em; }
+		.anonime-article-footer-card p { margin: 0; max-width: 40ch; color: rgba(255, 255, 255, 0.8); line-height: 1.7; }
+		.anonime-article-footer-card h3 { margin: 0 0 8px; font-size: 1.15rem; line-height: 1.12; letter-spacing: -0.05em; font-weight: 500;}
 		.anonime-article-footer-card .anonime-button { background: linear-gradient(180deg, #19c27b 0%, #0b9461 100%); color: #fff; }
 		.anonime-article-feedback { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 22px; }
 		.anonime-help-button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 12px; color: #334155; }
@@ -751,13 +837,14 @@ func anonimeStyles() string {
 		@media (max-width: 920px) {
 			.anonime-content-grid, .anonime-article-layout { grid-template-columns: 1fr; }
 			.anonime-sidebar-panel, .anonime-article-sidebar { position: static; }
-			.anonime-featured-inner, .anonime-article-card { grid-template-columns: 1fr; }
+			.anonime-featured-inner { grid-template-columns: 1fr; }
+			.anonime-article-card { grid-template-areas: "copy" "media"; grid-template-columns: 1fr; }
 			.anonime-hero { grid-template-columns: 1fr; }
 		}
 		@media (max-width: 820px) {
 			.anonime-nav, .anonime-login-link, .anonime-button-outline { display: none; }
 			.anonime-mobile-nav { display: block; }
-			.anonime-featured, .anonime-panel, .anonime-card, .anonime-callout, .anonime-article-footer-card { border-radius: 20px; }
+			.anonime-featured, .anonime-panel, .anonime-card, .anonime-callout, .anonime-article-footer-card { border-radius: 10px; }
 			.anonime-privacy-proof { padding-inline: 16px; }
 			.anonime-privacy-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 			.anonime-privacy-feature:nth-child(3) { border-left: 0; }
@@ -838,10 +925,29 @@ func authorLabel(article ArticleContent) string {
 }
 
 func dateLabel(article ArticleContent) string {
-	if strings.TrimSpace(article.PublishedAt) != "" {
-		return article.PublishedAt
+	date := strings.TrimSpace(article.PublishedAt)
+	if hasISODatePrefix(date) {
+		return date[:10]
+	}
+	if date != "" {
+		return date
 	}
 	return "Feb 7, 2026"
+}
+
+func hasISODatePrefix(value string) bool {
+	if len(value) < len("2006-01-02") || value[4] != '-' || value[7] != '-' {
+		return false
+	}
+	for index, character := range value[:10] {
+		if index == 4 || index == 7 {
+			continue
+		}
+		if character < '0' || character > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func readTimeLabel(article ArticleContent) string {

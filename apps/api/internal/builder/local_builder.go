@@ -171,6 +171,14 @@ func (b LocalBuilder) GenerateSite(ctx context.Context, content SiteContent, opt
 	if err := writeFile(filepath.Join(blogOutputPath, "index.html"), renderArticlesPage(rendered)); err != nil {
 		return "", err
 	}
+	if rendered.Theme.Name == "anonime" {
+		for page := 2; page <= anonimeArticlePageCount(len(rendered.Articles)); page++ {
+			pageDir := filepath.Join(blogOutputPath, "page", strconv.Itoa(page))
+			if err := writeFile(filepath.Join(pageDir, "index.html"), renderAnonimeArticlesPageNumber(rendered, page)); err != nil {
+				return "", err
+			}
+		}
+	}
 	for _, article := range articles {
 		articleDir := filepath.Join(blogOutputPath, safePathSegment(article.Slug))
 		if err := writeFile(filepath.Join(articleDir, "index.html"), renderArticlePage(rendered, article)); err != nil {
@@ -862,6 +870,11 @@ func renderSitemap(site renderedSite) string {
 	urls := []sitemapURL{
 		{Loc: site.PublicBaseURL + "/"},
 		{Loc: site.PublicBaseURL + site.BasePath + "/"},
+	}
+	if site.Theme.Name == "anonime" {
+		for page := 2; page <= anonimeArticlePageCount(len(site.Articles)); page++ {
+			urls = append(urls, sitemapURL{Loc: anonimeArticlesPageURL(site, page)})
+		}
 	}
 	for _, article := range site.Articles {
 		urls = append(urls, sitemapURL{Loc: articleURL(site, article), LastMod: article.UpdatedAt})

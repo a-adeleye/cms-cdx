@@ -2,6 +2,7 @@ package builder
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,6 +36,60 @@ func TestGenerateSiteWritesArticlesToConfiguredBlogPath(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(outputPath, "articles", "index.html")); !os.IsNotExist(err) {
 		t.Fatalf("expected legacy articles output not to exist, got %v", err)
+	}
+}
+
+func TestGenerateAnonimeArticlesPagination(t *testing.T) {
+	articles := make([]ArticleContent, 7)
+	for index := range articles {
+		articles[index] = ArticleContent{
+			Title:       fmt.Sprintf("Page article %d", index+1),
+			Slug:        fmt.Sprintf("page-article-%d", index+1),
+			PublishedAt: fmt.Sprintf("2026-06-%02d", index+1),
+		}
+	}
+
+	outputPath, err := NewLocalBuilder(t.TempDir()).GenerateSite(context.Background(), SiteContent{
+		Site: models.Site{
+			Name: "Anonime", Slug: "anonime", BlogPath: "/blog", TemplateKey: "anonime", ThemeConfig: map[string]any{},
+		},
+		Articles: articles,
+	}, GenerateOptions{})
+	if err != nil {
+		t.Fatalf("GenerateSite returned error: %v", err)
+	}
+
+	firstPage, err := os.ReadFile(filepath.Join(outputPath, "blog", "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondPage, err := os.ReadFile(filepath.Join(outputPath, "blog", "page", "2", "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(string(firstPage), `href="/blog/page/2/"`) {
+		t.Fatalf("expected the first page to link to page 2, got %s", firstPage)
+	}
+	if count := strings.Count(string(firstPage), `<article class="anonime-card anonime-article-card">`); count != anonimeArticlesPerPage {
+		t.Fatalf("expected %d article cards on the first page, got %d", anonimeArticlesPerPage, count)
+	}
+	if !strings.Contains(string(secondPage), `Page article 7`) {
+		t.Fatalf("expected second page to render its final article, got %s", secondPage)
+	}
+	if count := strings.Count(string(secondPage), `<article class="anonime-card anonime-article-card">`); count != 1 {
+		t.Fatalf("expected one article card on the second page, got %d", count)
+	}
+	if !strings.Contains(string(secondPage), `href="/blog/" aria-label="Previous page"`) {
+		t.Fatalf("expected page 2 to link back to the first page, got %s", secondPage)
+	}
+
+	sitemap, err := os.ReadFile(filepath.Join(outputPath, "sitemap.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(sitemap), `/blog/page/2/`) {
+		t.Fatalf("expected sitemap to include paginated articles page, got %s", sitemap)
 	}
 }
 
@@ -195,7 +250,7 @@ func TestRenderAnonimeChromeUsesProductionLinksAndCSSOnlyTheme(t *testing.T) {
 
 	header := renderAnonimeHeader(site)
 	for _, expected := range []string{
-		`src="https://cdn.example/anonime-logo.svg"`,
+		`class="brand-logo" src="https://cdn.anonime.io/anonime-logo.svg" alt="Anonime"`,
 		`href="https://anonime.io/#top">Home</a>`,
 		`href="https://anonime.io/#how-it-works">How it Works</a>`,
 		`href="https://anonime.io/pricing">Plans &amp; Pricing</a>`,
@@ -220,6 +275,7 @@ func TestRenderAnonimeChromeUsesProductionLinksAndCSSOnlyTheme(t *testing.T) {
 		`.anonime-theme-checkbox:checked + .anonime-theme-toggle .anonime-theme-sun`,
 		`@media (max-width: 920px)`,
 		`@media (max-width: 620px)`,
+		`font-family: Matter, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
 	} {
 		if !strings.Contains(styles, expected) {
 			t.Errorf("anonimeStyles() did not contain %q", expected)
@@ -250,11 +306,51 @@ func TestRenderAnonimeChromeUsesProductionLinksAndCSSOnlyTheme(t *testing.T) {
 		`No logs. No tracking.`,
 		`Hosted with privacy-first infra`,
 		`&copy; 2026 Anonime, Inc. All rights reserved.`,
-		`href="https://x.com/anonimehq"`,
+		`class="footer-social-link" href="https://x.com/anonimehq" aria-label="X" target="_blank" rel="noopener noreferrer"`,
 		`Your privacy is your right. <strong>We protect it every day.</strong>`,
 	} {
 		if !strings.Contains(footer, expected) {
 			t.Errorf("renderAnonimeFooter() did not contain %q", expected)
+		}
+	}
+}
+
+func TestRenderAnonimeMetaUsesDateOnlyForTimestampValues(t *testing.T) {
+	site := renderedSite{BasePath: "/articles"}
+	article := ArticleContent{
+		Title:       "Timestamp article",
+		Slug:        "timestamp-article",
+		AuthorName:  "Rene Carter",
+		PublishedAt: "2026-06-04T08:35:39Z",
+	}
+
+	featuredMeta := renderAnonimeMeta(site, article, true)
+	articleFooter := renderAnonimeMeta(site, article, false)
+	sidebarMeta := renderAnonimeCompactArticle(site, article)
+	for _, output := range []string{featuredMeta, articleFooter} {
+		if !strings.Contains(output, `>2026-06-04<`) {
+			t.Fatalf("expected date-only timestamp label, got %s", output)
+		}
+		if strings.Contains(output, article.PublishedAt) {
+			t.Fatalf("expected timestamp to be omitted, got %s", output)
+		}
+	}
+	if !strings.Contains(sidebarMeta, `>2026-06-04 <span`) || strings.Contains(sidebarMeta, article.PublishedAt) {
+		t.Fatalf("expected sidebar date-only timestamp label, got %s", sidebarMeta)
+	}
+}
+
+func TestAnonimeArticleCardsKeepArtLeftAndCopyRight(t *testing.T) {
+	styles := anonimeStyles()
+	for _, expected := range []string{
+		`grid-template-areas: "media copy"`,
+		`.anonime-article-card > a:first-child { grid-area: media; min-height: 100%; }`,
+		`.anonime-article-card .anonime-article-art { height: 100%; min-height: 100%; }`,
+		`.anonime-sidebar-item { display: grid; grid-template-columns: 84px minmax(0, 1fr);`,
+		`-webkit-line-clamp: 2; line-clamp: 2;`,
+	} {
+		if !strings.Contains(styles, expected) {
+			t.Fatalf("expected Anonime layout rule %q", expected)
 		}
 	}
 }

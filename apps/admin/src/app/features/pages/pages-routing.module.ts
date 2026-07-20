@@ -128,12 +128,6 @@ const routes: Routes = [
       {
         path: 'taxonomy/categories',
         component: TaxonomyPageComponent,
-        data: { kind: 'categories' },
-      },
-      {
-        path: 'taxonomy/tags',
-        component: TaxonomyPageComponent,
-        data: { kind: 'tags' },
       },
       {
         path: 'users',
@@ -171,7 +165,6 @@ const routes: Routes = [
       { path: 'ai', pathMatch: 'full', redirectTo: '/configuration/ai' },
       { path: 'authors', pathMatch: 'full', redirectTo: '/configuration/users' },
       { path: 'categories', pathMatch: 'full', redirectTo: '/configuration/taxonomy/categories' },
-      { path: 'tags', pathMatch: 'full', redirectTo: '/configuration/taxonomy/tags' },
     ],
   },
   { path: 'sites', pathMatch: 'full', redirectTo: 'configuration/sites' },
@@ -181,7 +174,6 @@ const routes: Routes = [
   { path: 'templates', pathMatch: 'full', redirectTo: 'configuration/templates' },
   { path: 'authors', pathMatch: 'full', redirectTo: 'configuration/users' },
   { path: 'categories', pathMatch: 'full', redirectTo: 'configuration/taxonomy/categories' },
-  { path: 'tags', pathMatch: 'full', redirectTo: 'configuration/taxonomy/tags' },
   { path: 'media-library', pathMatch: 'full', redirectTo: 'content/media' },
   { path: 'ai-assistant', pathMatch: 'full', redirectTo: 'content/articles/new' },
   { path: 'builds', pathMatch: 'full', redirectTo: 'publishing' },

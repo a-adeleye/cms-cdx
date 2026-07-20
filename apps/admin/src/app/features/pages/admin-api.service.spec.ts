@@ -20,7 +20,7 @@ describe('AdminApiService article persistence', () => {
     canonicalUrl: '',
     authorId: 'author-1',
     categoryId: 'category-1',
-    tagIds: [],
+    tags: '',
     isFeatured: false,
     status: 'draft' as const,
     publishedAt: null,

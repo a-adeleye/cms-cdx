@@ -30,7 +30,7 @@ describe('ArticleEditorPageComponent', () => {
     humanReviewed: false,
     aiPrompt: '',
     aiModel: '',
-    tagIds: [] as string[],
+    tags: '',
     updatedAt: '2026-05-23T00:00:00.000Z',
   });
   let selectedArticleValue: ReturnType<typeof articleRecord> | null;
@@ -46,10 +46,6 @@ describe('ArticleEditorPageComponent', () => {
     error: () => null,
     authors: () => [{ id: 'author-1', siteId: 'site-example', name: 'Author', slug: 'author', bio: '' }],
     categories: () => [{ id: 'category-1', siteId: 'site-example', name: 'Category', slug: 'category', description: '' }],
-    tags: () => [
-      { id: 'tag-1', siteId: 'site-example', name: 'Tag One', slug: 'tag-one' },
-      { id: 'tag-2', siteId: 'site-example', name: 'Tag Two', slug: 'tag-two' },
-    ],
     reportError: jasmine.createSpy('reportError'),
     clearError: jasmine.createSpy('clearError'),
     clearSelectedArticle: jasmine.createSpy('clearSelectedArticle').and.callFake(() => {
@@ -227,13 +223,10 @@ describe('ArticleEditorPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Article saved successfully.');
   });
 
-  it('renders tags as a multi-select from the workspace tag list', () => {
-    const select = fixture.nativeElement.querySelector('select[formcontrolname="tagIds"]') as HTMLSelectElement | null;
-    expect(select).toBeTruthy();
-    expect(select?.multiple).toBeTrue();
-    expect(select?.options.length).toBe(2);
-    expect(select?.options[0].textContent?.trim()).toBe('Tag One');
-    expect(select?.options[1].textContent?.trim()).toBe('Tag Two');
+  it('renders tags as a free-text input', () => {
+    const input = fixture.nativeElement.querySelector('input[formcontrolname="tags"]') as HTMLInputElement | null;
+    expect(input).toBeTruthy();
+    expect(input?.type).toBe('text');
   });
 
   it('shows validation feedback instead of silently doing nothing on invalid save', async () => {
@@ -317,7 +310,7 @@ describe('ArticleEditorPageComponent', () => {
     expect(createFixture.componentInstance.articleForm.controls.contentMarkdown.value).toContain('A complete AI draft.');
     expect(createFixture.componentInstance.articleForm.controls.coverImageUrl.value).toBe('https://cdn.example/ai-email-aliases.png');
     expect(createFixture.componentInstance.articleForm.controls.categoryId.value).toBe('category-1');
-    expect(createFixture.componentInstance.articleForm.controls.tagIds.value).toEqual(['tag-1']);
+    expect(createFixture.componentInstance.articleForm.controls.tags.value).toBe('tag one');
   });
 
   it('rejects an edit route whose article id is not in the current workspace', async () => {

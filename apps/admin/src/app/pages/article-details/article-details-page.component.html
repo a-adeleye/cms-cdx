@@ -83,11 +83,11 @@
           <div>
             <dt>Tags</dt>
             <dd>
-              @if (article.tagIds.length > 0) {
+              @if (tagList(article.tags).length > 0) {
                 <div class="chip-group">
-                  @for (tagId of article.tagIds; track tagId) {
+                  @for (tag of tagList(article.tags); track tag) {
                     <span class="chip is-active-chip">
-                      {{ tagName(tagId) }}
+                      {{ tag }}
                     </span>
                   }
                 </div>

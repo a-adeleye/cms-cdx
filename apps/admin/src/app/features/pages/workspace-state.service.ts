@@ -89,7 +89,6 @@ const EMPTY_STATE: AdminStateSnapshot = {
   articles: [],
   authors: [],
   categories: [],
-  tags: [],
   mediaAssets: [],
   builds: [],
 };
@@ -126,7 +125,6 @@ export class WorkspaceStateService {
   );
   readonly authors = computed(() => this.state().authors.filter((author) => author.siteId === this.selectedSite().id));
   readonly categories = computed(() => this.state().categories.filter((category) => category.siteId === this.selectedSite().id));
-  readonly tags = computed(() => this.state().tags.filter((tag) => tag.siteId === this.selectedSite().id));
   readonly mediaAssets = computed(() => this.state().mediaAssets.filter((asset) => asset.siteId === this.selectedSite().id));
   readonly builds = computed(() => this.state().builds.filter((build) => build.siteId === this.selectedSite().id));
   readonly selectedArticleId = computed(() => this.state().selectedArticleId);
@@ -300,7 +298,7 @@ export class WorkspaceStateService {
       canonicalUrl: '',
       authorId: this.authors()[0]?.id ?? '',
       categoryId: this.categories()[0]?.id ?? '',
-      tagIds: [],
+      tags: '',
       isFeatured: false,
       status: 'draft',
     });
@@ -370,34 +368,6 @@ export class WorkspaceStateService {
     await this.loadWorkspace(site.id);
   }
 
-  async saveTag(input: TagDraftInput): Promise<TagRecord> {
-    const site = this.selectedSite();
-    if (!site.id) {
-      throw new Error('No site selected.');
-    }
-
-    const tag = input.id
-      ? await this.api.updateTag(site.id, input.id, {
-          name: input.name,
-        })
-      : await this.api.createTag(site.id, {
-          name: input.name,
-        });
-
-    await this.loadWorkspace(site.id);
-    return tag;
-  }
-
-  async deleteTag(tagId: string): Promise<void> {
-    const site = this.selectedSite();
-    if (!site.id) {
-      throw new Error('No site selected.');
-    }
-
-    await this.api.deleteTag(site.id, tagId);
-    await this.loadWorkspace(site.id);
-  }
-
   async saveArticle(input: ArticleDraftInput): Promise<ArticleRecord> {
     const site = this.selectedSite();
     const article = await this.api.upsertArticle(site.id, {
@@ -412,7 +382,7 @@ export class WorkspaceStateService {
       canonicalUrl: input.canonicalUrl,
       authorId: input.authorId,
       categoryId: input.categoryId,
-      tagIds: input.tagIds,
+      tags: input.tags,
       isFeatured: input.isFeatured,
       status: input.status,
     });
@@ -488,7 +458,7 @@ export class WorkspaceStateService {
       canonicalUrl: article.canonicalUrl,
       authorId: article.authorId,
       categoryId: article.categoryId,
-      tagIds: article.tagIds,
+      tags: article.tags,
       isFeatured: article.isFeatured,
       status,
     });
@@ -512,7 +482,7 @@ export class WorkspaceStateService {
       canonicalUrl: article.canonicalUrl,
       authorId: article.authorId,
       categoryId: article.categoryId,
-      tagIds: article.tagIds,
+      tags: article.tags,
       isFeatured: !article.isFeatured,
       status: article.status,
     });
@@ -531,7 +501,7 @@ export class WorkspaceStateService {
       canonicalUrl: input.canonicalUrl,
       authorId: input.authorId,
       categoryId: input.categoryId,
-      tagIds: input.tagIds,
+      tags: input.tags,
       isFeatured: input.isFeatured,
       status: input.status,
     });
@@ -613,7 +583,6 @@ export class WorkspaceStateService {
       articles: workspace.articles,
       authors: workspace.authors,
       categories: workspace.categories,
-      tags: workspace.tags,
       mediaAssets: workspace.mediaAssets,
       builds: workspace.builds,
     });

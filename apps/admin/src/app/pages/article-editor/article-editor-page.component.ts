@@ -56,7 +56,7 @@ export class ArticleEditorPageComponent {
     canonicalUrl: [''],
     authorId: ['', [Validators.required]],
     categoryId: ['', [Validators.required]],
-    tagIds: [[] as string[]],
+    tags: [''],
     isFeatured: [false],
     status: ['draft' as ArticleStatus, [Validators.required]],
     contentMarkdown: ['', [Validators.required, Validators.minLength(20)]],
@@ -91,7 +91,7 @@ export class ArticleEditorPageComponent {
             canonicalUrl: '',
             authorId: this.state.authors()[0]?.id ?? '',
             categoryId: this.state.categories()[0]?.id ?? '',
-            tagIds: [],
+            tags: '',
             isFeatured: false,
             status: 'draft',
             contentMarkdown: '',
@@ -118,7 +118,7 @@ export class ArticleEditorPageComponent {
           canonicalUrl: article.canonicalUrl,
           authorId: article.authorId,
           categoryId: article.categoryId,
-          tagIds: article.tagIds,
+          tags: article.tags,
           isFeatured: article.isFeatured,
           status: article.status,
           contentMarkdown: article.contentMarkdown,
@@ -236,8 +236,7 @@ export class ArticleEditorPageComponent {
       const draft = await this.state.generateAIArticleDraft({ topic });
       const categoryId = this.state.categories().find((category) => category.name.localeCompare(draft.category, undefined, { sensitivity: 'accent' }) === 0)?.id
         ?? this.articleForm.controls.categoryId.value;
-      const generatedTags = new Set(draft.tags.map((tag) => tag.trim().toLowerCase()));
-      const tagIds = this.state.tags().filter((tag) => generatedTags.has(tag.name.trim().toLowerCase()) || generatedTags.has(tag.slug.trim().toLowerCase())).map((tag) => tag.id);
+      const tags = draft.tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean).join(', ');
       this.articleForm.patchValue({
         title: draft.title,
         slug: draft.slug,
@@ -248,7 +247,7 @@ export class ArticleEditorPageComponent {
         seoDescription: draft.metaDescription,
         canonicalUrl: draft.canonicalUrl,
         categoryId,
-        tagIds,
+        tags,
         isFeatured: draft.featured,
       });
       this.articleForm.markAsDirty();
@@ -367,7 +366,7 @@ export class ArticleEditorPageComponent {
         canonicalUrl: value.canonicalUrl,
         authorId: value.authorId,
         categoryId: value.categoryId,
-        tagIds: value.tagIds,
+        tags: value.tags,
         isFeatured: value.isFeatured,
         status: value.status,
       });

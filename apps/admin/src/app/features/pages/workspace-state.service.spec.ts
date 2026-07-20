@@ -23,9 +23,6 @@ describe('WorkspaceStateService', () => {
       'createCategory',
       'updateCategory',
       'deleteCategory',
-      'createTag',
-      'updateTag',
-      'deleteTag',
       'deleteArticle',
       'updateArticle',
       'updateLandingSection',
@@ -100,13 +97,12 @@ describe('WorkspaceStateService', () => {
           humanReviewed: false,
           aiPrompt: '',
           aiModel: '',
-          tagIds: [],
+          tags: '',
           updatedAt: '2026-05-23T00:00:00.000Z',
         },
       ],
       authors: [],
       categories: [],
-      tags: [],
       mediaAssets: [],
       builds: [],
     }));
@@ -169,7 +165,7 @@ describe('WorkspaceStateService', () => {
       humanReviewed: false,
       aiPrompt: '',
       aiModel: '',
-      tagIds: [],
+      tags: '',
       updatedAt: '2026-05-23T00:00:00.000Z',
     });
     api.createCategory.and.resolveTo({
@@ -187,19 +183,6 @@ describe('WorkspaceStateService', () => {
       description: 'Updated description',
     });
     api.deleteCategory.and.resolveTo();
-    api.createTag.and.resolveTo({
-      id: 'tag-new',
-      siteId: 'site-example',
-      name: 'New Tag',
-      slug: 'new-tag',
-    });
-    api.updateTag.and.resolveTo({
-      id: 'tag-1',
-      siteId: 'site-example',
-      name: 'Updated Tag',
-      slug: 'updated-tag',
-    });
-    api.deleteTag.and.resolveTo();
     api.deleteArticle.and.resolveTo();
     api.updateArticle.and.resolveTo({
       id: 'article-1',
@@ -221,7 +204,7 @@ describe('WorkspaceStateService', () => {
       humanReviewed: false,
       aiPrompt: '',
       aiModel: '',
-      tagIds: [],
+      tags: '',
       updatedAt: '2026-05-23T00:00:00.000Z',
     });
     api.uploadMediaFile.and.resolveTo({
@@ -287,15 +270,6 @@ describe('WorkspaceStateService', () => {
     });
     await service.deleteCategory('category-1');
 
-    await service.saveTag({
-      name: 'New Tag',
-    });
-    await service.saveTag({
-      id: 'tag-1',
-      name: 'Updated Tag',
-    });
-    await service.deleteTag('tag-1');
-
     expect(api.createCategory).toHaveBeenCalledWith('site-example', {
       name: 'New Category',
       description: 'Category description',
@@ -305,14 +279,7 @@ describe('WorkspaceStateService', () => {
       description: 'Updated description',
     });
     expect(api.deleteCategory).toHaveBeenCalledWith('site-example', 'category-1');
-    expect(api.createTag).toHaveBeenCalledWith('site-example', {
-      name: 'New Tag',
-    });
-    expect(api.updateTag).toHaveBeenCalledWith('site-example', 'tag-1', {
-      name: 'Updated Tag',
-    });
-    expect(api.deleteTag).toHaveBeenCalledWith('site-example', 'tag-1');
-    expect(api.loadWorkspace).toHaveBeenCalledTimes(7);
+    expect(api.loadWorkspace).toHaveBeenCalledTimes(4);
   });
 
   it('uploads media without reloading the workspace', async () => {

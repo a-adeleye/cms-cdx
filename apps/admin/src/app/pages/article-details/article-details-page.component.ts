@@ -75,8 +75,11 @@ export class ArticleDetailsPageComponent implements OnInit {
     return this.state.categories().find((category) => category.id === categoryId)?.name ?? '—';
   }
 
-  tagName(tagId: string): string {
-    return this.state.tags().find((tag) => tag.id === tagId)?.name ?? tagId;
+  tagList(tags: string): string[] {
+    return tags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
   }
 
   private buildErrorMessage(message: string, error: unknown): string {

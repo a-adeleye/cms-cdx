@@ -1,5 +1,3 @@
-.taxonomy-route-tabs { display: flex; width: fit-content; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
-.taxonomy-route-tabs a { padding: 6px 12px; border-radius: 4px; color: var(--muted); font-size: 11px; font-weight: 600; }.taxonomy-route-tabs a.is-active { background: var(--accent-soft); color: var(--accent); }
 .taxonomy-layout { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 18px; align-items: start; }
 .taxonomy-list-tabs { margin-right: auto; border-bottom: 0; }.taxonomy-list-tabs .ui-tab { min-height: 42px; }
 .taxonomy-table-card .ui-filter-bar .ui-search { margin-left: auto; }
@@ -10,5 +8,4 @@
 .taxonomy-form-card { padding: 0; overflow: hidden; }.taxonomy-form-header { display: flex; align-items: center; justify-content: space-between; padding: 17px 18px; border-bottom: 1px solid var(--line); }.taxonomy-form-header h2 { margin: 0; font-size: 15px; }.taxonomy-form-header button { border: 0; background: transparent; color: var(--muted); font-size: 20px; cursor: pointer; }
 .taxonomy-preview { display: grid; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }.taxonomy-preview > small { color: var(--muted); font-size: 10px; }.taxonomy-preview > div { display: flex; align-items: center; gap: 12px; }.taxonomy-preview strong, .taxonomy-preview div small { display: block; }.taxonomy-preview div small { margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.4; }
 .taxonomy-form-card form { padding: 18px; }.taxonomy-form-card label > span { color: var(--danger); }.taxonomy-form-actions { display: flex; justify-content: flex-end; gap: 8px; margin: 4px -18px -18px; padding: 14px 18px; border-top: 1px solid var(--line); background: #fbfcfe; }
-.tag-tips ul { display: grid; gap: 10px; margin: 0; padding: 0; color: var(--muted); font-size: 10px; list-style: none; }.tag-tips li::first-letter { color: var(--accent); }
 @media (max-width: 1050px) { .taxonomy-layout { grid-template-columns: 1fr; }.taxonomy-sidebar { order: -1; } }

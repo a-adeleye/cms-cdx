@@ -14,13 +14,6 @@ describe('TaxonomyPageComponent', () => {
     description: 'Category description',
   };
 
-  const tag = {
-    id: 'tag-1',
-    siteId: 'site-example',
-    name: 'Tag',
-    slug: 'tag',
-  };
-
   let fixture: ComponentFixture<TaxonomyPageComponent>;
 
   const createState = () => ({
@@ -51,7 +44,6 @@ describe('TaxonomyPageComponent', () => {
     authors: () => [],
     categories: () => [category],
     articles: () => [],
-    tags: () => [tag],
     mediaAssets: () => [],
     builds: () => [],
     dashboardStats: () => [],
@@ -69,8 +61,6 @@ describe('TaxonomyPageComponent', () => {
     saveArticle: jasmine.createSpy('saveArticle').and.resolveTo({ id: 'article-1' }),
     saveCategory: jasmine.createSpy('saveCategory').and.resolveTo(category),
     deleteCategory: jasmine.createSpy('deleteCategory').and.resolveTo(),
-    saveTag: jasmine.createSpy('saveTag').and.resolveTo(tag),
-    deleteTag: jasmine.createSpy('deleteTag').and.resolveTo(),
     triggerBuild: jasmine.createSpy('triggerBuild').and.resolveTo(),
     toggleLandingSection: jasmine.createSpy('toggleLandingSection').and.resolveTo(),
     moveLandingSection: jasmine.createSpy('moveLandingSection').and.resolveTo(),
@@ -92,7 +82,6 @@ describe('TaxonomyPageComponent', () => {
       }).compileComponents();
 
       fixture = TestBed.createComponent(TaxonomyPageComponent);
-      fixture.componentRef.setInput('kind', 'categories');
       fixture.detectChanges();
       await fixture.whenStable();
       fixture.detectChanges();
@@ -128,51 +117,6 @@ describe('TaxonomyPageComponent', () => {
 
       expect(state.deleteCategory).toHaveBeenCalledWith('category-1');
       expect(fixture.nativeElement.textContent).toContain('Categories deleted successfully.');
-    });
-  });
-
-  describe('tags', () => {
-    let state: ReturnType<typeof createState>;
-
-    beforeEach(async () => {
-      state = createState();
-
-      await TestBed.configureTestingModule({
-        imports: [CommonModule, ReactiveFormsModule, RouterTestingModule, TaxonomyPageComponent],
-        providers: [{ provide: WorkspaceStateService, useValue: state }],
-      }).compileComponents();
-
-      fixture = TestBed.createComponent(TaxonomyPageComponent);
-      fixture.componentRef.setInput('kind', 'tags');
-      fixture.detectChanges();
-      await fixture.whenStable();
-      fixture.detectChanges();
-    });
-
-    it('renders optional tag metadata and uses tag CRUD actions', async () => {
-      expect(fixture.nativeElement.textContent).toContain('Tags');
-      expect(fixture.nativeElement.textContent).toContain('Add tag');
-      expect(fixture.nativeElement.textContent).toContain('Description');
-      expect(fixture.nativeElement.querySelector('textarea[formcontrolname="description"]')).toBeNull();
-      expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBe(1);
-
-      fixture.componentInstance.form.controls.name.setValue('Launch');
-      await fixture.componentInstance.save();
-      fixture.detectChanges();
-
-      expect(state.clearError).toHaveBeenCalled();
-      expect(state.saveTag).toHaveBeenCalledWith({
-        id: undefined,
-        name: 'Launch',
-      });
-      expect(fixture.nativeElement.textContent).toContain('Tags saved successfully.');
-
-      spyOn(window, 'confirm').and.returnValue(true);
-      await fixture.componentInstance.remove(tag);
-      fixture.detectChanges();
-
-      expect(state.deleteTag).toHaveBeenCalledWith('tag-1');
-      expect(fixture.nativeElement.textContent).toContain('Tags deleted successfully.');
     });
   });
 });

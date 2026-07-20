@@ -31,13 +31,12 @@ describe('ArticleDetailsPageComponent', () => {
       humanReviewed: false,
       aiPrompt: '',
       aiModel: '',
-      tagIds: ['tag-1'],
+      tags: 'tag-one',
       updatedAt: '2026-06-02T00:00:00.000Z',
     }),
     error: () => null,
     authors: () => [{ id: 'author-1', siteId: 'site-example', name: 'Author', slug: 'author', bio: '' }],
     categories: () => [{ id: 'category-1', siteId: 'site-example', name: 'Category', slug: 'category', description: '' }],
-    tags: () => [{ id: 'tag-1', siteId: 'site-example', name: 'Tag One', slug: 'tag-one' }],
     selectArticle: jasmine.createSpy('selectArticle').and.resolveTo(),
     deleteArticle: jasmine.createSpy('deleteArticle').and.callFake(
       () =>

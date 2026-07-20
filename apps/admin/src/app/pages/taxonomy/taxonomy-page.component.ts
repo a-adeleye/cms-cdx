@@ -1,13 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { createPageActionFeedback } from '../../features/pages/page-feedback';
-import { CategoryRecord, TagRecord } from '../../features/pages/pages.model';
+import { CategoryRecord } from '../../features/pages/pages.model';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
-
-type TaxonomyKind = 'categories' | 'tags';
-type TaxonomyRecord = CategoryRecord | TagRecord;
 
 @Component({
   selector: 'app-taxonomy-page',
@@ -18,7 +15,6 @@ type TaxonomyRecord = CategoryRecord | TagRecord;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaxonomyPageComponent {
-  readonly kind = input.required<TaxonomyKind>();
   readonly state = inject(WorkspaceStateService);
   readonly feedback = createPageActionFeedback();
 
@@ -34,24 +30,18 @@ export class TaxonomyPageComponent {
   readonly search = signal('');
   readonly records = computed(() => {
     const search = this.search().trim().toLowerCase();
-    const records = this.kind() === 'categories' ? this.state.categories() : this.state.tags();
-    return records.filter((record) => !search || `${record.name} ${record.slug}`.toLowerCase().includes(search));
+    return this.state.categories().filter((record) => !search || `${record.name} ${record.slug}`.toLowerCase().includes(search));
   });
-  readonly isCategoryPage = computed(() => this.kind() === 'categories');
-  readonly pageTitle = computed(() => (this.isCategoryPage() ? 'Categories' : 'Tags'));
-  readonly singularLabel = computed(() => (this.isCategoryPage() ? 'category' : 'tag'));
-  readonly showDescription = computed(() => this.isCategoryPage());
+  readonly pageTitle = 'Categories';
+  readonly singularLabel = 'category';
+  readonly showDescription = true;
 
-  articleCount(record: TaxonomyRecord): number {
-    return this.isCategoryPage()
-      ? this.state.articles().filter((article) => article.categoryId === record.id).length
-      : this.state.articles().filter((article) => article.tagIds.includes(record.id)).length;
+  articleCount(record: CategoryRecord): number {
+    return this.state.articles().filter((article) => article.categoryId === record.id).length;
   }
 
-  recordDescription(record: TaxonomyRecord): string {
-    return 'description' in record && record.description
-      ? record.description
-      : 'Organize related content and topics.';
+  recordDescription(record: CategoryRecord): string {
+    return record.description ? record.description : 'Organize related content and topics.';
   }
 
   startCreate(): void {
@@ -60,7 +50,7 @@ export class TaxonomyPageComponent {
     this.resetForm();
   }
 
-  edit(record: TaxonomyRecord): void {
+  edit(record: CategoryRecord): void {
     this.state.clearError();
     this.feedback.clear();
     this.editingId.set(record.id);
@@ -68,7 +58,7 @@ export class TaxonomyPageComponent {
       {
         id: record.id,
         name: record.name,
-        description: 'description' in record ? record.description : '',
+        description: record.description,
       },
       { emitEvent: false },
     );
@@ -77,43 +67,35 @@ export class TaxonomyPageComponent {
   async save(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.feedback.error(`Fix the highlighted fields to save the ${this.singularLabel()}.`);
+      this.feedback.error(`Fix the highlighted fields to save the ${this.singularLabel}.`);
       return;
     }
 
     const { id, name, description } = this.form.getRawValue();
     try {
       this.state.clearError();
-      this.feedback.loading(`Saving ${this.singularLabel()}...`);
-      if (this.isCategoryPage()) {
-        await this.state.saveCategory({ id: id.trim() || undefined, name, description });
-      } else {
-        await this.state.saveTag({ id: id.trim() || undefined, name });
-      }
-      this.feedback.success(`${this.pageTitle()} saved successfully.`);
+      this.feedback.loading(`Saving ${this.singularLabel}...`);
+      await this.state.saveCategory({ id: id.trim() || undefined, name, description });
+      this.feedback.success(`${this.pageTitle} saved successfully.`);
       this.resetForm();
     } catch (error) {
-      this.feedback.error(this.buildErrorMessage(`Unable to save ${this.singularLabel()}.`, error));
+      this.feedback.error(this.buildErrorMessage(`Unable to save ${this.singularLabel}.`, error));
     }
   }
 
-  async remove(record: TaxonomyRecord): Promise<void> {
+  async remove(record: CategoryRecord): Promise<void> {
     if (!this.confirmDelete(record)) {
       return;
     }
 
     try {
       this.state.clearError();
-      this.feedback.loading(`Deleting ${this.singularLabel()}...`);
-      if (this.isCategoryPage()) {
-        await this.state.deleteCategory(record.id);
-      } else {
-        await this.state.deleteTag(record.id);
-      }
-      this.feedback.success(`${this.pageTitle()} deleted successfully.`);
+      this.feedback.loading(`Deleting ${this.singularLabel}...`);
+      await this.state.deleteCategory(record.id);
+      this.feedback.success(`${this.pageTitle} deleted successfully.`);
       this.resetForm();
     } catch (error) {
-      this.feedback.error(this.buildErrorMessage(`Unable to delete ${this.singularLabel()}.`, error));
+      this.feedback.error(this.buildErrorMessage(`Unable to delete ${this.singularLabel}.`, error));
     }
   }
 
@@ -134,7 +116,7 @@ export class TaxonomyPageComponent {
     return `${message}${detail}`;
   }
 
-  private confirmDelete(record: TaxonomyRecord): boolean {
+  private confirmDelete(record: CategoryRecord): boolean {
     return typeof globalThis.confirm !== 'function' || globalThis.confirm(`Delete ${record.name}? This cannot be undone.`);
   }
 }

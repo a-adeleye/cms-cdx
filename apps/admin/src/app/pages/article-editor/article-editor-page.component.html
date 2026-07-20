@@ -102,8 +102,15 @@
         <section class="editor-sidebar-section editor-ai-panel">
           <span class="editor-ai-icon" aria-hidden="true">✦</span><h2>AI writing assistance</h2>
           <p>Generate an outline, improve clarity, or rewrite selected content while keeping editorial control.</p>
-          <label>What would you like help with?<textarea rows="5" placeholder="Describe the change you want..."></textarea></label>
-          <button class="button button-primary" type="button" disabled title="AI generation requires a configured provider API.">Generate suggestion (API required)</button>
+          <label>What would you like help with?<textarea rows="5" placeholder="Describe the change you want..." [value]="aiPrompt()" [disabled]="aiGenerating()" (input)="setAIPrompt($event)"></textarea></label>
+          <button class="button button-primary" type="button" [disabled]="aiGenerating() || !isAIConfigured()" (click)="generateAISuggestion()" [title]="isAIConfigured() ? 'Generate a suggestion' : 'Configure an AI provider first'">{{ aiGenerating() ? 'Generating…' : 'Generate suggestion' }}</button>
+          @if (aiError()) { <p class="field-error" role="alert">{{ aiError() }}</p> }
+          @if (aiSuggestion()) {
+            <section class="editor-ai-result" aria-label="AI suggestion">
+              <label>Suggested Markdown<textarea rows="8" readonly [value]="aiSuggestion()"></textarea></label>
+              <button class="button button-secondary" type="button" (click)="applyAISuggestion()">Use suggestion</button>
+            </section>
+          }
           <a class="ui-link" routerLink="/configuration/ai">Configure AI provider</a>
         </section>
       }

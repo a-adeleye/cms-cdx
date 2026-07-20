@@ -23,7 +23,7 @@
       <label>Model<input type="text" formControlName="model" placeholder="Provider model name" /></label>
       <label>API-key environment variable<input type="text" formControlName="apiKeySecretRef" placeholder="OPENAI_API_KEY" autocapitalize="characters" /><small>The key itself is never stored in this CMS.</small></label>
       @if (isCompatibleProvider()) { <label>Compatible API base URL<input type="url" formControlName="baseUrl" placeholder="https://api.example.com/v1" /></label> }
-      <p class="page-warning">Selecting a provider saves its configuration. AI drafting remains unavailable until the server-side AI adapter for that provider is enabled.</p>
+      <p class="muted">The server resolves this environment variable only when you request a suggestion; the API key is never stored in the CMS or sent to the browser.</p>
     } @else {
       <p class="muted">No provider is selected. AI generation controls will remain unavailable.</p>
     }

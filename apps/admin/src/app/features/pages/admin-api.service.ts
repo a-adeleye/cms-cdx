@@ -121,6 +121,18 @@ interface TagUpsertPayload {
   name: string;
 }
 
+export interface AISuggestionPayload {
+  instruction: string;
+  title: string;
+  excerpt: string;
+  contentMarkdown: string;
+}
+
+export interface AISuggestionResponse {
+  suggestion: string;
+  model: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -285,6 +297,16 @@ export class AdminApiService {
   async deleteArticle(articleId: string): Promise<void> {
     try {
       await firstValueFrom(this.http.delete(`${this.baseUrl}/articles/${articleId}`, { headers: this.headers() }));
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
+
+  async generateAISuggestion(siteId: string, payload: AISuggestionPayload): Promise<AISuggestionResponse> {
+    try {
+      return await firstValueFrom(
+        this.http.post<AISuggestionResponse>(`${this.baseUrl}/sites/${siteId}/ai/suggestions`, payload, { headers: this.headers() }),
+      );
     } catch (error) {
       throw this.toError(error);
     }

@@ -36,6 +36,10 @@ export class ArticleEditorPageComponent {
   readonly coverImageFileName = signal('');
   readonly coverImageError = signal<string | null>(null);
   readonly coverImageLoadFailed = signal(false);
+  readonly aiPrompt = signal('');
+  readonly aiSuggestion = signal('');
+  readonly aiGenerating = signal(false);
+  readonly aiError = signal<string | null>(null);
   readonly feedback = createPageActionFeedback();
 
   readonly articleForm = this.fb.nonNullable.group({
@@ -174,6 +178,69 @@ export class ArticleEditorPageComponent {
   async publishArticle(): Promise<void> {
     this.articleForm.controls.status.setValue('published');
     await this.saveArticle();
+  }
+
+  isAIConfigured(): boolean {
+    try {
+      const config = JSON.parse(this.state.selectedSite().aiConfig || '{}') as Record<string, unknown>;
+      const provider = config['provider'];
+      const model = config['model'];
+      const apiKeySecretRef = config['apiKeySecretRef'];
+      const baseUrl = config['baseUrl'];
+      return (
+        (provider === 'openai' || provider === 'anthropic' || provider === 'google' || provider === 'openai_compatible') &&
+        typeof model === 'string' && model.trim().length > 0 &&
+        typeof apiKeySecretRef === 'string' && apiKeySecretRef.trim().length > 0 &&
+        (provider !== 'openai_compatible' || (typeof baseUrl === 'string' && baseUrl.trim().length > 0))
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  setAIPrompt(event: Event): void {
+    this.aiPrompt.set((event.target as HTMLTextAreaElement | null)?.value ?? '');
+    this.aiError.set(null);
+  }
+
+  async generateAISuggestion(): Promise<void> {
+    if (!this.isAIConfigured()) {
+      this.aiError.set('Configure an AI provider, model, and API-key environment variable first.');
+      return;
+    }
+    const instruction = this.aiPrompt().trim();
+    if (instruction.length < 3) {
+      this.aiError.set('Describe the change you want in at least 3 characters.');
+      return;
+    }
+
+    this.aiGenerating.set(true);
+    this.aiError.set(null);
+    try {
+      const value = this.articleForm.getRawValue();
+      const response = await this.state.generateAISuggestion({
+        instruction,
+        title: value.title,
+        excerpt: value.excerpt,
+        contentMarkdown: value.contentMarkdown,
+      });
+      this.aiSuggestion.set(response.suggestion);
+    } catch (error) {
+      this.aiError.set(error instanceof Error && error.message ? error.message : 'Unable to generate a suggestion.');
+    } finally {
+      this.aiGenerating.set(false);
+    }
+  }
+
+  applyAISuggestion(): void {
+    const suggestion = this.aiSuggestion().trim();
+    if (!suggestion) {
+      return;
+    }
+    this.articleForm.controls.contentMarkdown.setValue(suggestion);
+    this.articleForm.controls.contentMarkdown.markAsDirty();
+    this.articleForm.controls.contentMarkdown.markAsTouched();
+    this.aiError.set(null);
   }
 
   setCoverImageMode(mode: 'url' | 'upload'): void {

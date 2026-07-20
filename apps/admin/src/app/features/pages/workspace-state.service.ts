@@ -15,7 +15,7 @@ import {
   TagRecord,
 } from './pages.model';
 import { INITIAL_STATE } from './pages.seed';
-import { AdminApiService } from './admin-api.service';
+import { AdminApiService, AISuggestionPayload, AISuggestionResponse } from './admin-api.service';
 import { AuthTokenService } from './auth-token.service';
 
 interface ArticleDraftInput {
@@ -426,6 +426,14 @@ export class WorkspaceStateService {
     await this.loadWorkspace(site.id);
     this.state.update((state) => ({ ...state, selectedArticleId: article.id }));
     return article;
+  }
+
+  async generateAISuggestion(input: AISuggestionPayload): Promise<AISuggestionResponse> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+    return this.api.generateAISuggestion(site.id, input);
   }
 
   async deleteArticle(articleId: string): Promise<void> {

@@ -15,7 +15,7 @@ import (
 type Services struct {
 	DB       *sql.DB
 	Config   config.Config
-	AI       ai.AIProvider
+	AI       ai.SuggestionGenerator
 	Builder  builder.Builder
 	Deploy   deploy.DeployAdapter
 	Storage  storage.StorageProvider
@@ -27,7 +27,7 @@ func New(db *sql.DB, cfg config.Config) Services {
 	return Services{
 		DB:      db,
 		Config:  cfg,
-		AI:      ai.NoopProvider{},
+		AI:      ai.NewProvider(nil, nil),
 		Builder: builder.NewLocalBuilder(""),
 		Deploy: deploy.NewAdapterWithCloudflareAndRepository("", deploy.CloudflarePagesAdapter{
 			APIToken:  cfg.CloudflareAPIToken,

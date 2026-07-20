@@ -37,6 +37,10 @@ describe('ArticleEditorPageComponent', () => {
 
   const fakeState = {
     loading: () => false,
+    selectedSite: () => ({
+      id: 'site-example',
+      aiConfig: '{"provider":"openai","model":"gpt-4.1-mini","apiKeySecretRef":"OPENAI_API_KEY"}',
+    }),
     selectedArticle: () => selectedArticleValue,
     articles: () => [articleRecord()],
     error: () => null,
@@ -68,6 +72,10 @@ describe('ArticleEditorPageComponent', () => {
       storageProvider: 'minio',
       storageKey: 'site-example/media/cover.jpg',
       altText: 'Example article',
+    }),
+    generateAISuggestion: jasmine.createSpy('generateAISuggestion').and.resolveTo({
+      suggestion: '## Suggested revision\n\nThis is the suggested article content.',
+      model: 'gpt-4.1-mini',
     }),
   };
 
@@ -136,6 +144,36 @@ describe('ArticleEditorPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('AI writing assistance');
     expect(fixture.nativeElement.textContent).toContain('Configure AI provider');
     expect(fixture.nativeElement.querySelector('a[href="/configuration/ai"]')).toBeTruthy();
+  });
+
+  it('enables a configured AI provider and applies its generated suggestion', async () => {
+    const aiButton = Array.from(fixture.nativeElement.querySelectorAll('.ui-tabs button') as NodeListOf<HTMLButtonElement>).find(
+      (button) => button.textContent?.includes('AI Assistant'),
+    );
+    aiButton?.click();
+    fixture.detectChanges();
+
+    const generateButton = Array.from(fixture.nativeElement.querySelectorAll('.editor-ai-panel > button') as NodeListOf<HTMLButtonElement>).find(
+      (button) => button.textContent?.includes('Generate suggestion'),
+    ) ?? null;
+    expect(generateButton?.disabled).toBeFalse();
+
+    const prompt = fixture.nativeElement.querySelector('.editor-ai-panel textarea') as HTMLTextAreaElement;
+    prompt.value = 'Make the introduction clearer';
+    prompt.dispatchEvent(new Event('input'));
+    generateButton?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fakeState.generateAISuggestion).toHaveBeenCalledWith(jasmine.objectContaining({
+      instruction: 'Make the introduction clearer',
+      title: 'Example article',
+    }));
+    expect(fixture.nativeElement.textContent).toContain('Suggested Markdown');
+
+    const useSuggestion = Array.from(fixture.nativeElement.querySelectorAll('.editor-ai-result button') as NodeListOf<HTMLButtonElement>)[0];
+    useSuggestion?.click();
+    expect(fixture.componentInstance.articleForm.controls.contentMarkdown.value).toContain('Suggested revision');
   });
 
   it('uploads a cover image file and populates the cover image url', async () => {

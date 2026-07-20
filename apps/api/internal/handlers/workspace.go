@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"cms-builder/api/internal/ai"
 	"cms-builder/api/internal/builder"
 	"cms-builder/api/internal/middleware"
 	"cms-builder/api/internal/models"
@@ -404,6 +405,8 @@ func (a *API) siteSubroutes(w http.ResponseWriter, r *http.Request) {
 		a.handleBuildRoutes(w, r, siteID)
 	case "media":
 		a.handleMediaRoutes(w, r, siteID)
+	case "ai":
+		a.handleAISuggestion(w, r, siteID, parts[2:])
 	default:
 		http.NotFound(w, r)
 	}
@@ -1259,28 +1262,8 @@ func validateSitePayload(payload siteUpsertRequest) error {
 }
 
 func validateAIConfig(rawConfig string) error {
-	var values map[string]any
-	if err := json.Unmarshal([]byte(fallbackJSON(rawConfig, `{}`)), &values); err != nil {
-		return fmt.Errorf("%w: AI config must be JSON", errValidation)
-	}
-	for key := range values {
-		if key != "provider" && key != "model" && key != "apiKeySecretRef" && key != "baseUrl" {
-			return fmt.Errorf("%w: unsupported AI configuration field %q", errValidation, key)
-		}
-	}
-	provider := configValue(values, "provider")
-	switch provider {
-	case "", "none", "openai", "anthropic", "google":
-	case "openai_compatible":
-		baseURL, err := url.Parse(configValue(values, "baseUrl"))
-		if err != nil || baseURL.Scheme != "https" || baseURL.User != nil || baseURL.Hostname() == "" {
-			return fmt.Errorf("%w: compatible AI provider requires an HTTPS baseUrl without credentials", errValidation)
-		}
-	default:
-		return fmt.Errorf("%w: unsupported AI provider %q", errValidation, provider)
-	}
-	if secretRef := configValue(values, "apiKeySecretRef"); secretRef != "" && !regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,127}$`).MatchString(secretRef) {
-		return fmt.Errorf("%w: apiKeySecretRef must be an environment variable name", errValidation)
+	if _, err := ai.ParseConfig(fallbackJSON(rawConfig, `{}`)); err != nil {
+		return fmt.Errorf("%w: %v", errValidation, err)
 	}
 	return nil
 }

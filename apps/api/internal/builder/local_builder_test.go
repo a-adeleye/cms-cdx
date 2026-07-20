@@ -59,16 +59,23 @@ func TestGenerateAnonimeArticlesPagination(t *testing.T) {
 		t.Fatalf("GenerateSite returned error: %v", err)
 	}
 
-	firstPage, err := os.ReadFile(filepath.Join(outputPath, "blog", "index.html"))
+	blogLanding, err := os.ReadFile(filepath.Join(outputPath, "blog", "index.html"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	secondPage, err := os.ReadFile(filepath.Join(outputPath, "blog", "page", "2", "index.html"))
+	firstPage, err := os.ReadFile(filepath.Join(outputPath, "blog", "articles", "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondPage, err := os.ReadFile(filepath.Join(outputPath, "blog", "articles", "page", "2", "index.html"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !strings.Contains(string(firstPage), `href="/blog/page/2/"`) {
+	if !strings.Contains(string(blogLanding), `Thoughts that protect your right to`) || strings.Contains(string(blogLanding), `All <strong>Articles</strong>`) {
+		t.Fatalf("expected /blog to render the Anonime blog landing page, got %s", blogLanding)
+	}
+	if !strings.Contains(string(firstPage), `href="/blog/articles/page/2/"`) {
 		t.Fatalf("expected the first page to link to page 2, got %s", firstPage)
 	}
 	if count := strings.Count(string(firstPage), `<article class="anonime-card anonime-article-card">`); count != anonimeArticlesPerPage {
@@ -80,7 +87,7 @@ func TestGenerateAnonimeArticlesPagination(t *testing.T) {
 	if count := strings.Count(string(secondPage), `<article class="anonime-card anonime-article-card">`); count != 1 {
 		t.Fatalf("expected one article card on the second page, got %d", count)
 	}
-	if !strings.Contains(string(secondPage), `href="/blog/" aria-label="Previous page"`) {
+	if !strings.Contains(string(secondPage), `href="/blog/articles/" aria-label="Previous page"`) {
 		t.Fatalf("expected page 2 to link back to the first page, got %s", secondPage)
 	}
 
@@ -88,7 +95,7 @@ func TestGenerateAnonimeArticlesPagination(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(sitemap), `/blog/page/2/`) {
+	if !strings.Contains(string(sitemap), `/blog/articles/`) || !strings.Contains(string(sitemap), `/blog/articles/page/2/`) {
 		t.Fatalf("expected sitemap to include paginated articles page, got %s", sitemap)
 	}
 }
@@ -231,7 +238,7 @@ func TestRenderAnonimeTemplateUsesAnonimeLayout(t *testing.T) {
 	if !strings.Contains(home, `Thoughts that protect your right to`) {
 		t.Fatalf("expected anonime hero copy, got %s", home)
 	}
-	if !strings.Contains(home, `href="/articles/"`) {
+	if !strings.Contains(home, `href="/articles/articles/"`) {
 		t.Fatalf("expected anonime browse link to remain relative, got %s", home)
 	}
 	if !strings.Contains(home, `data-art="shield"`) {
@@ -239,6 +246,26 @@ func TestRenderAnonimeTemplateUsesAnonimeLayout(t *testing.T) {
 	}
 	if count := strings.Count(home, `id="latest-insights"`); count != 1 {
 		t.Fatalf("expected one latest insights section, got %d", count)
+	}
+}
+
+func TestAnonimeArticleEyebrowUsesArticleCategory(t *testing.T) {
+	site := renderedSite{
+		BasePath: "/blog",
+		Theme:    themeForSite(models.Site{TemplateKey: "anonime", Name: "Anonime"}),
+	}
+	article := ArticleContent{
+		Title:        "Protecting your identity",
+		Slug:         "protecting-your-identity",
+		CategoryName: "Identity",
+	}
+
+	page := renderAnonimeArticleLayout(site, article)
+	if !strings.Contains(page, `<p class="anonime-eyebrow">Identity</p>`) {
+		t.Fatalf("expected the article category in the eyebrow, got %s", page)
+	}
+	if strings.Contains(page, `<p class="anonime-eyebrow">Secure communication</p>`) {
+		t.Fatalf("expected the hard-coded article eyebrow to be removed, got %s", page)
 	}
 }
 
@@ -250,7 +277,8 @@ func TestRenderAnonimeChromeUsesProductionLinksAndCSSOnlyTheme(t *testing.T) {
 
 	header := renderAnonimeHeader(site)
 	for _, expected := range []string{
-		`class="brand-logo" src="https://cdn.anonime.io/anonime-logo.svg" alt="Anonime"`,
+		`class="brand-logo brand-logo-light" src="https://cdn.anonime.io/anonime-logo.svg" alt="Anonime"`,
+		`class="brand-logo brand-logo-dark" src="https://cdn.anonime.io/anonime-logo-dark.svg" alt="" aria-hidden="true"`,
 		`href="https://anonime.io/#top">Home</a>`,
 		`href="https://anonime.io/#how-it-works">How it Works</a>`,
 		`href="https://anonime.io/pricing">Plans &amp; Pricing</a>`,
@@ -271,6 +299,9 @@ func TestRenderAnonimeChromeUsesProductionLinksAndCSSOnlyTheme(t *testing.T) {
 	styles := anonimeStyles()
 	for _, expected := range []string{
 		`body.anonime-layout:has(#anonime-theme-toggle:checked)`,
+		`.anonime-template .brand-logo-dark { display: none; }`,
+		`body.anonime-layout:has(#anonime-theme-toggle:checked) .brand-logo-light { display: none; }`,
+		`body.anonime-layout:has(#anonime-theme-toggle:checked) .brand-logo-dark { display: block; }`,
 		`color-scheme: dark`,
 		`.anonime-theme-checkbox:checked + .anonime-theme-toggle .anonime-theme-sun`,
 		`@media (max-width: 920px)`,
@@ -285,6 +316,7 @@ func TestRenderAnonimeChromeUsesProductionLinksAndCSSOnlyTheme(t *testing.T) {
 	footer := renderAnonimeFooter(site)
 	for _, expected := range []string{
 		`Private communication<br>without <strong>permanent trails.</strong>`,
+		`class="anonime-footer-logo" src="https://cdn.anonime.io/anonime-logo-dark.svg" alt="Anonime"`,
 		`<h3>Product</h3>`,
 		`href="https://anonime.io/#security">Whispers</a>`,
 		`href="https://anonime.io/#private-drops">Private Drops</a>`,

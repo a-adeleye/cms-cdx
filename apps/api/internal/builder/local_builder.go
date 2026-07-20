@@ -168,12 +168,19 @@ func (b LocalBuilder) GenerateSite(ctx context.Context, content SiteContent, opt
 		return "", err
 	}
 	blogOutputPath := filepath.Join(outputPath, filepath.FromSlash(strings.TrimPrefix(rendered.BasePath, "/")))
-	if err := writeFile(filepath.Join(blogOutputPath, "index.html"), renderArticlesPage(rendered)); err != nil {
+	articlesOutputPath := blogOutputPath
+	if rendered.Theme.Name == "anonime" {
+		if err := writeFile(filepath.Join(blogOutputPath, "index.html"), renderAnonimeBlogLandingPage(rendered)); err != nil {
+			return "", err
+		}
+		articlesOutputPath = filepath.Join(blogOutputPath, "articles")
+	}
+	if err := writeFile(filepath.Join(articlesOutputPath, "index.html"), renderArticlesPage(rendered)); err != nil {
 		return "", err
 	}
 	if rendered.Theme.Name == "anonime" {
 		for page := 2; page <= anonimeArticlePageCount(len(rendered.Articles)); page++ {
-			pageDir := filepath.Join(blogOutputPath, "page", strconv.Itoa(page))
+			pageDir := filepath.Join(articlesOutputPath, "page", strconv.Itoa(page))
 			if err := writeFile(filepath.Join(pageDir, "index.html"), renderAnonimeArticlesPageNumber(rendered, page)); err != nil {
 				return "", err
 			}
@@ -852,6 +859,13 @@ func articlesURL(site renderedSite) string {
 }
 
 func articlesPath(site renderedSite) string {
+	if site.Theme.Name == "anonime" {
+		return strings.TrimRight(site.BasePath, "/") + "/articles/"
+	}
+	return site.BasePath + "/"
+}
+
+func anonimeBlogLandingPath(site renderedSite) string {
 	return site.BasePath + "/"
 }
 
@@ -872,6 +886,7 @@ func renderSitemap(site renderedSite) string {
 		{Loc: site.PublicBaseURL + site.BasePath + "/"},
 	}
 	if site.Theme.Name == "anonime" {
+		urls = append(urls, sitemapURL{Loc: articlesURL(site)})
 		for page := 2; page <= anonimeArticlePageCount(len(site.Articles)); page++ {
 			urls = append(urls, sitemapURL{Loc: anonimeArticlesPageURL(site, page)})
 		}

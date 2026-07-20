@@ -25,8 +25,8 @@
             }
             @case ('git_repository') {
               <label>Repository URL<input type="url" [formControlName]="channel + 'RepositoryUrl'" placeholder="https://github.com/owner/landing-site.git" /><small>HTTPS Git host allowed by the API server. Do not put a token in this URL.</small></label>
-              <div class="field-row"><label>Target branch<input [formControlName]="channel + 'Branch'" /></label><label>CMS-owned blog directory<input [formControlName]="channel + 'ContentPath'" placeholder="public/blog" /><small>Only this directory is replaced.</small></label></div>
-              <div class="field-row"><label>Token environment variable (optional)<input [formControlName]="channel + 'TokenSecretRef'" placeholder="GITHUB_PUSH_TOKEN" /></label><label>Deployed URL (optional)<input type="url" [formControlName]="channel + 'PublicUrl'" /></label></div>
+              <div class="field-row"><label>Target branch<input [formControlName]="channel + 'Branch'" /><small>&nbsp;</small></label><label>CMS-owned blog directory<input [formControlName]="channel + 'ContentPath'" placeholder="public/blog" /><small>Only this directory is replaced.</small></label></div>
+              <div class="field-row"><label>Token environment variable<input [formControlName]="channel + 'TokenSecretRef'" placeholder="GITHUB_PUSH_TOKEN" /><small>Name of a server environment variable that holds a GitHub token with repository contents read/write access.</small></label><label>Deployed URL (optional)<input type="url" [formControlName]="channel + 'PublicUrl'" /><small>&nbsp;</small></label></div>
             }
             @default { <p class="field-help">Builds remain available locally and no external provider is called.</p> }
           }

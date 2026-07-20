@@ -12,6 +12,8 @@ const DEFAULT_MODELS: Record<Exclude<AIProvider, 'none' | 'openai_compatible'>, 
   google: 'gemini-2.5-flash',
 };
 
+const DEFAULT_GOOGLE_IMAGE_MODEL = 'gemini-2.5-flash-image';
+
 @Component({
   selector: 'app-ai-settings-page',
   templateUrl: './ai-settings-page.component.html',
@@ -27,6 +29,7 @@ export class AiSettingsPageComponent {
   readonly form = this.fb.nonNullable.group({
     provider: ['none' as AIProvider, [Validators.required]],
     model: [''],
+    imageModel: [''],
     apiKeySecretRef: [''],
     baseUrl: [''],
   });
@@ -37,6 +40,7 @@ export class AiSettingsPageComponent {
       this.form.reset({
         provider: config.provider,
         model: config.model,
+        imageModel: config.imageModel,
         apiKeySecretRef: config.apiKeySecretRef,
         baseUrl: config.baseUrl,
       }, { emitEvent: false });
@@ -56,6 +60,7 @@ export class AiSettingsPageComponent {
     this.form.patchValue({
       provider,
       model: provider === 'none' ? '' : current.model || DEFAULT_MODELS[provider as keyof typeof DEFAULT_MODELS] || '',
+      imageModel: provider === 'google' ? current.imageModel || DEFAULT_GOOGLE_IMAGE_MODEL : '',
       baseUrl: provider === 'openai_compatible' ? current.baseUrl : '',
     });
   }
@@ -70,14 +75,17 @@ export class AiSettingsPageComponent {
 
     try {
       this.feedback.loading('Saving AI configuration...');
-      const aiConfig = value.provider === 'none'
-        ? '{}'
-        : JSON.stringify({
+      const existing = parseAIConfig(this.state.selectedSite().aiConfig);
+      const aiConfig = JSON.stringify({
+        ...(existing.masterPrompt ? { masterPrompt: existing.masterPrompt } : {}),
+        ...(value.provider !== 'none' ? {
             provider: value.provider,
             model: value.model.trim(),
             apiKeySecretRef: value.apiKeySecretRef.trim(),
+            ...(value.provider === 'google' && value.imageModel.trim() ? { imageModel: value.imageModel.trim() } : {}),
             ...(value.provider === 'openai_compatible' ? { baseUrl: value.baseUrl.trim() } : {}),
-          });
+          } : {}),
+      });
       await this.state.updateSelectedSite({ aiConfig });
       this.feedback.success('AI configuration saved.');
     } catch (error) {
@@ -86,17 +94,19 @@ export class AiSettingsPageComponent {
   }
 }
 
-function parseAIConfig(raw: string): { provider: AIProvider; model: string; apiKeySecretRef: string; baseUrl: string } {
+function parseAIConfig(raw: string): { provider: AIProvider; model: string; imageModel: string; apiKeySecretRef: string; baseUrl: string; masterPrompt: string } {
   try {
     const config = JSON.parse(raw || '{}') as Record<string, unknown>;
     const provider = config['provider'];
     return {
       provider: provider === 'openai' || provider === 'anthropic' || provider === 'google' || provider === 'openai_compatible' ? provider : 'none',
       model: typeof config['model'] === 'string' ? config['model'] : '',
+      imageModel: typeof config['imageModel'] === 'string' ? config['imageModel'] : '',
       apiKeySecretRef: typeof config['apiKeySecretRef'] === 'string' ? config['apiKeySecretRef'] : '',
       baseUrl: typeof config['baseUrl'] === 'string' ? config['baseUrl'] : '',
+      masterPrompt: typeof config['masterPrompt'] === 'string' ? config['masterPrompt'] : '',
     };
   } catch {
-    return { provider: 'none', model: '', apiKeySecretRef: '', baseUrl: '' };
+    return { provider: 'none', model: '', imageModel: '', apiKeySecretRef: '', baseUrl: '', masterPrompt: '' };
   }
 }

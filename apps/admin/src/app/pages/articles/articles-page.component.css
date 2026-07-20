@@ -47,6 +47,37 @@
   padding-right: 0;
 }
 
+.articles-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.articles-bulk-bar span {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.articles-bulk-bar .button {
+  margin-left: auto;
+}
+
+.articles-row-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.articles-row-actions .button {
+  padding: 4px 10px;
+  min-height: 30px;
+  font-size: .8rem;
+}
+
 .article-title-cell {
   display: flex;
   align-items: center;
@@ -67,7 +98,6 @@
   height: 40px;
   flex: none;
   border-radius: 5px;
-  background: radial-gradient(circle at 68% 48%, #4fd1ef 0 4%, transparent 5%), linear-gradient(135deg, #174e4d, #08161c);
   background-position: center;
   background-size: cover;
 }

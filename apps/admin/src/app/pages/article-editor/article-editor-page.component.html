@@ -6,6 +6,7 @@
       <p>{{ editorMode === 'edit' ? (state.selectedArticle() ? 'Last saved ' + (state.selectedArticle()?.updatedAt | date: 'short') + ' • ' + (state.selectedArticle()?.status | titlecase) : 'Loading the requested article...') : 'Start writing your article. You can save as draft anytime.' }}</p>
     </div>
     <div class="hero-actions">
+      @if (editorMode === 'create') { <button class="button button-secondary" type="button" [disabled]="!routeReady()" (click)="setActiveTool('ai', $event.currentTarget)">AI Writer</button> }
       <button class="button button-secondary" type="button" [disabled]="feedback.isBusy() || !routeReady()" (click)="saveArticle()">Save draft</button>
       <button class="button button-secondary" type="button" (click)="setActiveTool('preview', $event.currentTarget)">Preview</button>
       <button class="button button-primary" type="button" [disabled]="feedback.isBusy() || !routeReady()" (click)="publishArticle()">{{ feedback.isBusy() ? 'Saving...' : 'Publish' }}</button>
@@ -25,6 +26,7 @@
   @if (routeReady()) {
   <form class="editor-workspace" [formGroup]="articleForm" [attr.aria-busy]="feedback.isBusy()">
     <input type="hidden" formControlName="id" />
+    <input type="hidden" formControlName="slug" />
     <article class="ui-card editor-document" aria-labelledby="content-section-title">
       <section class="editor-field editor-field--title">
         <label for="article-title">Title <span aria-hidden="true">*</span></label>
@@ -100,6 +102,16 @@
 
       @if (activeTool() === 'ai') {
         <section class="editor-sidebar-section editor-ai-panel">
+          @if (editorMode === 'create') {
+            <h2>AI Writer</h2>
+            <p>Generate a complete article draft, SEO metadata, and a 16:9 featured image from this site's saved editorial brief.</p>
+            <label>Optional topic or brief<textarea rows="5" placeholder="Leave blank to let AI choose a strong topic, or describe a specific article you want." [value]="aiArticleTopic()" [disabled]="aiArticleGenerating()" (input)="setAIArticleTopic($event)"></textarea></label>
+            <button class="button button-primary" type="button" [disabled]="aiArticleGenerating() || !isAIArticleWriterConfigured()" (click)="generateAIArticleDraft()" [title]="isAIArticleWriterConfigured() ? 'Generate a full article draft' : 'Configure Google Gemini and save a master prompt first'">{{ aiArticleGenerating() ? 'Generating article…' : 'Generate full article' }}</button>
+            @if (aiArticleError()) { <p class="field-error" role="alert">{{ aiArticleError() }}</p> }
+            <a class="ui-link" routerLink="/configuration/site-settings">Edit master prompt</a>
+            <a class="ui-link" routerLink="/configuration/ai">Configure Gemini</a>
+          }
+          @if (editorMode === 'edit') {
           <span class="editor-ai-icon" aria-hidden="true">✦</span><h2>AI writing assistance</h2>
           <p>Generate an outline, improve clarity, or rewrite selected content while keeping editorial control.</p>
           <label>What would you like help with?<textarea rows="5" placeholder="Describe the change you want..." [value]="aiPrompt()" [disabled]="aiGenerating()" (input)="setAIPrompt($event)"></textarea></label>
@@ -112,6 +124,7 @@
             </section>
           }
           <a class="ui-link" routerLink="/configuration/ai">Configure AI provider</a>
+          }
         </section>
       }
 

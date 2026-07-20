@@ -3,9 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"os"
-	"strings"
 	"testing"
 
 	"cms-builder/api/internal/services"
@@ -50,13 +48,12 @@ func TestUpsertArticleCreatesDraftWithAuthorAndCategory(t *testing.T) {
 	}
 
 	t.Cleanup(func() {
-		_, _ = db.ExecContext(ctx, `DELETE FROM article_tags WHERE article_id = $1`, article.ID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM articles WHERE id = $1`, article.ID)
 		_ = db.Close()
 	})
 }
 
-func TestUpsertArticleReturnsValidationErrorForInvalidTagIds(t *testing.T) {
+func TestUpsertArticleNormalizesFreeTextTags(t *testing.T) {
 	db := openTestDatabase(t)
 	ctx := context.Background()
 	api := &API{Services: services.Services{DB: db}}
@@ -65,31 +62,32 @@ func TestUpsertArticleReturnsValidationErrorForInvalidTagIds(t *testing.T) {
 	authorID := mustQueryText(t, db, ctx, `SELECT id::text FROM authors WHERE site_id = $1 ORDER BY name ASC LIMIT 1`, siteID)
 	categoryID := mustQueryText(t, db, ctx, `SELECT id::text FROM categories WHERE site_id = $1 ORDER BY name ASC LIMIT 1`, siteID)
 
-	_, err := api.upsertArticleWithSite(ctx, siteID, articleUpsertRequest{
+	article, err := api.upsertArticleWithSite(ctx, siteID, articleUpsertRequest{
 		Title:           "Regression test article with tags",
 		Slug:            "regression-test-article-with-tags",
 		Excerpt:         "A short regression test article",
-		ContentMarkdown: "This article verifies invalid tag ids are rejected.",
+		ContentMarkdown: "This article verifies free-text tags are stored as-is.",
 		AuthorID:        authorID,
 		CategoryID:      categoryID,
-		TagIDs:          []string{"not-a-uuid", "still-not-a-uuid"},
+		Tags:            "Privacy,  privacy, VPN , security",
 		IsFeatured:      false,
 		Status:          "draft",
 	})
-	if err == nil {
-		t.Fatal("expected validation error for invalid tag ids")
-	}
-	if !errors.Is(err, errValidation) {
-		t.Fatalf("expected validation error, got %v", err)
-	}
-	if got := err.Error(); !strings.Contains(got, "invalid tag id") {
-		t.Fatalf("expected invalid tag id message, got %q", got)
+	if err != nil {
+		t.Fatalf("upsertArticleWithSite returned error: %v", err)
 	}
 
-	_ = db.Close()
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM articles WHERE id = $1`, article.ID)
+		_ = db.Close()
+	})
+
+	if got, want := article.Tags, "Privacy, VPN, security"; got != want {
+		t.Fatalf("expected normalized tags %q, got %q", want, got)
+	}
 }
 
-func TestDeleteArticleRemovesArticleAndTags(t *testing.T) {
+func TestDeleteArticleRemovesArticle(t *testing.T) {
 	db := openTestDatabase(t)
 	ctx := context.Background()
 	api := &API{Services: services.Services{DB: db}}
@@ -97,7 +95,6 @@ func TestDeleteArticleRemovesArticleAndTags(t *testing.T) {
 	siteID := mustQueryText(t, db, ctx, `SELECT id::text FROM sites ORDER BY updated_at DESC LIMIT 1`)
 	authorID := mustQueryText(t, db, ctx, `SELECT id::text FROM authors WHERE site_id = $1 ORDER BY name ASC LIMIT 1`, siteID)
 	categoryID := mustQueryText(t, db, ctx, `SELECT id::text FROM categories WHERE site_id = $1 ORDER BY name ASC LIMIT 1`, siteID)
-	tagID := mustQueryText(t, db, ctx, `SELECT id::text FROM tags WHERE site_id = $1 ORDER BY name ASC LIMIT 1`, siteID)
 
 	article, err := api.upsertArticleWithSite(ctx, siteID, articleUpsertRequest{
 		Title:           "Delete test article",
@@ -106,7 +103,7 @@ func TestDeleteArticleRemovesArticleAndTags(t *testing.T) {
 		ContentMarkdown: "This article exists for deletion testing.",
 		AuthorID:        authorID,
 		CategoryID:      categoryID,
-		TagIDs:          []string{tagID},
+		Tags:            "privacy, security",
 		IsFeatured:      false,
 		Status:          "draft",
 	})
@@ -124,13 +121,6 @@ func TestDeleteArticleRemovesArticleAndTags(t *testing.T) {
 	}
 	if count != 0 {
 		t.Fatalf("expected article to be deleted, found %d rows", count)
-	}
-
-	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM article_tags WHERE article_id = $1`, article.ID).Scan(&count); err != nil {
-		t.Fatalf("tag count query failed: %v", err)
-	}
-	if count != 0 {
-		t.Fatalf("expected article tags to be deleted, found %d rows", count)
 	}
 
 	t.Cleanup(func() {

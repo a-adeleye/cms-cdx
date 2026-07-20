@@ -45,11 +45,14 @@ describe('ArticlesPageComponent', () => {
     selectArticle: jasmine.createSpy('selectArticle').and.resolveTo(),
     toggleFeatured: jasmine.createSpy('toggleFeatured').and.resolveTo(),
     setArticleStatus: jasmine.createSpy('setArticleStatus').and.resolveTo(),
+    deleteArticle: jasmine.createSpy('deleteArticle').and.resolveTo(),
   };
 
   beforeEach(async () => {
     fakeState.clearSelectedArticle.calls.reset();
     fakeState.selectArticle.calls.reset();
+    fakeState.deleteArticle.calls.reset();
+    spyOn(globalThis, 'confirm').and.returnValue(true);
     await TestBed.configureTestingModule({
       imports: [CommonModule, RouterTestingModule, ArticlesPageComponent],
       providers: [{ provide: WorkspaceStateService, useValue: fakeState }],
@@ -90,5 +93,42 @@ describe('ArticlesPageComponent', () => {
 
     expect(fakeState.selectArticle).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/content/articles', 'article-1', 'edit']);
+  });
+
+  it('selects all visible articles with the header checkbox', () => {
+    const headerCheckbox = fixture.nativeElement.querySelector('thead input[type="checkbox"]') as HTMLInputElement;
+
+    headerCheckbox.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedArticleIds()).toEqual(['article-1']);
+
+    headerCheckbox.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedArticleIds()).toEqual([]);
+  });
+
+  it('deletes an article from its row action', async () => {
+    fixture.componentInstance.deleteArticle({ id: 'article-1', title: 'First article' });
+
+    await fixture.whenStable();
+
+    expect(fakeState.deleteArticle).toHaveBeenCalledWith('article-1');
+  });
+
+  it('only shows the clear button when a filter is active', () => {
+    expect(fixture.nativeElement.querySelector('.articles-clear')).toBeNull();
+
+    fixture.componentInstance.onSearch('foo');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.articles-clear')).toBeTruthy();
+
+    fixture.componentInstance.clearFilters();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.articles-clear')).toBeNull();
+    expect(fixture.componentInstance.articleSearch()).toBe('');
   });
 });

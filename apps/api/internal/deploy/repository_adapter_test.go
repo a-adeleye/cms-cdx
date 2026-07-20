@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"cms-builder/api/internal/models"
@@ -56,6 +57,18 @@ func TestRepositoryConfigRejectsTraversalAndUnapprovedHosts(t *testing.T) {
 	}
 	if _, err := adapter.parseConfig(map[string]any{"repositoryUrl": "https://github.com/example/site.git", "branch": "main", "contentPath": "../landing"}); err == nil {
 		t.Fatal("expected traversal error")
+	}
+}
+
+func TestRepositoryConfigRequiresTokenReferenceForHTTPS(t *testing.T) {
+	adapter := NewRepositoryAdapter()
+	_, err := adapter.parseConfig(map[string]any{
+		"repositoryUrl": "https://github.com/example/site.git",
+		"branch":        "main",
+		"contentPath":   "public/blog",
+	})
+	if err == nil || !strings.Contains(err.Error(), "tokenSecretRef") {
+		t.Fatalf("expected HTTPS repository configuration to require a token reference, got %v", err)
 	}
 }
 

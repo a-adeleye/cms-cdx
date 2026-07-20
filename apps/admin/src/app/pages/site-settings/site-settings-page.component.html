@@ -16,11 +16,16 @@
       <div class="field-row"><label>Template<select formControlName="templateKey">@for (option of templateOptions(); track option.value) { <option [value]="option.value">{{ option.label }}</option> }</select></label><label>Accent color<input type="color" formControlName="accentColor" /></label></div>
     </article>
 
+    <article class="ui-card settings-section-content form-grid">
+      <div><h2>AI writing master prompt</h2><p class="muted">This editorial brief is sent with every full AI article request. Existing article titles and excerpts are also provided so new drafts avoid duplicate coverage.</p></div>
+      <label>Master prompt<textarea rows="16" formControlName="masterPrompt" placeholder="Define the voice, SEO requirements, product claims, source standards, and required JSON output for AI-generated articles."></textarea><small>{{ form.controls.masterPrompt.value.length }} / 50000</small></label>
+    </article>
+
     <article class="ui-card settings-section-content">
       <div><h2>Brand assets</h2><p class="muted">Uploaded files are stored in the media library and referenced by generated pages.</p></div>
       <div class="settings-brand-assets">
         <label><span>Logo</span><div class="brand-upload">@if (state.selectedSite().logoUrl) { <img [src]="state.selectedSite().logoUrl" alt="Current site logo" /> } @else { <span class="brand-upload__logo">{{ form.controls.name.value.charAt(0) || 'S' }}</span> }<span>PNG, JPEG, GIF, or WebP up to 12 MB.<input #logoInput type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden (change)="uploadBrandAsset('logo', $event)" /><button class="button button-secondary" type="button" [disabled]="feedback.isBusy()" (click)="logoInput.click()">Upload logo</button></span></div></label>
-        <label><span>Favicon</span><div class="brand-upload">@if (state.selectedSite().faviconUrl) { <img [src]="state.selectedSite().faviconUrl" alt="Current favicon" /> } @else { <span class="brand-upload__favicon">{{ form.controls.name.value.charAt(0) || 'S' }}</span> }<span>Use a square PNG or WebP for best results.<input #faviconInput type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden (change)="uploadBrandAsset('favicon', $event)" /><button class="button button-secondary" type="button" [disabled]="feedback.isBusy()" (click)="faviconInput.click()">Upload favicon</button></span></div></label>
+        <label><span>Favicon</span><div class="brand-upload">@if (state.selectedSite().faviconUrl) { <img [src]="state.selectedSite().faviconUrl" alt="Current favicon" /> } @else { <span class="brand-upload__favicon">{{ form.controls.name.value.charAt(0) || 'S' }}</span> }<span>Use an ICO or square PNG/WebP for best results.<input #faviconInput type="file" accept=".ico,image/x-icon,image/vnd.microsoft.icon,image/png,image/jpeg,image/gif,image/webp" hidden (change)="uploadBrandAsset('favicon', $event)" /><button class="button button-secondary" type="button" [disabled]="feedback.isBusy()" (click)="faviconInput.click()">Upload favicon</button></span></div></label>
       </div>
     </article>
     <div class="hero-actions"><a class="button button-secondary" routerLink="/configuration/templates">View template previews</a><a class="button button-secondary" routerLink="/configuration/deployment">Configure deployment</a><button class="button button-primary" type="submit" [disabled]="feedback.isBusy()">Save configuration</button></div>

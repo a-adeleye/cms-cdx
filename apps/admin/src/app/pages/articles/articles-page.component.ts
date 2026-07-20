@@ -51,6 +51,24 @@ export class ArticlesPageComponent {
     });
   });
 
+  readonly hasActiveFilters = computed(
+    () =>
+      this.articleFilter() !== 'all' ||
+      this.categoryFilter() !== 'all' ||
+      this.authorFilter() !== 'all' ||
+      this.articleSearch().trim().length > 0,
+  );
+
+  readonly allVisibleSelected = computed(() => {
+    const visible = this.filteredArticles();
+    return visible.length > 0 && visible.every((article) => this.selectedArticleIds().includes(article.id));
+  });
+
+  readonly someVisibleSelected = computed(() => {
+    const visible = this.filteredArticles();
+    return visible.some((article) => this.selectedArticleIds().includes(article.id)) && !this.allVisibleSelected();
+  });
+
   constructor() {
     const flashMessage = window.history.state?.flashMessage;
     if (typeof flashMessage === 'string' && flashMessage.trim()) {
@@ -64,6 +82,13 @@ export class ArticlesPageComponent {
 
   onSearch(value: string): void {
     this.articleSearch.set(value);
+  }
+
+  clearFilters(): void {
+    this.articleSearch.set('');
+    this.articleFilter.set('all');
+    this.categoryFilter.set('all');
+    this.authorFilter.set('all');
   }
 
   toggleSelection(articleId: string): void {
@@ -102,4 +127,47 @@ export class ArticlesPageComponent {
     void this.router.navigate(['/content/articles', articleId, 'edit']);
   }
 
+  async deleteArticle(article: { id: string; title: string }): Promise<void> {
+    if (!this.confirmDelete(article.title)) {
+      return;
+    }
+
+    try {
+      this.state.clearError();
+      this.feedback.loading('Deleting article…');
+      await this.state.deleteArticle(article.id);
+      this.selectedArticleIds.set(this.selectedArticleIds().filter((id) => id !== article.id));
+      this.feedback.success('Article deleted.');
+    } catch (error) {
+      this.reportActionError('Unable to delete article.', error);
+    }
+  }
+
+  async deleteSelected(): Promise<void> {
+    const ids = this.selectedArticleIds();
+    if (!ids.length || !this.confirmDelete(`${ids.length} selected article${ids.length === 1 ? '' : 's'}`)) {
+      return;
+    }
+
+    try {
+      this.state.clearError();
+      this.feedback.loading('Deleting articles…');
+      for (const id of ids) {
+        await this.state.deleteArticle(id);
+      }
+      this.selectedArticleIds.set([]);
+      this.feedback.success('Selected articles deleted.');
+    } catch (error) {
+      this.reportActionError('Unable to delete selected articles.', error);
+    }
+  }
+
+  private confirmDelete(label: string): boolean {
+    return typeof globalThis.confirm !== 'function' || globalThis.confirm(`Delete ${label}? This cannot be undone.`);
+  }
+
+  private reportActionError(message: string, error: unknown): void {
+    const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
+    this.feedback.error(`${message}${detail}`);
+  }
 }

@@ -11,7 +11,6 @@ import {
   MediaAssetRecord,
   SiteRecord,
   TemplateRecord,
-  TagRecord,
 } from './pages.model';
 import { AuthTokenService } from './auth-token.service';
 
@@ -37,7 +36,6 @@ interface WorkspaceResponse {
   articles: ArticleRecord[];
   authors: Array<{ id: string; siteId: string; name: string; slug: string; bio: string }>;
   categories: Array<{ id: string; siteId: string; name: string; slug: string; description: string }>;
-  tags: Array<{ id: string; siteId: string; name: string; slug: string }>;
   mediaAssets: MediaAssetRecord[];
   builds: BuildRecord[];
 }
@@ -58,7 +56,7 @@ interface ArticleUpsertPayload extends Partial<ArticleRecord> {
   canonicalUrl: string;
   authorId: string;
   categoryId: string;
-  tagIds: string[];
+  tags: string;
   isFeatured: boolean;
   status: ArticleRecord['status'];
 }
@@ -117,10 +115,6 @@ interface AuthorUpsertPayload {
   bio: string;
 }
 
-interface TagUpsertPayload {
-  name: string;
-}
-
 export interface AISuggestionPayload {
   instruction: string;
   title: string;
@@ -130,6 +124,26 @@ export interface AISuggestionPayload {
 
 export interface AISuggestionResponse {
   suggestion: string;
+  model: string;
+}
+
+export interface AIArticleDraftPayload {
+  topic: string;
+}
+
+export interface AIArticleDraftResponse {
+  title: string;
+  slug: string;
+  category: string;
+  featured: boolean;
+  tags: string[];
+  seoTitle: string;
+  metaDescription: string;
+  canonicalUrl: string;
+  excerpt: string;
+  contentMarkdown: string;
+  coverImage?: MediaAssetRecord;
+  imageError?: string;
   model: string;
 }
 
@@ -238,34 +252,6 @@ export class AdminApiService {
     }
   }
 
-  async createTag(siteId: string, payload: TagUpsertPayload): Promise<TagRecord> {
-    try {
-      return await firstValueFrom(
-        this.http.post<TagRecord>(`${this.baseUrl}/sites/${siteId}/tags`, payload, { headers: this.headers() }),
-      );
-    } catch (error) {
-      throw this.toError(error);
-    }
-  }
-
-  async updateTag(siteId: string, tagId: string, payload: TagUpsertPayload): Promise<TagRecord> {
-    try {
-      return await firstValueFrom(
-        this.http.patch<TagRecord>(`${this.baseUrl}/sites/${siteId}/tags/${tagId}`, payload, { headers: this.headers() }),
-      );
-    } catch (error) {
-      throw this.toError(error);
-    }
-  }
-
-  async deleteTag(siteId: string, tagId: string): Promise<void> {
-    try {
-      await firstValueFrom(this.http.delete(`${this.baseUrl}/sites/${siteId}/tags/${tagId}`, { headers: this.headers() }));
-    } catch (error) {
-      throw this.toError(error);
-    }
-  }
-
   async upsertArticle(siteId: string, payload: ArticleUpsertPayload): Promise<ArticleRecord> {
     try {
       const articleId = payload.id?.trim();
@@ -306,6 +292,16 @@ export class AdminApiService {
     try {
       return await firstValueFrom(
         this.http.post<AISuggestionResponse>(`${this.baseUrl}/sites/${siteId}/ai/suggestions`, payload, { headers: this.headers() }),
+      );
+    } catch (error) {
+      throw this.toError(error);
+    }
+  }
+
+  async generateAIArticleDraft(siteId: string, payload: AIArticleDraftPayload): Promise<AIArticleDraftResponse> {
+    try {
+      return await firstValueFrom(
+        this.http.post<AIArticleDraftResponse>(`${this.baseUrl}/sites/${siteId}/ai/article-drafts`, payload, { headers: this.headers() }),
       );
     } catch (error) {
       throw this.toError(error);

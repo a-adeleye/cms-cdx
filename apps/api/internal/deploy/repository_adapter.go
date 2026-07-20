@@ -138,6 +138,9 @@ func (a RepositoryAdapter) parseConfig(values map[string]any) (repositoryConfig,
 	if !allowed {
 		return repositoryConfig{}, fmt.Errorf("repository host %s is not allowed", parsed.Hostname())
 	}
+	if parsed.Scheme == "https" && config.TokenSecretRef == "" {
+		return repositoryConfig{}, errors.New("repository deployment requires tokenSecretRef for HTTPS repositories")
+	}
 	if strings.ContainsAny(config.Branch, "\r\n ~^:?*[\\") || strings.HasPrefix(config.Branch, "-") {
 		return repositoryConfig{}, errors.New("repository branch is invalid")
 	}

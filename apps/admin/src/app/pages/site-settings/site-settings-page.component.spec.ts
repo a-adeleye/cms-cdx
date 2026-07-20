@@ -36,4 +36,18 @@ describe('SiteSettingsPageComponent', () => {
     await fixture.componentInstance.save();
     expect(state.updateSelectedSite).toHaveBeenCalledWith(jasmine.objectContaining({ contentContext: 'application_blog' }));
   });
+
+  it('persists the AI master prompt alongside the existing AI configuration', async () => {
+    state.selectedSite.and.returnValue({
+      id: 'site-1', name: 'Example Site', domain: 'https://example.test', blogPath: '/blog', templateKey: 'anonime', themeConfig: '{"accent":"#2563eb"}',
+      aiConfig: '{"provider":"google","model":"gemini-2.5-flash","apiKeySecretRef":"GEMINI_API_KEY"}',
+    } as never);
+    fixture.componentInstance.form.controls.masterPrompt.setValue('Write accurate Anonime privacy guides.');
+
+    await fixture.componentInstance.save();
+
+    expect(state.updateSelectedSite).toHaveBeenCalledWith(jasmine.objectContaining({
+      aiConfig: '{"provider":"google","model":"gemini-2.5-flash","apiKeySecretRef":"GEMINI_API_KEY","masterPrompt":"Write accurate Anonime privacy guides."}',
+    }));
+  });
 });

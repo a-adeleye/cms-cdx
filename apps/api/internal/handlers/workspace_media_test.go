@@ -140,3 +140,34 @@ func TestMediaUploadRejectsSpoofedImageContentType(t *testing.T) {
 		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, rec.Code, rec.Body.String())
 	}
 }
+
+func TestMediaUploadAcceptsICOFiles(t *testing.T) {
+	db := openTestDatabase(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	api := &API{Services: services.Services{DB: db, Storage: fakeStorageProvider{}}}
+	siteID := mustQueryText(t, db, ctx, `SELECT id::text FROM sites ORDER BY updated_at DESC LIMIT 1`)
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	filePart, err := writer.CreateFormFile("file", "favicon.ico")
+	if err != nil {
+		t.Fatalf("CreateFormFile returned error: %v", err)
+	}
+	if _, err := filePart.Write([]byte{0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x10, 0x10, 0x00, 0x00, 0x01, 0x00, 0x20, 0x00, 0x00, 0x00}); err != nil {
+		t.Fatalf("write ICO header failed: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("writer close failed: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/sites/"+siteID+"/media", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+
+	api.handleMediaRoutes(rec, req, siteID)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected status %d for a valid ICO file, got %d with body %s", http.StatusCreated, rec.Code, rec.Body.String())
+	}
+}

@@ -39,7 +39,7 @@ describe('ArticleEditorPageComponent', () => {
     loading: () => false,
     selectedSite: () => ({
       id: 'site-example',
-      aiConfig: '{"provider":"openai","model":"gpt-4.1-mini","apiKeySecretRef":"OPENAI_API_KEY"}',
+      aiConfig: '{"provider":"google","model":"gemini-2.5-flash","apiKeySecretRef":"GEMINI_API_KEY","masterPrompt":"Write useful Anonime articles."}',
     }),
     selectedArticle: () => selectedArticleValue,
     articles: () => [articleRecord()],
@@ -76,6 +76,20 @@ describe('ArticleEditorPageComponent', () => {
     generateAISuggestion: jasmine.createSpy('generateAISuggestion').and.resolveTo({
       suggestion: '## Suggested revision\n\nThis is the suggested article content.',
       model: 'gpt-4.1-mini',
+    }),
+    generateAIArticleDraft: jasmine.createSpy('generateAIArticleDraft').and.resolveTo({
+      title: 'How email aliases protect privacy',
+      slug: 'email-aliases-protect-privacy',
+      category: 'Category',
+      featured: true,
+      tags: ['tag one'],
+      seoTitle: 'How email aliases protect privacy',
+      metaDescription: 'Learn how email aliases help protect your inbox privacy.',
+      canonicalUrl: 'https://anonime.io/blog/email-aliases-protect-privacy',
+      excerpt: 'A practical explanation of email aliases and privacy.',
+      contentMarkdown: '# How email aliases protect privacy\n\nA complete AI draft.',
+      coverImage: { fileName: 'ai-email-aliases.png', fileUrl: 'https://cdn.example/ai-email-aliases.png' },
+      model: 'gemini-2.5-flash',
     }),
   };
 
@@ -271,6 +285,39 @@ describe('ArticleEditorPageComponent', () => {
     expect(createFixture.componentInstance.articleForm.controls.id.value).toBe('');
     expect(createFixture.componentInstance.articleForm.controls.title.value).toBe('');
     expect(createFixture.nativeElement.textContent).toContain('New article');
+  });
+
+  it('generates and applies a complete AI draft without requiring a topic', async () => {
+    fixture.destroy();
+    const routeStub = TestBed.inject(ActivatedRoute) as unknown as {
+      snapshot: { data: Record<string, string>; paramMap: ReturnType<typeof convertToParamMap> };
+    };
+    routeStub.snapshot.data = { editorMode: 'create' };
+    routeStub.snapshot.paramMap = convertToParamMap({});
+    const createFixture = TestBed.createComponent(ArticleEditorPageComponent);
+    createFixture.detectChanges();
+    await createFixture.whenStable();
+    createFixture.detectChanges();
+
+    const writerButton = Array.from(createFixture.nativeElement.querySelectorAll('.hero-actions button') as NodeListOf<HTMLButtonElement>).find(
+      (button) => button.textContent?.trim() === 'AI Writer',
+    );
+    writerButton?.click();
+    createFixture.detectChanges();
+    const generateButton = Array.from(createFixture.nativeElement.querySelectorAll('.editor-ai-panel button') as NodeListOf<HTMLButtonElement>).find(
+      (button) => button.textContent?.includes('Generate full article'),
+    );
+    generateButton?.click();
+    await createFixture.whenStable();
+    createFixture.detectChanges();
+
+    expect(fakeState.generateAIArticleDraft).toHaveBeenCalledWith({ topic: '' });
+    expect(createFixture.componentInstance.articleForm.controls.title.value).toBe('How email aliases protect privacy');
+    expect(createFixture.componentInstance.articleForm.controls.slug.value).toBe('email-aliases-protect-privacy');
+    expect(createFixture.componentInstance.articleForm.controls.contentMarkdown.value).toContain('A complete AI draft.');
+    expect(createFixture.componentInstance.articleForm.controls.coverImageUrl.value).toBe('https://cdn.example/ai-email-aliases.png');
+    expect(createFixture.componentInstance.articleForm.controls.categoryId.value).toBe('category-1');
+    expect(createFixture.componentInstance.articleForm.controls.tagIds.value).toEqual(['tag-1']);
   });
 
   it('rejects an edit route whose article id is not in the current workspace', async () => {

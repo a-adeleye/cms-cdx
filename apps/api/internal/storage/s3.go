@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path"
@@ -11,8 +12,8 @@ import (
 	"time"
 
 	"cms-builder/api/internal/config"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
@@ -94,18 +95,57 @@ func (s *s3Storage) ensureBucket(ctx context.Context) error {
 	_, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(s.bucket),
 	})
-	if err == nil {
-		return nil
+	if err != nil {
+		_, createErr := s.client.CreateBucket(ctx, &s3.CreateBucketInput{
+			Bucket: aws.String(s.bucket),
+		})
+		if createErr != nil {
+			return fmt.Errorf("unable to prepare storage bucket: %w", createErr)
+		}
 	}
 
-	_, createErr := s.client.CreateBucket(ctx, &s3.CreateBucketInput{
+	policy, err := publicReadBucketPolicy(s.bucket)
+	if err != nil {
+		return fmt.Errorf("create public media policy: %w", err)
+	}
+	if _, err := s.client.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{
 		Bucket: aws.String(s.bucket),
-	})
-	if createErr != nil {
-		return fmt.Errorf("unable to prepare storage bucket: %w", createErr)
+		Policy: aws.String(policy),
+	}); err != nil {
+		return fmt.Errorf("enable public reads for media bucket: %w", err)
 	}
-
 	return nil
+}
+
+func publicReadBucketPolicy(bucket string) (string, error) {
+	policy := struct {
+		Version   string `json:"Version"`
+		Statement []struct {
+			Effect    string   `json:"Effect"`
+			Principal string   `json:"Principal"`
+			Action    []string `json:"Action"`
+			Resource  []string `json:"Resource"`
+		} `json:"Statement"`
+	}{
+		Version: "2012-10-17",
+	}
+	policy.Statement = append(policy.Statement, struct {
+		Effect    string   `json:"Effect"`
+		Principal string   `json:"Principal"`
+		Action    []string `json:"Action"`
+		Resource  []string `json:"Resource"`
+	}{
+		Effect:    "Allow",
+		Principal: "*",
+		Action:    []string{"s3:GetObject"},
+		Resource:  []string{fmt.Sprintf("arn:aws:s3:::%s/*", bucket)},
+	})
+
+	encoded, err := json.Marshal(policy)
+	if err != nil {
+		return "", err
+	}
+	return string(encoded), nil
 }
 
 func (s *s3Storage) Delete(ctx context.Context, key string) error {

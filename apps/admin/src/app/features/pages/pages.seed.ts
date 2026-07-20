@@ -10,7 +10,6 @@ export const INITIAL_STATE: AdminStateSnapshot = {
   articles: [],
   authors: [],
   categories: [],
-  tags: [],
   mediaAssets: [],
   builds: [],
 };

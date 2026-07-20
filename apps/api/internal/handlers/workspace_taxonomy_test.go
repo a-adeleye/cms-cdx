@@ -79,7 +79,7 @@ func TestCategoryCRUDClearsArticleCategoryWhenDeleted(t *testing.T) {
 	}
 }
 
-func TestTagCRUDCascadesArticleTagLinksWhenDeleted(t *testing.T) {
+func TestArticleFreeTextTagsRoundTripThroughUpdate(t *testing.T) {
 	db := openTestDatabase(t)
 	ctx := context.Background()
 	api := &API{Services: services.Services{DB: db}}
@@ -88,40 +88,14 @@ func TestTagCRUDCascadesArticleTagLinksWhenDeleted(t *testing.T) {
 	authorID := mustQueryText(t, db, ctx, `SELECT id::text FROM authors WHERE site_id = $1 ORDER BY name ASC LIMIT 1`, siteID)
 	categoryID := mustQueryText(t, db, ctx, `SELECT id::text FROM categories WHERE site_id = $1 ORDER BY name ASC LIMIT 1`, siteID)
 
-	tag, err := api.createTag(ctx, siteID, tagUpsertRequest{
-		Name: "Launch Plan",
-	})
-	if err != nil {
-		t.Fatalf("createTag returned error: %v", err)
-	}
-	if tag.ID == "" {
-		t.Fatal("expected created tag ID")
-	}
-	if tag.Slug == "" {
-		t.Fatal("expected created tag slug")
-	}
-
-	updatedTag, err := api.updateTag(ctx, siteID, tag.ID, tagUpsertRequest{
-		Name: "Launch Strategy",
-	})
-	if err != nil {
-		t.Fatalf("updateTag returned error: %v", err)
-	}
-	if updatedTag.Name != "Launch Strategy" {
-		t.Fatalf("expected updated tag name, got %q", updatedTag.Name)
-	}
-	if updatedTag.Slug == "" {
-		t.Fatal("expected updated tag slug")
-	}
-
 	article, err := api.upsertArticleWithSite(ctx, siteID, articleUpsertRequest{
 		Title:           "Tag regression article",
 		Slug:            "tag-regression-article",
-		Excerpt:         "An article used to verify tag cleanup.",
-		ContentMarkdown: "This article references the created tag.",
+		Excerpt:         "An article used to verify free-text tags.",
+		ContentMarkdown: "This article carries AI-suggested free-text tags.",
 		AuthorID:        authorID,
 		CategoryID:      categoryID,
-		TagIDs:          []string{updatedTag.ID},
+		Tags:            "launch plan",
 		IsFeatured:      false,
 		Status:          "draft",
 	})
@@ -131,20 +105,30 @@ func TestTagCRUDCascadesArticleTagLinksWhenDeleted(t *testing.T) {
 
 	t.Cleanup(func() {
 		_, _ = db.ExecContext(ctx, `DELETE FROM articles WHERE id = $1`, article.ID)
-		_, _ = db.ExecContext(ctx, `DELETE FROM tags WHERE id = $1`, updatedTag.ID)
 		_ = db.Close()
 	})
 
-	if err := api.deleteTag(ctx, siteID, updatedTag.ID); err != nil {
-		t.Fatalf("deleteTag returned error: %v", err)
+	if article.Tags != "launch plan" {
+		t.Fatalf("expected tags %q, got %q", "launch plan", article.Tags)
 	}
 
-	var linkCount int
-	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM article_tags WHERE article_id = $1`, article.ID).Scan(&linkCount); err != nil {
-		t.Fatalf("query article tag links failed: %v", err)
+	updated, err := api.upsertArticle(ctx, articleUpsertRequest{
+		ID:              article.ID,
+		Title:           article.Title,
+		Slug:            article.Slug,
+		Excerpt:         article.Excerpt,
+		ContentMarkdown: article.ContentMarkdown,
+		AuthorID:        article.AuthorID,
+		CategoryID:      article.CategoryID,
+		Tags:            "launch strategy, growth",
+		IsFeatured:      article.IsFeatured,
+		Status:          article.Status,
+	})
+	if err != nil {
+		t.Fatalf("upsertArticle returned error: %v", err)
 	}
-	if linkCount != 0 {
-		t.Fatalf("expected deleted tag to cascade from article_tags, got %d links", linkCount)
+	if updated.Tags != "launch strategy, growth" {
+		t.Fatalf("expected updated tags %q, got %q", "launch strategy, growth", updated.Tags)
 	}
 }
 

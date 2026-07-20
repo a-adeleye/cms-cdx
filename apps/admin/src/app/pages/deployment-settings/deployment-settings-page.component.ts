@@ -85,7 +85,7 @@ export class DeploymentSettingsPageComponent {
     if (provider === 'firebase') config = { siteId: controls[`${p}FirebaseSiteId`].value.trim(), serviceAccountSecretRef: controls[`${p}SecretRef`].value.trim(), publicUrl: controls[`${p}PublicUrl`].value.trim() };
     if (provider === 'git_repository') config = { repositoryUrl: controls[`${p}RepositoryUrl`].value.trim(), branch: controls[`${p}Branch`].value.trim(), contentPath: controls[`${p}ContentPath`].value.trim(), tokenSecretRef: controls[`${p}TokenSecretRef`].value.trim(), publicUrl: controls[`${p}PublicUrl`].value.trim() };
     for (const [key, value] of Object.entries(config)) {
-      if (!value && !['publicUrl', 'tokenSecretRef'].includes(key)) throw new Error(`${channel === 'production' ? 'Production' : 'Preview'} ${key} is required.`);
+      if (!value && key !== 'publicUrl') throw new Error(`${channel === 'production' ? 'Production' : 'Preview'} ${key} is required.`);
     }
     return JSON.stringify(config, null, 2);
   }

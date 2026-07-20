@@ -6,6 +6,7 @@ import { createPageActionFeedback } from '../../features/pages/page-feedback';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 import { DEFAULT_TEMPLATE_SLUG, templateSelectOptions } from '../../features/pages/site-config-options';
 import { externalSiteUrl } from '../../features/pages/external-url';
+import { ANONIME_ARTICLE_MASTER_PROMPT } from '../../features/pages/anonime-article-master-prompt';
 import type { SiteContentContext } from '../../features/pages/pages.model';
 
 @Component({
@@ -30,12 +31,14 @@ export class SiteSettingsPageComponent {
     contentContext: ['standalone_blog' as SiteContentContext, [Validators.required]],
     templateKey: [DEFAULT_TEMPLATE_SLUG, [Validators.required]],
     accentColor: ['#2563eb', [Validators.required, Validators.pattern(/^#[0-9a-fA-F]{6}$/)]],
+    masterPrompt: ['', [Validators.maxLength(50000)]],
   });
 
   constructor() {
     effect(() => {
       const site = this.state.selectedSite();
       let theme: Record<string, unknown> = {};
+      const aiConfig = parseConfiguration(site.aiConfig);
       try { theme = JSON.parse(site.themeConfig || '{}') as Record<string, unknown>; } catch { theme = {}; }
       this.form.reset({
         name: site.name,
@@ -45,6 +48,9 @@ export class SiteSettingsPageComponent {
         contentContext: site.contentContext || 'standalone_blog',
         templateKey: site.templateKey || DEFAULT_TEMPLATE_SLUG,
         accentColor: typeof theme['accent'] === 'string' ? theme['accent'] : '#2563eb',
+        masterPrompt: typeof aiConfig['masterPrompt'] === 'string'
+          ? aiConfig['masterPrompt']
+          : site.templateKey === 'anonime' ? ANONIME_ARTICLE_MASTER_PROMPT : '',
       }, { emitEvent: false });
     });
   }
@@ -62,6 +68,7 @@ export class SiteSettingsPageComponent {
         name: value.name.trim(), domain: value.domain.trim(), blogPath: value.blogPath.trim(),
         description: value.description.trim(), contentContext: value.contentContext, templateKey: value.templateKey,
         themeConfig: JSON.stringify({ accent: value.accentColor }),
+        aiConfig: JSON.stringify({ ...parseConfiguration(this.state.selectedSite().aiConfig), masterPrompt: value.masterPrompt.trim() }),
       });
       this.feedback.success('Site configuration saved.');
     } catch (error) {
@@ -83,5 +90,14 @@ export class SiteSettingsPageComponent {
     } finally {
       input.value = '';
     }
+  }
+}
+
+function parseConfiguration(raw: string | undefined): Record<string, unknown> {
+  try {
+    const value = JSON.parse(raw || '{}');
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  } catch {
+    return {};
   }
 }

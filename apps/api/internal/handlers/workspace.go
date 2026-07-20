@@ -33,7 +33,6 @@ type workspaceResponse struct {
 	Articles          []articleResponse    `json:"articles"`
 	Authors           []authorResponse     `json:"authors"`
 	Categories        []categoryResponse   `json:"categories"`
-	Tags              []tagResponse        `json:"tags"`
 	MediaAssets       []mediaAssetResponse `json:"mediaAssets"`
 	Builds            []buildResponse      `json:"builds"`
 }
@@ -102,7 +101,7 @@ type articleResponse struct {
 	HumanReviewed   bool     `json:"humanReviewed"`
 	AIPrompt        string   `json:"aiPrompt"`
 	AIModel         string   `json:"aiModel"`
-	TagIDs          []string `json:"tagIds"`
+	Tags            string   `json:"tags"`
 	UpdatedAt       string   `json:"updatedAt"`
 }
 
@@ -120,13 +119,6 @@ type categoryResponse struct {
 	Name        string `json:"name"`
 	Slug        string `json:"slug"`
 	Description string `json:"description"`
-}
-
-type tagResponse struct {
-	ID     string `json:"id"`
-	SiteID string `json:"siteId"`
-	Name   string `json:"name"`
-	Slug   string `json:"slug"`
 }
 
 type mediaAssetResponse struct {
@@ -189,7 +181,7 @@ type articleUpsertRequest struct {
 	CanonicalURL    string   `json:"canonicalUrl"`
 	AuthorID        string   `json:"authorId"`
 	CategoryID      string   `json:"categoryId"`
-	TagIDs          []string `json:"tagIds"`
+	Tags            string   `json:"tags"`
 	IsFeatured      bool     `json:"isFeatured"`
 	Status          string   `json:"status"`
 }
@@ -202,10 +194,6 @@ type categoryUpsertRequest struct {
 type authorUpsertRequest struct {
 	Name string `json:"name"`
 	Bio  string `json:"bio"`
-}
-
-type tagUpsertRequest struct {
-	Name string `json:"name"`
 }
 
 type landingReorderRequest struct {
@@ -399,8 +387,6 @@ func (a *API) siteSubroutes(w http.ResponseWriter, r *http.Request) {
 		a.handleSiteAuthorRoutes(w, r, siteID, parts[2:])
 	case "categories":
 		a.handleSiteCategoryRoutes(w, r, siteID, parts[2:])
-	case "tags":
-		a.handleSiteTagRoutes(w, r, siteID, parts[2:])
 	case "builds":
 		a.handleBuildRoutes(w, r, siteID)
 	case "media":
@@ -735,75 +721,6 @@ func (a *API) handleSiteCategoryRoutes(w http.ResponseWriter, r *http.Request, s
 	}
 }
 
-func (a *API) handleSiteTagRoutes(w http.ResponseWriter, r *http.Request, siteID string, parts []string) {
-	switch {
-	case len(parts) == 0 || parts[0] == "":
-		switch r.Method {
-		case http.MethodGet:
-			tags, err := a.listTags(r.Context(), siteID)
-			if err != nil {
-				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to load tags"})
-				return
-			}
-			writeJSON(w, http.StatusOK, map[string]any{"items": tags})
-		case http.MethodPost:
-			var payload tagUpsertRequest
-			if err := decodeJSON(r, &payload); err != nil {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
-				return
-			}
-			tag, err := a.createTag(r.Context(), siteID, payload)
-			if err != nil {
-				if errors.Is(err, errValidation) {
-					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-					return
-				}
-				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to create tag"})
-				return
-			}
-			writeJSON(w, http.StatusCreated, tag)
-		default:
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		}
-	default:
-		tagID := parts[0]
-		switch r.Method {
-		case http.MethodPatch:
-			var payload tagUpsertRequest
-			if err := decodeJSON(r, &payload); err != nil {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
-				return
-			}
-			tag, err := a.updateTag(r.Context(), siteID, tagID, payload)
-			if err != nil {
-				if errors.Is(err, errValidation) {
-					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-					return
-				}
-				if errors.Is(err, sql.ErrNoRows) {
-					http.NotFound(w, r)
-					return
-				}
-				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to update tag"})
-				return
-			}
-			writeJSON(w, http.StatusOK, tag)
-		case http.MethodDelete:
-			if err := a.deleteTag(r.Context(), siteID, tagID); err != nil {
-				if errors.Is(err, sql.ErrNoRows) {
-					http.NotFound(w, r)
-					return
-				}
-				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to delete tag"})
-				return
-			}
-			w.WriteHeader(http.StatusNoContent)
-		default:
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		}
-	}
-}
-
 func (a *API) handleBuildRoutes(w http.ResponseWriter, r *http.Request, siteID string) {
 	switch r.Method {
 	case http.MethodGet:
@@ -879,10 +796,11 @@ func (a *API) handleMediaRoutes(w http.ResponseWriter, r *http.Request, siteID s
 			// payload from its bytes and allow only formats supported by the CMS.
 			mimeType := http.DetectContentType(contents)
 			allowedImageTypes := map[string]bool{
-				"image/gif":  true,
-				"image/jpeg": true,
-				"image/png":  true,
-				"image/webp": true,
+				"image/gif":    true,
+				"image/jpeg":   true,
+				"image/png":    true,
+				"image/webp":   true,
+				"image/x-icon": true,
 			}
 			if !allowedImageTypes[mimeType] {
 				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "only image uploads are supported"})
@@ -894,6 +812,7 @@ func (a *API) handleMediaRoutes(w http.ResponseWriter, r *http.Request, siteID s
 				".jpg":  "image/jpeg",
 				".png":  "image/png",
 				".webp": "image/webp",
+				".ico":  "image/x-icon",
 			}
 			extension := strings.ToLower(filepath.Ext(header.Filename))
 			if extensionTypes[extension] != mimeType {
@@ -1014,10 +933,6 @@ func (a *API) loadWorkspace(ctx context.Context, userID, selectedSiteID string) 
 	if err != nil {
 		return workspaceResponse{}, err
 	}
-	tags, err := a.listTags(ctx, selectedSiteID)
-	if err != nil {
-		return workspaceResponse{}, err
-	}
 	mediaAssets, err := a.listMediaAssets(ctx, selectedSiteID)
 	if err != nil {
 		return workspaceResponse{}, err
@@ -1041,7 +956,6 @@ func (a *API) loadWorkspace(ctx context.Context, userID, selectedSiteID string) 
 		Articles:          articles,
 		Authors:           authors,
 		Categories:        categories,
-		Tags:              tags,
 		MediaAssets:       mediaAssets,
 		Builds:            builds,
 	}, nil
@@ -1303,6 +1217,9 @@ func validateDeploymentConfig(provider, rawConfig string) error {
 		if configValue(values, "branch") == "" || configValue(values, "contentPath") == "" {
 			return fmt.Errorf("%w: repository deployment requires branch and contentPath", errValidation)
 		}
+		if configValue(values, "tokenSecretRef") == "" {
+			return fmt.Errorf("%w: repository deployment requires tokenSecretRef", errValidation)
+		}
 		if _, err := deploySafeRelativePath(configValue(values, "contentPath")); err != nil {
 			return fmt.Errorf("%w: %v", errValidation, err)
 		}
@@ -1510,12 +1427,10 @@ func (a *API) listArticles(ctx context.Context, siteID string) ([]articleRespons
 			a.human_reviewed,
 			COALESCE(a.ai_prompt, ''),
 			COALESCE(a.ai_model, ''),
-			COALESCE(string_agg(at.tag_id::text, ',' ORDER BY at.tag_id), ''),
+			a.tags,
 			a.updated_at
 		FROM articles a
-		LEFT JOIN article_tags at ON at.article_id = a.id
 		WHERE a.site_id = $1
-		GROUP BY a.id
 		ORDER BY a.updated_at DESC
 	`, siteID)
 	if err != nil {
@@ -1527,16 +1442,14 @@ func (a *API) listArticles(ctx context.Context, siteID string) ([]articleRespons
 	for rows.Next() {
 		var article articleResponse
 		var publishedAt sql.NullTime
-		var tagIDs string
 		var updatedAt time.Time
-		if err := rows.Scan(&article.ID, &article.SiteID, &article.AuthorID, &article.CategoryID, &article.Title, &article.Slug, &article.Excerpt, &article.ContentMarkdown, &article.CoverImageURL, &article.Status, &article.IsFeatured, &publishedAt, &article.SEOTitle, &article.SEODescription, &article.CanonicalURL, &article.GeneratedByAI, &article.HumanReviewed, &article.AIPrompt, &article.AIModel, &tagIDs, &updatedAt); err != nil {
+		if err := rows.Scan(&article.ID, &article.SiteID, &article.AuthorID, &article.CategoryID, &article.Title, &article.Slug, &article.Excerpt, &article.ContentMarkdown, &article.CoverImageURL, &article.Status, &article.IsFeatured, &publishedAt, &article.SEOTitle, &article.SEODescription, &article.CanonicalURL, &article.GeneratedByAI, &article.HumanReviewed, &article.AIPrompt, &article.AIModel, &article.Tags, &updatedAt); err != nil {
 			return nil, err
 		}
 		if publishedAt.Valid {
 			value := publishedAt.Time.UTC().Format(time.RFC3339)
 			article.PublishedAt = &value
 		}
-		article.TagIDs = splitIDs(tagIDs)
 		article.UpdatedAt = updatedAt.Format(time.RFC3339)
 		articles = append(articles, article)
 	}
@@ -1566,12 +1479,10 @@ func (a *API) getArticle(ctx context.Context, articleID string) (articleResponse
 			a.human_reviewed,
 			COALESCE(a.ai_prompt, ''),
 			COALESCE(a.ai_model, ''),
-			COALESCE(string_agg(at.tag_id::text, ',' ORDER BY at.tag_id), ''),
+			a.tags,
 			a.updated_at
 		FROM articles a
-		LEFT JOIN article_tags at ON at.article_id = a.id
 		WHERE a.id = $1
-		GROUP BY a.id
 		LIMIT 1
 	`, articleID)
 	if err != nil {
@@ -1585,16 +1496,14 @@ func (a *API) getArticle(ctx context.Context, articleID string) (articleResponse
 
 	var article articleResponse
 	var publishedAt sql.NullTime
-	var tagIDs string
 	var updatedAt time.Time
-	if err := rows.Scan(&article.ID, &article.SiteID, &article.AuthorID, &article.CategoryID, &article.Title, &article.Slug, &article.Excerpt, &article.ContentMarkdown, &article.CoverImageURL, &article.Status, &article.IsFeatured, &publishedAt, &article.SEOTitle, &article.SEODescription, &article.CanonicalURL, &article.GeneratedByAI, &article.HumanReviewed, &article.AIPrompt, &article.AIModel, &tagIDs, &updatedAt); err != nil {
+	if err := rows.Scan(&article.ID, &article.SiteID, &article.AuthorID, &article.CategoryID, &article.Title, &article.Slug, &article.Excerpt, &article.ContentMarkdown, &article.CoverImageURL, &article.Status, &article.IsFeatured, &publishedAt, &article.SEOTitle, &article.SEODescription, &article.CanonicalURL, &article.GeneratedByAI, &article.HumanReviewed, &article.AIPrompt, &article.AIModel, &article.Tags, &updatedAt); err != nil {
 		return articleResponse{}, err
 	}
 	if publishedAt.Valid {
 		value := publishedAt.Time.UTC().Format(time.RFC3339)
 		article.PublishedAt = &value
 	}
-	article.TagIDs = splitIDs(tagIDs)
 	article.UpdatedAt = updatedAt.Format(time.RFC3339)
 	return article, nil
 }
@@ -1632,17 +1541,19 @@ func (a *API) upsertArticle(ctx context.Context, payload articleUpsertRequest, s
 		}
 	}()
 
+	tags := normalizeTagsInput(payload.Tags)
+
 	articleID := strings.TrimSpace(payload.ID)
 	if articleID == "" {
 		err = tx.QueryRowContext(ctx, `
 			INSERT INTO articles (
-				site_id, author_id, category_id, title, slug, excerpt, content_markdown, cover_image_url, status, is_featured, published_at, seo_title, seo_description, canonical_url, generated_by_ai, human_reviewed, ai_prompt, ai_model, updated_at
+				site_id, author_id, category_id, title, slug, excerpt, content_markdown, cover_image_url, status, is_featured, published_at, seo_title, seo_description, canonical_url, tags, generated_by_ai, human_reviewed, ai_prompt, ai_model, updated_at
 			)
 			VALUES (
-				$1, NULLIF($2, '')::uuid, NULLIF($3, '')::uuid, $4, $5, $6, $7, NULLIF($8, ''), $9, $10, CASE WHEN $9 = 'published' THEN NOW() ELSE NULL END, $11, $12, NULLIF($13, ''), FALSE, CASE WHEN $9 IN ('review', 'published') THEN TRUE ELSE FALSE END, '', '', NOW()
+				$1, NULLIF($2, '')::uuid, NULLIF($3, '')::uuid, $4, $5, $6, $7, NULLIF($8, ''), $9, $10, CASE WHEN $9 = 'published' THEN NOW() ELSE NULL END, $11, $12, NULLIF($13, ''), $14, FALSE, CASE WHEN $9 IN ('review', 'published') THEN TRUE ELSE FALSE END, '', '', NOW()
 			)
 			RETURNING id::text
-		`, siteID, payload.AuthorID, payload.CategoryID, payload.Title, payload.Slug, payload.Excerpt, payload.ContentMarkdown, payload.CoverImageURL, fallbackString(payload.Status, "draft"), payload.IsFeatured, payload.SEOTitle, payload.SEODescription, payload.CanonicalURL).Scan(&articleID)
+		`, siteID, payload.AuthorID, payload.CategoryID, payload.Title, payload.Slug, payload.Excerpt, payload.ContentMarkdown, payload.CoverImageURL, fallbackString(payload.Status, "draft"), payload.IsFeatured, payload.SEOTitle, payload.SEODescription, payload.CanonicalURL, tags).Scan(&articleID)
 		if err != nil {
 			return articleResponse{}, err
 		}
@@ -1667,10 +1578,11 @@ func (a *API) upsertArticle(ctx context.Context, payload articleUpsertRequest, s
 				seo_title = $11,
 				seo_description = $12,
 				canonical_url = NULLIF($13, ''),
+				tags = $14,
 				human_reviewed = CASE WHEN $9 IN ('review', 'published') THEN TRUE ELSE human_reviewed END,
 				updated_at = NOW()
-			WHERE id = $1 AND site_id = $14
-		`, payload.ID, payload.AuthorID, payload.CategoryID, payload.Title, payload.Slug, payload.Excerpt, payload.ContentMarkdown, payload.CoverImageURL, fallbackString(payload.Status, "draft"), payload.IsFeatured, payload.SEOTitle, payload.SEODescription, payload.CanonicalURL, siteID)
+			WHERE id = $1 AND site_id = $15
+		`, payload.ID, payload.AuthorID, payload.CategoryID, payload.Title, payload.Slug, payload.Excerpt, payload.ContentMarkdown, payload.CoverImageURL, fallbackString(payload.Status, "draft"), payload.IsFeatured, payload.SEOTitle, payload.SEODescription, payload.CanonicalURL, tags, siteID)
 		if err != nil {
 			return articleResponse{}, err
 		}
@@ -1678,10 +1590,6 @@ func (a *API) upsertArticle(ctx context.Context, payload articleUpsertRequest, s
 			return articleResponse{}, sql.ErrNoRows
 		}
 		articleID = payload.ID
-	}
-
-	if err := replaceArticleTags(ctx, tx, articleID, payload.TagIDs); err != nil {
-		return articleResponse{}, err
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -1711,10 +1619,6 @@ func (a *API) deleteArticle(ctx context.Context, articleID string) error {
 		return err
 	}
 
-	if _, err = tx.ExecContext(ctx, `DELETE FROM article_tags WHERE article_id = $1`, articleID); err != nil {
-		return err
-	}
-
 	if _, err = tx.ExecContext(ctx, `DELETE FROM articles WHERE id = $1`, articleID); err != nil {
 		return err
 	}
@@ -1729,29 +1633,29 @@ func validateArticlePayload(payload articleUpsertRequest) error {
 	return nil
 }
 
-func replaceArticleTags(ctx context.Context, tx *sql.Tx, articleID string, tagIDs []string) error {
-	if _, err := tx.ExecContext(ctx, `DELETE FROM article_tags WHERE article_id = $1`, articleID); err != nil {
-		return err
-	}
-	for _, tagID := range tagIDs {
-		tagID = strings.TrimSpace(tagID)
-		if tagID == "" {
+// normalizeTagsInput trims, dedupes (case-insensitively), and rejoins a
+// comma-separated tag string, capping both the count and length of entries
+// so free-text tags (including AI-suggested ones) can't grow unbounded.
+func normalizeTagsInput(raw string) string {
+	parts := strings.Split(raw, ",")
+	seen := make(map[string]struct{}, len(parts))
+	tags := make([]string, 0, len(parts))
+	for _, part := range parts {
+		tag := strings.TrimSpace(part)
+		if tag == "" || len(tag) > 80 {
 			continue
 		}
-		if !isUUID(tagID) {
-			return fmt.Errorf("%w: invalid tag id %q", errValidation, tagID)
+		key := strings.ToLower(tag)
+		if _, exists := seen[key]; exists {
+			continue
 		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO article_tags (article_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, articleID, tagID); err != nil {
-			return err
+		seen[key] = struct{}{}
+		tags = append(tags, tag)
+		if len(tags) == 24 {
+			break
 		}
 	}
-	return nil
-}
-
-var uuidPattern = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
-
-func isUUID(value string) bool {
-	return uuidPattern.MatchString(strings.TrimSpace(value))
+	return strings.Join(tags, ", ")
 }
 
 func (a *API) listAuthors(ctx context.Context, siteID string) ([]authorResponse, error) {
@@ -1793,29 +1697,6 @@ func (a *API) listCategories(ctx context.Context, siteID string) ([]categoryResp
 	for rows.Next() {
 		var item categoryResponse
 		if err := rows.Scan(&item.ID, &item.SiteID, &item.Name, &item.Slug, &item.Description); err != nil {
-			return nil, err
-		}
-		items = append(items, item)
-	}
-	return items, rows.Err()
-}
-
-func (a *API) listTags(ctx context.Context, siteID string) ([]tagResponse, error) {
-	rows, err := a.Services.DB.QueryContext(ctx, `
-		SELECT id::text, site_id::text, name, slug
-		FROM tags
-		WHERE site_id = $1
-		ORDER BY name ASC
-	`, siteID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	items := make([]tagResponse, 0)
-	for rows.Next() {
-		var item tagResponse
-		if err := rows.Scan(&item.ID, &item.SiteID, &item.Name, &item.Slug); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -1929,98 +1810,12 @@ func (a *API) deleteCategory(ctx context.Context, siteID, categoryID string) err
 	return tx.Commit()
 }
 
-func (a *API) getTag(ctx context.Context, siteID, tagID string) (tagResponse, error) {
-	row := a.Services.DB.QueryRowContext(ctx, `
-		SELECT id::text, site_id::text, name, slug
-		FROM tags
-		WHERE site_id = $1 AND id = $2
-	`, siteID, tagID)
-
-	var item tagResponse
-	if err := row.Scan(&item.ID, &item.SiteID, &item.Name, &item.Slug); err != nil {
-		return tagResponse{}, err
-	}
-	return item, nil
-}
-
-func (a *API) createTag(ctx context.Context, siteID string, payload tagUpsertRequest) (tagResponse, error) {
-	name := strings.TrimSpace(payload.Name)
-	if name == "" {
-		return tagResponse{}, fmt.Errorf("%w: tag name is required", errValidation)
-	}
-
-	slug, err := a.uniqueTagSlug(ctx, siteID, "", name)
-	if err != nil {
-		return tagResponse{}, err
-	}
-
-	var item tagResponse
-	err = a.Services.DB.QueryRowContext(ctx, `
-		INSERT INTO tags (site_id, name, slug)
-		VALUES ($1, $2, $3)
-		RETURNING id::text, site_id::text, name, slug
-	`, siteID, name, slug).Scan(&item.ID, &item.SiteID, &item.Name, &item.Slug)
-	if err != nil {
-		if isUniqueViolation(err) {
-			return tagResponse{}, fmt.Errorf("%w: tag slug already exists", errValidation)
-		}
-		return tagResponse{}, err
-	}
-	return item, nil
-}
-
-func (a *API) updateTag(ctx context.Context, siteID, tagID string, payload tagUpsertRequest) (tagResponse, error) {
-	name := strings.TrimSpace(payload.Name)
-	if name == "" {
-		return tagResponse{}, fmt.Errorf("%w: tag name is required", errValidation)
-	}
-
-	slug, err := a.uniqueTagSlug(ctx, siteID, tagID, name)
-	if err != nil {
-		return tagResponse{}, err
-	}
-
-	result, err := a.Services.DB.ExecContext(ctx, `
-		UPDATE tags
-		SET name = $3, slug = $4, updated_at = NOW()
-		WHERE id = $1 AND site_id = $2
-	`, tagID, siteID, name, slug)
-	if err != nil {
-		if isUniqueViolation(err) {
-			return tagResponse{}, fmt.Errorf("%w: tag slug already exists", errValidation)
-		}
-		return tagResponse{}, err
-	}
-	if affected, _ := result.RowsAffected(); affected == 0 {
-		return tagResponse{}, sql.ErrNoRows
-	}
-	return a.getTag(ctx, siteID, tagID)
-}
-
-func (a *API) deleteTag(ctx context.Context, siteID, tagID string) error {
-	result, err := a.Services.DB.ExecContext(ctx, `
-		DELETE FROM tags
-		WHERE id = $1 AND site_id = $2
-	`, tagID, siteID)
-	if err != nil {
-		return err
-	}
-	if affected, _ := result.RowsAffected(); affected == 0 {
-		return sql.ErrNoRows
-	}
-	return nil
-}
-
 func (a *API) uniqueCategorySlug(ctx context.Context, siteID, categoryID, name string) (string, error) {
 	return a.uniqueSlug(ctx, "categories", siteID, categoryID, name)
 }
 
 func (a *API) uniqueAuthorSlug(ctx context.Context, siteID, authorID, name string) (string, error) {
 	return a.uniqueSlug(ctx, "authors", siteID, authorID, name)
-}
-
-func (a *API) uniqueTagSlug(ctx context.Context, siteID, tagID, name string) (string, error) {
-	return a.uniqueSlug(ctx, "tags", siteID, tagID, name)
 }
 
 func (a *API) uniqueSlug(ctx context.Context, table, siteID, excludeID, name string) (string, error) {
@@ -2550,10 +2345,6 @@ func (a *API) siteBuildContent(ctx context.Context, siteID string, publishedOnly
 	if err != nil {
 		return builder.SiteContent{}, err
 	}
-	tags, err := a.listTags(ctx, siteID)
-	if err != nil {
-		return builder.SiteContent{}, err
-	}
 	sections, err := a.listLandingSections(ctx, siteID)
 	if err != nil {
 		return builder.SiteContent{}, err
@@ -2566,10 +2357,6 @@ func (a *API) siteBuildContent(ctx context.Context, siteID string, publishedOnly
 	categoryNames := make(map[string]categoryResponse, len(categories))
 	for _, category := range categories {
 		categoryNames[category.ID] = category
-	}
-	tagNames := make(map[string]tagResponse, len(tags))
-	for _, tag := range tags {
-		tagNames[tag.ID] = tag
 	}
 
 	content := builder.SiteContent{
@@ -2614,10 +2401,12 @@ func (a *API) siteBuildContent(ctx context.Context, siteID string, publishedOnly
 			articleContent.CategoryName = category.Name
 			articleContent.CategorySlug = category.Slug
 		}
-		for _, tagID := range article.TagIDs {
-			if tag, ok := tagNames[tagID]; ok {
-				articleContent.Tags = append(articleContent.Tags, builder.TagContent{Name: tag.Name, Slug: tag.Slug})
+		for _, tagName := range strings.Split(article.Tags, ",") {
+			tagName = strings.TrimSpace(tagName)
+			if tagName == "" {
+				continue
 			}
+			articleContent.Tags = append(articleContent.Tags, builder.TagContent{Name: tagName, Slug: slugify(tagName)})
 		}
 		content.Articles = append(content.Articles, articleContent)
 	}
@@ -2727,7 +2516,10 @@ func repositoryDeploymentWarnings(channel, provider, rawConfig string) []string 
 	}
 	values := parseJSONMap(rawConfig)
 	secretRef := strings.TrimSpace(configValue(values, "tokenSecretRef"))
-	if secretRef != "" && strings.TrimSpace(os.Getenv(secretRef)) == "" {
+	if secretRef == "" {
+		return []string{fmt.Sprintf("Repository %s deployment requires a token environment variable.", channel)}
+	}
+	if strings.TrimSpace(os.Getenv(secretRef)) == "" {
 		return []string{fmt.Sprintf("Repository %s deploy secret %s is not set on the API server.", channel, secretRef)}
 	}
 	return nil
@@ -2803,15 +2595,6 @@ func seedSiteDefaults(ctx context.Context, tx *sql.Tx, siteID string) error {
 		return err
 	}
 
-	var tagID string
-	if err := tx.QueryRowContext(ctx, `
-		INSERT INTO tags (site_id, name, slug)
-		VALUES ($1, 'starter', 'starter')
-		RETURNING id::text
-	`, siteID).Scan(&tagID); err != nil {
-		return err
-	}
-
 	sections := []struct {
 		key       string
 		title     string
@@ -2836,7 +2619,6 @@ func seedSiteDefaults(ctx context.Context, tx *sql.Tx, siteID string) error {
 
 	_ = authorID
 	_ = categoryID
-	_ = tagID
 	return nil
 }
 
@@ -2854,18 +2636,3 @@ func fallbackJSON(value, fallback string) string {
 	return value
 }
 
-func splitIDs(raw string) []string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return []string{}
-	}
-	parts := strings.Split(raw, ",")
-	ids := make([]string, 0, len(parts))
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part != "" {
-			ids = append(ids, part)
-		}
-	}
-	return ids
-}

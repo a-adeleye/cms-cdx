@@ -100,7 +100,7 @@ export interface ArticleRecord {
   humanReviewed: boolean;
   aiPrompt: string;
   aiModel: string;
-  tagIds: string[];
+  tags: string;
   updatedAt: string;
 }
 
@@ -118,13 +118,6 @@ export interface CategoryRecord {
   name: string;
   slug: string;
   description: string;
-}
-
-export interface TagRecord {
-  id: string;
-  siteId: string;
-  name: string;
-  slug: string;
 }
 
 export interface MediaAssetRecord {
@@ -165,7 +158,6 @@ export interface AdminStateSnapshot {
   articles: ArticleRecord[];
   authors: AuthorRecord[];
   categories: CategoryRecord[];
-  tags: TagRecord[];
   mediaAssets: MediaAssetRecord[];
   builds: BuildRecord[];
 }

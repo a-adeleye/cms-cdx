@@ -43,6 +43,53 @@ type GenerateImagePromptInput struct {
 	Title string `json:"title"`
 }
 
+// ArticleReference is deliberately limited to public editorial metadata. It
+// lets the model avoid duplicating the site's coverage without sending every
+// existing article body to the external AI provider.
+type ArticleReference struct {
+	Title    string `json:"title"`
+	Slug     string `json:"slug"`
+	Excerpt  string `json:"excerpt"`
+	Category string `json:"category"`
+	Status   string `json:"status"`
+}
+
+type GenerateArticleDraftInput struct {
+	Topic            string             `json:"topic"`
+	SiteName         string             `json:"siteName"`
+	SiteDescription  string             `json:"siteDescription"`
+	BlogURL          string             `json:"blogUrl"`
+	ContentContext   string             `json:"contentContext"`
+	MasterPrompt     string             `json:"-"`
+	Categories       []string           `json:"categories"`
+	ExistingArticles []ArticleReference `json:"existingArticles"`
+}
+
+type GeneratedImage struct {
+	Contents []byte `json:"-"`
+	MimeType string `json:"mimeType"`
+	AltText  string `json:"altText"`
+	Caption  string `json:"caption"`
+}
+
+type ArticleDraft struct {
+	Title           string
+	Slug            string
+	Category        string
+	Featured        bool
+	Tags            []string
+	SEOTitle        string
+	MetaDescription string
+	CanonicalURL    string
+	Excerpt         string
+	Content         string
+	ImageAlt        string
+	ImageCaption    string
+	Image           *GeneratedImage
+	ImageError      string
+	Model           string
+}
+
 type AIProvider interface {
 	GenerateIdeas(input GenerateIdeasInput) ([]Idea, error)
 	GenerateOutline(input GenerateOutlineInput) (Outline, error)

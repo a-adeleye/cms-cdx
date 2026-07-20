@@ -40,11 +40,15 @@ export class ArticleEditorPageComponent {
   readonly aiSuggestion = signal('');
   readonly aiGenerating = signal(false);
   readonly aiError = signal<string | null>(null);
+  readonly aiArticleTopic = signal('');
+  readonly aiArticleGenerating = signal(false);
+  readonly aiArticleError = signal<string | null>(null);
   readonly feedback = createPageActionFeedback();
 
   readonly articleForm = this.fb.nonNullable.group({
     id: [''],
     title: ['', [Validators.required, Validators.minLength(3)]],
+    slug: [''],
     excerpt: ['', [Validators.required, Validators.minLength(12)]],
     coverImageUrl: [''],
     seoTitle: ['', [Validators.required]],
@@ -79,6 +83,7 @@ export class ArticleEditorPageComponent {
           {
             id: '',
             title: '',
+            slug: '',
             excerpt: '',
             coverImageUrl: '',
             seoTitle: '',
@@ -105,6 +110,7 @@ export class ArticleEditorPageComponent {
         {
           id: article.id,
           title: article.title,
+          slug: article.slug,
           excerpt: article.excerpt,
           coverImageUrl: article.coverImageUrl,
           seoTitle: article.seoTitle,
@@ -198,9 +204,64 @@ export class ArticleEditorPageComponent {
     }
   }
 
+  isAIArticleWriterConfigured(): boolean {
+    try {
+      const config = JSON.parse(this.state.selectedSite().aiConfig || '{}') as Record<string, unknown>;
+      return this.isAIConfigured() && config['provider'] === 'google' && typeof config['masterPrompt'] === 'string' && config['masterPrompt'].trim().length > 0;
+    } catch {
+      return false;
+    }
+  }
+
   setAIPrompt(event: Event): void {
     this.aiPrompt.set((event.target as HTMLTextAreaElement | null)?.value ?? '');
     this.aiError.set(null);
+  }
+
+  setAIArticleTopic(event: Event): void {
+    this.aiArticleTopic.set((event.target as HTMLTextAreaElement | null)?.value ?? '');
+    this.aiArticleError.set(null);
+  }
+
+  async generateAIArticleDraft(): Promise<void> {
+    if (!this.isAIArticleWriterConfigured()) {
+      this.aiArticleError.set('Configure Google Gemini and save an AI master prompt in Site configuration first.');
+      return;
+    }
+    const topic = this.aiArticleTopic().trim();
+
+    this.aiArticleGenerating.set(true);
+    this.aiArticleError.set(null);
+    try {
+      const draft = await this.state.generateAIArticleDraft({ topic });
+      const categoryId = this.state.categories().find((category) => category.name.localeCompare(draft.category, undefined, { sensitivity: 'accent' }) === 0)?.id
+        ?? this.articleForm.controls.categoryId.value;
+      const generatedTags = new Set(draft.tags.map((tag) => tag.trim().toLowerCase()));
+      const tagIds = this.state.tags().filter((tag) => generatedTags.has(tag.name.trim().toLowerCase()) || generatedTags.has(tag.slug.trim().toLowerCase())).map((tag) => tag.id);
+      this.articleForm.patchValue({
+        title: draft.title,
+        slug: draft.slug,
+        excerpt: draft.excerpt,
+        contentMarkdown: draft.contentMarkdown,
+        coverImageUrl: draft.coverImage?.fileUrl ?? '',
+        seoTitle: draft.seoTitle,
+        seoDescription: draft.metaDescription,
+        canonicalUrl: draft.canonicalUrl,
+        categoryId,
+        tagIds,
+        isFeatured: draft.featured,
+      });
+      this.articleForm.markAsDirty();
+      this.coverImageMode.set(draft.coverImage ? 'url' : 'upload');
+      this.coverImageFileName.set(draft.coverImage?.fileName ?? '');
+      this.aiArticleError.set(draft.imageError || null);
+      this.feedback.success(draft.imageError ? 'Article draft generated. Add a featured image before publishing.' : 'Article draft and featured image generated. Review before publishing.');
+      this.setActiveTool('write');
+    } catch (error) {
+      this.aiArticleError.set(error instanceof Error && error.message ? error.message : 'Unable to generate an article draft.');
+    } finally {
+      this.aiArticleGenerating.set(false);
+    }
   }
 
   async generateAISuggestion(): Promise<void> {
@@ -297,7 +358,7 @@ export class ArticleEditorPageComponent {
       const article = await this.state.saveArticle({
         id: value.id,
         title: value.title,
-        slug: this.buildArticleSlug(value.title),
+        slug: value.slug.trim() || this.buildArticleSlug(value.title),
         excerpt: value.excerpt,
         contentMarkdown: value.contentMarkdown,
         coverImageUrl: value.coverImageUrl,

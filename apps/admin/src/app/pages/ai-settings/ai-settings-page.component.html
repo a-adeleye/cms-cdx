@@ -21,6 +21,7 @@
 
     @if (isConfigured()) {
       <label>Model<input type="text" formControlName="model" placeholder="Provider model name" /></label>
+      @if (form.controls.provider.value === 'google') { <label>Featured-image model<input type="text" formControlName="imageModel" placeholder="gemini-2.5-flash-image" /><small>Used only for 16:9 featured images generated alongside new AI article drafts.</small></label> }
       <label>API-key environment variable<input type="text" formControlName="apiKeySecretRef" placeholder="OPENAI_API_KEY" autocapitalize="characters" /><small>The key itself is never stored in this CMS.</small></label>
       @if (isCompatibleProvider()) { <label>Compatible API base URL<input type="url" formControlName="baseUrl" placeholder="https://api.example.com/v1" /></label> }
       <p class="muted">The server resolves this environment variable only when you request a suggestion; the API key is never stored in the CMS or sent to the browser.</p>

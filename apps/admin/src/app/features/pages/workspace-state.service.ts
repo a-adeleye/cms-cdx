@@ -12,10 +12,9 @@ import {
   MediaAssetRecord,
   SiteRecord,
   TemplateRecord,
-  TagRecord,
 } from './pages.model';
 import { INITIAL_STATE } from './pages.seed';
-import { AdminApiService, AISuggestionPayload, AISuggestionResponse } from './admin-api.service';
+import { AdminApiService, AIArticleDraftPayload, AIArticleDraftResponse, AISuggestionPayload, AISuggestionResponse } from './admin-api.service';
 import { AuthTokenService } from './auth-token.service';
 
 interface ArticleDraftInput {
@@ -30,7 +29,7 @@ interface ArticleDraftInput {
   canonicalUrl: string;
   authorId: string;
   categoryId: string;
-  tagIds: string[];
+  tags: string;
   isFeatured: boolean;
   status: ArticleStatus;
 }
@@ -53,11 +52,6 @@ interface AuthorDraftInput {
   id?: string;
   name: string;
   bio: string;
-}
-
-interface TagDraftInput {
-  id?: string;
-  name: string;
 }
 
 const EMPTY_SITE: SiteRecord = {
@@ -434,6 +428,14 @@ export class WorkspaceStateService {
       throw new Error('No site selected.');
     }
     return this.api.generateAISuggestion(site.id, input);
+  }
+
+  async generateAIArticleDraft(input: AIArticleDraftPayload): Promise<AIArticleDraftResponse> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+    return this.api.generateAIArticleDraft(site.id, input);
   }
 
   async deleteArticle(articleId: string): Promise<void> {

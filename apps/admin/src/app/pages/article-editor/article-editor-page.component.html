@@ -87,13 +87,14 @@
         <section class="editor-sidebar-section">
           <h2>Media</h2>
           <h3 class="editor-section-label">Cover image</h3>
-          @if (articleForm.controls.coverImageUrl.value) {
+          @if (articleForm.controls.coverImageUrl.value && coverImageMode() === 'url') {
             <div class="editor-cover-preview">
               @if (coverImageLoadFailed()) { <span class="editor-cover-placeholder" aria-label="Cover image unavailable">Image unavailable</span> } @else { <img [ngSrc]="articleForm.controls.coverImageUrl.value" width="1200" height="630" alt="" (error)="coverImageLoadFailed.set(true)" /> }
               <div class="editor-cover-preview__details"><strong>{{ coverImageFileName() || 'Article cover image' }}</strong><small>1200 × 630px (16:9)</small><button class="button button-secondary" type="button" (click)="setCoverImageMode('upload')">Replace</button></div>
             </div>
           } @else {
             <label class="editor-upload"><span aria-hidden="true">▧</span><span><strong>Upload image</strong><small>Recommended size: 1200×630px (16:9)</small></span><input class="sr-only" type="file" accept="image/*" (change)="onCoverImageSelected($event)" /><span class="button button-secondary">Choose image</span></label>
+            @if (articleForm.controls.coverImageUrl.value) { <button class="button button-secondary" type="button" (click)="setCoverImageMode('url')">Cancel</button> }
           }
           @if (uploadingCoverImage()) { <p class="field-help">Uploading cover image...</p> }
           @if (coverImageError()) { <p class="field-error">{{ coverImageError() }}</p> }

@@ -43,6 +43,34 @@ describe('DeploymentSettingsPageComponent', () => {
     expect(cards[0].classList).toContain('deployment-config-card--production');
     expect(cards[0].classList).not.toContain('deployment-config-card--preview');
     expect(cards[1].classList).toContain('deployment-config-card--preview');
-    expect(cards[2].classList).toContain('deployment-config-card--latest');
+    expect(cards[2].classList).toContain('deployment-config-card--storage');
+    expect(cards[3].classList).toContain('deployment-config-card--latest');
+  });
+
+  it('serializes production storage fields and sends them with deployment settings', async () => {
+    fixture.componentInstance.deploymentSettingsForm.patchValue({
+      storageBucket: 'my-site-prod-media', storageRegion: 'us-west-2', storagePublicUrl: 'https://cdn.example.com',
+      storageAccessKeySecretRef: 'PROD_S3_ACCESS_KEY', storageSecretKeySecretRef: 'PROD_S3_SECRET_KEY',
+    });
+    await fixture.componentInstance.saveDeploymentSettings();
+    expect(state.updateSelectedSite).toHaveBeenCalledWith(jasmine.objectContaining({
+      storageConfig: JSON.stringify({
+        bucket: 'my-site-prod-media', region: 'us-west-2', endpoint: '', publicUrl: 'https://cdn.example.com',
+        accessKeySecretRef: 'PROD_S3_ACCESS_KEY', secretKeySecretRef: 'PROD_S3_SECRET_KEY',
+      }, null, 2),
+    }));
+  });
+
+  it('leaves storage config empty when no fields are filled', async () => {
+    await fixture.componentInstance.saveDeploymentSettings();
+    expect(state.updateSelectedSite).toHaveBeenCalledWith(jasmine.objectContaining({ storageConfig: '{}' }));
+  });
+
+  it('rejects an incomplete production storage configuration', async () => {
+    fixture.componentInstance.deploymentSettingsForm.patchValue({ storageBucket: 'my-site-prod-media' });
+    await fixture.componentInstance.saveDeploymentSettings();
+    fixture.detectChanges();
+    expect(state.updateSelectedSite).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Production storage publicUrl is required.');
   });
 });

@@ -272,11 +272,11 @@ func renderAnonimeArticleSidebar(site renderedSite, current ArticleContent) stri
 }
 
 func renderAnonimeHeroArt() string {
-	return `<div class="anonime-hero-art" aria-hidden="true"><div class="anonime-hero-grid"></div><div class="anonime-hero-small top-left"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7.5 11.2V8.8a4.5 4.5 0 1 1 9 0v2.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /><rect x="6.5" y="11.2" width="11" height="8.5" rx="2.4" stroke="currentColor" stroke-width="1.8" /></svg></div><div class="anonime-hero-small top-right"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 7.5h15v9h-5.2l-2.3 2.3-2.3-2.3H4.5v-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /><path d="M8 10.5h8M8 13h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg></div><div class="anonime-hero-card"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.2 4.7 6.8v5.2c0 4.9 3.5 8.5 7.3 9.8 3.8-1.3 7.3-4.9 7.3-9.8V6.8L12 3.2Z" stroke="currentColor" stroke-width="1.8" /></svg></div><div class="anonime-hero-small bottom-right"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="9.6" r="3" stroke="currentColor" stroke-width="1.8" /><path d="M5.5 19c1.3-3 4-4.5 6.5-4.5S17.2 16 18.5 19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg></div></div>`
+	return `<div class="anonime-hero-art" aria-hidden="true"><img class="anonime-hero-art-light" src="https://cdn.anonime.io/anonime-blog-hero-white.webp" alt=""><img class="anonime-hero-art-dark" src="https://cdn.anonime.io/anonime-blog-hero-black.webp" alt=""></div>`
 }
 
 func renderAnonimePricingCallout() string {
-	return `<section class="anonime-section anonime-section-spaced" id="pricing"><div class="anonime-callout dark"><div class="anonime-article-footer-card is-flat"><div><h3>Conversations are yours. Keep them that way.</h3><p>Private communication deserves a design that feels calm, deliberate, and secure.</p></div><div><a class="anonime-button anonime-button-primary" href="#get-started">Explore Anonime <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M7 12h10m0 0-4-4m4 4-4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" /></svg></a></div><div>Image here</div></div></div></section>`
+	return `<section class="anonime-section anonime-section-spaced" id="pricing"><div class="anonime-callout dark"><div class="anonime-article-footer-card is-flat"><div><h3>Conversations are yours. Keep them that way.</h3><p>Private communication deserves a design that feels calm, deliberate, and secure.</p></div><img src="https://cdn.anonime.io/anonime-blog-cta-icon.webp" alt="Icon"><div><a class="anonime-button anonime-button-primary" href="#get-started">Explore Anonime <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M7 12h10m0 0-4-4m4 4-4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" /></svg></a></div></div></div></section>`
 }
 
 func renderAnonimeCallout() string {
@@ -591,33 +591,13 @@ func anonimeStyles() string {
 		.anonime-subtitle { margin: 18px 0 0; max-width: 46ch; font-size: 1.03rem; line-height: 1.8; color: #5b6474; }
 		.anonime-hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
 		.anonime-hero-art {
-			position: relative; min-height: 360px; border-radius: 34px;
-			background:
-				radial-gradient(circle at 16% 22%, rgba(16, 178, 108, 0.14), transparent 14%),
-				radial-gradient(circle at 72% 72%, rgba(16, 178, 108, 0.1), transparent 16%),
-				linear-gradient(180deg, rgba(16, 178, 108, 0.06), rgba(16, 178, 108, 0.02));
+			min-width: 0;
 		}
-		.anonime-hero-art::before, .anonime-hero-art::after, .anonime-featured-hero::before, .anonime-featured-hero::after {
+		.anonime-hero-art img { display: block; width: 100%; height: auto; max-width: 300px;}
+		.anonime-hero-art .anonime-hero-art-dark { display: none; }
+		.anonime-featured-hero::before, .anonime-featured-hero::after {
 			content: ""; position: absolute; border-radius: 24px; background: rgba(255, 255, 255, 0.68); box-shadow: 0 24px 60px rgba(14, 23, 38, 0.08); backdrop-filter: blur(12px);
 		}
-		.anonime-hero-art::before { top: 18px; right: 6px; width: 200px; height: 110px; transform: rotate(-6deg); }
-		.anonime-hero-art::after { left: 24px; bottom: 22px; width: 220px; height: 124px; transform: rotate(10deg); }
-		.anonime-hero-grid {
-			position: absolute; inset: 0; border-radius: 34px;
-			background:
-				linear-gradient(rgba(16, 178, 108, 0.08) 1px, transparent 1px) 0 0 / 28px 28px,
-				linear-gradient(90deg, rgba(16, 178, 108, 0.08) 1px, transparent 1px) 0 0 / 28px 28px;
-			mask-image: radial-gradient(circle at center, black, transparent 70%); opacity: 0.24;
-		}
-		.anonime-hero-card, .anonime-hero-small {
-			position: absolute; border-radius: 24px; background: rgba(255, 255, 255, 0.7); box-shadow: 0 24px 60px rgba(14, 23, 38, 0.08); backdrop-filter: blur(12px);
-		}
-		.anonime-hero-card { left: 28%; top: 28%; width: 240px; height: 190px; display: grid; place-items: center; }
-		.anonime-hero-small { width: 72px; height: 72px; display: grid; place-items: center; }
-		.anonime-hero-small.top-left { top: 48px; left: 38px; }
-		.anonime-hero-small.top-right { top: 84px; right: 44px; }
-		.anonime-hero-small.bottom-right { right: 62px; bottom: 48px; }
-		.anonime-hero-card svg, .anonime-hero-small svg, .anonime-featured-hero svg { width: 42px; height: 42px; color: #10b26c; }
 		.anonime-featured {
 			margin-top: 8px; padding: 24px; border-radius: 10px; color: #fff;
 			background: radial-gradient(circle at 76% 34%, rgba(16, 178, 108, 0.28), transparent 18%), linear-gradient(135deg, #0a1410 0%, #041f18 52%, #0d1514 100%);
@@ -680,7 +660,6 @@ func anonimeStyles() string {
 		.anonime-sidebar-item .anonime-sidebar-thumb { width: 100%; height: 100%; min-height: 80px; border-radius: 10px; }
 		.anonime-sidebar-item > div { display: flex; min-width: 0; flex-direction: column; }
 		.anonime-sidebar-item .anonime-sidebar-title { display: -webkit-box; margin: 0; overflow: hidden; color: #0f1728; font-size: .92rem; font-weight: 600; line-height: 1.3; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
-		.anonime-sidebar-item .anonime-sidebar-title a { color: inherit; font: inherit; }
 		.anonime-sidebar-item .anonime-sidebar-meta { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; color: #5b6474; font-size: .78rem; white-space: nowrap; }
 		.anonime-sidebar-panel, .anonime-article-sidebar { display: grid; gap: 16px; position: sticky; top: 20px; }
 		.anonime-topic-list { display: grid; gap: 12px; }
@@ -737,7 +716,7 @@ func anonimeStyles() string {
 		.footer-social-link { display: grid; place-items: center; width: 36px; height: 36px; justify-self: end; color: #3d4b61; }
 		.footer-social-link svg { width: 20px; height: 20px; }
 		.anonime-footer-tagline { align-self: end; color: #63718a; text-align: center; font-size: 0.84rem; }
-		.anonime-featured-summary, .anonime-muted { color: #5b6474; }
+		.anonime-featured-summary, .anonime-muted { color: #bac4d7; }
 		.anonime-article-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; align-items: start; }
 		.anonime-article-main { min-width: 0; }
 		.anonime-article-header { padding: 24px 0 0; }
@@ -772,13 +751,68 @@ func anonimeStyles() string {
 		.anonime-article-related-card .anonime-sidebar-title { font-size: 0.92rem; }
 		.anonime-article-related-card .anonime-sidebar-meta { margin-top: 4px; color: #5b6474; }
 		.anonime-muted { color: #5b6474; }
+		@media (prefers-color-scheme: dark) {
+			body.anonime-layout {
+				color-scheme: dark;
+				color: #edf6f2;
+				background: #000;
+			}
+			body.anonime-layout .anonime-brand,
+			body.anonime-layout .anonime-nav,
+			body.anonime-layout .anonime-title,
+			body.anonime-layout .anonime-article-title,
+			body.anonime-layout .anonime-panel-title,
+			body.anonime-layout .anonime-article-heading,
+			body.anonime-layout .anonime-callout-title,
+			body.anonime-layout .anonime-footer-brand h2,
+			body.anonime-layout .anonime-privacy-proof > p { color: #edf6f2; }
+			body.anonime-layout .anonime-subtitle,
+			body.anonime-layout .anonime-article-excerpt,
+			body.anonime-layout .anonime-article-footer,
+			body.anonime-layout .anonime-article-intro,
+			body.anonime-layout .anonime-article-body,
+			body.anonime-layout .anonime-topic-entry,
+			body.anonime-layout .anonime-article-toc-list,
+			body.anonime-layout .anonime-sidebar-meta,
+			body.anonime-layout .anonime-article-related-card .anonime-sidebar-meta,
+			body.anonime-layout .anonime-muted,
+			body.anonime-layout .anonime-footer-links ul,
+			body.anonime-layout .anonime-privacy-feature,
+			body.anonime-layout .anonime-footer-bottom,
+			body.anonime-layout .anonime-footer-tagline { color: #a9b8b1; }
+			body.anonime-layout .anonime-card,
+			body.anonime-layout .anonime-panel,
+			body.anonime-layout .anonime-callout:not(.dark) { border-color: rgba(191, 239, 215, 0.13); background: #000; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18); }
+			body.anonime-layout .anonime-pill,
+			body.anonime-layout .anonime-pagination-button,
+			body.anonime-layout .anonime-help-button,
+			body.anonime-layout .anonime-article-toolbar .anonime-icon-button { border-color: rgba(191, 239, 215, 0.14); color: #c4d2cd; background: rgba(17, 31, 26, 0.9); }
+			body.anonime-layout .anonime-button-outline { border-color: #36bd8d; color: #64d4ab; background: transparent; }
+			body.anonime-layout .anonime-login-link,
+			body.anonime-layout .anonime-theme-toggle,
+			body.anonime-layout .anonime-mobile-nav summary { color: #64d4ab; }
+			body.anonime-layout .brand-logo-light { display: none; }
+			body.anonime-layout .brand-logo-dark { display: block; }
+			body.anonime-layout .anonime-mobile-nav nav { border-color: rgba(191, 239, 215, 0.14); background: rgba(17, 31, 26, 0.98); }
+			body.anonime-layout .anonime-mobile-nav nav a { color: #edf6f2; }
+			body.anonime-layout .anonime-hero-art-light { display: none; }
+			body.anonime-layout .anonime-hero-art-dark { display: block; }
+			body.anonime-layout .anonime-article-body h2,
+			body.anonime-layout .anonime-article-body h3,
+			body.anonime-layout .anonime-article-body blockquote { color: #edf6f2; }
+			body.anonime-layout .anonime-article-body blockquote,
+			body.anonime-layout .anonime-inline-callout { background: rgba(16, 178, 108, 0.1); }
+			body.anonime-layout .anonime-callout-icon,
+			body.anonime-layout .anonime-privacy-icon { border-color: rgba(73, 211, 159, 0.22); background: linear-gradient(180deg, rgba(29, 64, 51, 0.96), rgba(13, 42, 32, 0.96)); }
+			body.anonime-layout .anonime-footer-links > div,
+			body.anonime-layout .anonime-privacy-proof,
+			body.anonime-layout .anonime-privacy-feature { border-color: rgba(191, 239, 215, 0.13); }
+			body.anonime-layout .anonime-footer-x { color: #c5d2cd; }
+		}
 		body.anonime-layout:has(#anonime-theme-toggle:checked) {
 			color-scheme: dark;
 			color: #edf6f2;
-			background:
-				radial-gradient(circle at 18% 2%, rgba(16, 178, 108, 0.12), transparent 24%),
-				radial-gradient(circle at 84% 12%, rgba(16, 178, 108, 0.08), transparent 18%),
-				linear-gradient(180deg, #08100e 0%, #0b1512 100%);
+			background:#000;
 		}
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-brand,
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-nav,
@@ -805,7 +839,7 @@ func anonimeStyles() string {
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-footer-tagline { color: #a9b8b1; }
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-card,
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-panel,
-		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-callout:not(.dark) { border-color: rgba(191, 239, 215, 0.13); background: rgba(16, 28, 24, 0.94); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18); }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-callout:not(.dark) { border-color: rgba(191, 239, 215, 0.13); background: #000; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18); }
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-pill,
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-pagination-button,
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-help-button,
@@ -818,10 +852,8 @@ func anonimeStyles() string {
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .brand-logo-dark { display: block; }
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-mobile-nav nav { border-color: rgba(191, 239, 215, 0.14); background: rgba(17, 31, 26, 0.98); }
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-mobile-nav nav a { color: #edf6f2; }
-		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-art::before,
-		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-art::after,
-		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-card,
-		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-small { background: rgba(18, 36, 29, 0.78); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22); }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-art-light { display: none; }
+		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-art-dark { display: block; }
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-body h2,
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-body h3,
 		body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-article-body blockquote { color: #edf6f2; }
@@ -848,6 +880,7 @@ func anonimeStyles() string {
 			.anonime-featured-inner { grid-template-columns: 1fr; }
 			.anonime-article-card { grid-template-areas: "copy" "media"; grid-template-columns: 1fr; }
 			.anonime-hero { grid-template-columns: 1fr; }
+			.anonime-article-footer-card.is-flat { grid-template-columns: minmax(0, 1fr) 1fr; }
 		}
 		@media (max-width: 820px) {
 			.anonime-nav, .anonime-login-link, .anonime-button-outline { display: none; }
@@ -869,7 +902,8 @@ func anonimeStyles() string {
 			.anonime-featured-copy, .anonime-panel, .anonime-card, .anonime-callout, .anonime-article-footer-card { padding-left: 16px; padding-right: 16px; }
 			.anonime-article-card { padding: 12px; }
 			.anonime-footer { margin-top: 42px; }
-			.anonime-footer-main { padding: 0 14px 34px; }
+			.anonime-footer-main { display: grid; padding: 0 14px 34px; }
+			.anonime-footer-links {margin-left: 0;}
 			.anonime-footer-brand h2 { font-size: 2.1rem; }
 			.anonime-footer-links { grid-template-columns: 1fr; }
 			.anonime-footer-links > div { min-height: 0; padding: 24px 0; border-left: 0; border-top: 1px solid rgba(29, 77, 65, 0.12); }
@@ -877,6 +911,7 @@ func anonimeStyles() string {
 			.anonime-footer-links ul { gap: 14px; }
 			.anonime-footer-bottom { min-height: 176px; padding-inline: 14px; grid-template-columns: 1fr auto; }
 			.anonime-footer-tagline { grid-column: 1 / -1; grid-row: 2; text-align: left; }
+			.anonime-article-footer-card.is-flat { grid-template-columns: 1fr; }
 		}
 		@media (max-width: 420px) {
 			.anonime-privacy-features { grid-template-columns: 1fr; }

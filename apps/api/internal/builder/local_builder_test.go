@@ -238,6 +238,15 @@ func TestRenderAnonimeTemplateUsesAnonimeLayout(t *testing.T) {
 	if !strings.Contains(home, `Thoughts that protect your right to`) {
 		t.Fatalf("expected anonime hero copy, got %s", home)
 	}
+	for _, expected := range []string{
+		`class="anonime-hero-art"`,
+		`anonime-blog-hero-white.webp`,
+		`anonime-blog-hero-black.webp`,
+	} {
+		if !strings.Contains(home, expected) {
+			t.Errorf("expected rendered anonime hero to contain %q", expected)
+		}
+	}
 	if !strings.Contains(home, `href="/articles/articles/"`) {
 		t.Fatalf("expected anonime browse link to remain relative, got %s", home)
 	}
@@ -307,10 +316,19 @@ func TestRenderAnonimeChromeUsesProductionLinksAndCSSOnlyTheme(t *testing.T) {
 		`@media (max-width: 920px)`,
 		`@media (max-width: 620px)`,
 		`font-family: Matter, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
+		`.anonime-hero-art .anonime-hero-art-dark { display: none; }`,
+		`body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-art-light { display: none; }`,
+		`body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-art-dark { display: block; }`,
+		`@media (prefers-color-scheme: dark)`,
+		`body.anonime-layout .anonime-hero-art-light { display: none; }`,
+		`body.anonime-layout .anonime-hero-art-dark { display: block; }`,
 	} {
 		if !strings.Contains(styles, expected) {
 			t.Errorf("anonimeStyles() did not contain %q", expected)
 		}
+	}
+	if strings.Contains(styles, `.anonime-hero-art::before`) || strings.Contains(styles, `.anonime-hero-art::after`) {
+		t.Error("expected hero art pseudo-elements to be removed")
 	}
 
 	footer := renderAnonimeFooter(site)

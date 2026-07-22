@@ -110,7 +110,15 @@ func TestFirebaseAdapterDeploysPreviewBuildToPreviewChannel(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		case r.Method == http.MethodPatch && r.URL.Path == "/v1beta1/sites/site-example/versions/version-2":
 			writeJSON(t, w, map[string]any{"name": "sites/site-example/versions/version-2", "status": "FINALIZED"})
-		case r.Method == http.MethodPost && r.URL.Path == "/v1beta1/sites/site-example/channels":
+		case r.Method == http.MethodPatch && r.URL.Path == "/v1beta1/sites/site-example/channels/preview-site-example":
+			if got := r.URL.Query().Get("updateMask"); got != "ttl" {
+				t.Fatalf("expected updateMask=ttl, got %q", got)
+			}
+			var request map[string]string
+			decodeBody(t, r, &request)
+			if request["ttl"] != "3600s" {
+				t.Fatalf("expected preview channel TTL to be renewed, got %q", request["ttl"])
+			}
 			writeJSON(t, w, firebaseChannelResponse{
 				Name: "sites/site-example/channels/preview-site-example",
 				URL:  "https://site-example--preview-site-example-random.web.app/",

@@ -82,27 +82,27 @@ type landingSectionResp struct {
 }
 
 type articleResponse struct {
-	ID              string   `json:"id"`
-	SiteID          string   `json:"siteId"`
-	AuthorID        string   `json:"authorId"`
-	CategoryID      string   `json:"categoryId"`
-	Title           string   `json:"title"`
-	Slug            string   `json:"slug"`
-	Excerpt         string   `json:"excerpt"`
-	ContentMarkdown string   `json:"contentMarkdown"`
-	CoverImageURL   string   `json:"coverImageUrl"`
-	Status          string   `json:"status"`
-	IsFeatured      bool     `json:"isFeatured"`
-	PublishedAt     *string  `json:"publishedAt"`
-	SEOTitle        string   `json:"seoTitle"`
-	SEODescription  string   `json:"seoDescription"`
-	CanonicalURL    string   `json:"canonicalUrl"`
-	GeneratedByAI   bool     `json:"generatedByAi"`
-	HumanReviewed   bool     `json:"humanReviewed"`
-	AIPrompt        string   `json:"aiPrompt"`
-	AIModel         string   `json:"aiModel"`
-	Tags            string   `json:"tags"`
-	UpdatedAt       string   `json:"updatedAt"`
+	ID              string  `json:"id"`
+	SiteID          string  `json:"siteId"`
+	AuthorID        string  `json:"authorId"`
+	CategoryID      string  `json:"categoryId"`
+	Title           string  `json:"title"`
+	Slug            string  `json:"slug"`
+	Excerpt         string  `json:"excerpt"`
+	ContentMarkdown string  `json:"contentMarkdown"`
+	CoverImageURL   string  `json:"coverImageUrl"`
+	Status          string  `json:"status"`
+	IsFeatured      bool    `json:"isFeatured"`
+	PublishedAt     *string `json:"publishedAt"`
+	SEOTitle        string  `json:"seoTitle"`
+	SEODescription  string  `json:"seoDescription"`
+	CanonicalURL    string  `json:"canonicalUrl"`
+	GeneratedByAI   bool    `json:"generatedByAi"`
+	HumanReviewed   bool    `json:"humanReviewed"`
+	AIPrompt        string  `json:"aiPrompt"`
+	AIModel         string  `json:"aiModel"`
+	Tags            string  `json:"tags"`
+	UpdatedAt       string  `json:"updatedAt"`
 }
 
 type authorResponse struct {
@@ -170,20 +170,20 @@ type siteUpsertRequest struct {
 }
 
 type articleUpsertRequest struct {
-	ID              string   `json:"id"`
-	Title           string   `json:"title"`
-	Slug            string   `json:"slug"`
-	Excerpt         string   `json:"excerpt"`
-	ContentMarkdown string   `json:"contentMarkdown"`
-	CoverImageURL   string   `json:"coverImageUrl"`
-	SEOTitle        string   `json:"seoTitle"`
-	SEODescription  string   `json:"seoDescription"`
-	CanonicalURL    string   `json:"canonicalUrl"`
-	AuthorID        string   `json:"authorId"`
-	CategoryID      string   `json:"categoryId"`
-	Tags            string   `json:"tags"`
-	IsFeatured      bool     `json:"isFeatured"`
-	Status          string   `json:"status"`
+	ID              string `json:"id"`
+	Title           string `json:"title"`
+	Slug            string `json:"slug"`
+	Excerpt         string `json:"excerpt"`
+	ContentMarkdown string `json:"contentMarkdown"`
+	CoverImageURL   string `json:"coverImageUrl"`
+	SEOTitle        string `json:"seoTitle"`
+	SEODescription  string `json:"seoDescription"`
+	CanonicalURL    string `json:"canonicalUrl"`
+	AuthorID        string `json:"authorId"`
+	CategoryID      string `json:"categoryId"`
+	Tags            string `json:"tags"`
+	IsFeatured      bool   `json:"isFeatured"`
+	Status          string `json:"status"`
 }
 
 type categoryUpsertRequest struct {
@@ -1169,6 +1169,9 @@ func validateSitePayload(payload siteUpsertRequest) error {
 	if err := validateAIConfig(payload.AIConfig); err != nil {
 		return err
 	}
+	if err := validateStorageConfig(payload.StorageConfig); err != nil {
+		return err
+	}
 	if err := validateDeploymentConfig(payload.DeployProvider, payload.DeployConfig); err != nil {
 		return err
 	}
@@ -1177,6 +1180,13 @@ func validateSitePayload(payload siteUpsertRequest) error {
 
 func validateAIConfig(rawConfig string) error {
 	if _, err := ai.ParseConfig(fallbackJSON(rawConfig, `{}`)); err != nil {
+		return fmt.Errorf("%w: %v", errValidation, err)
+	}
+	return nil
+}
+
+func validateStorageConfig(rawConfig string) error {
+	if _, err := storage.ParseConfig(fallbackJSON(rawConfig, `{}`)); err != nil {
 		return fmt.Errorf("%w: %v", errValidation, err)
 	}
 	return nil
@@ -2209,6 +2219,12 @@ func (a *API) createBuild(ctx context.Context, siteID string, payload buildCreat
 		return fail(err)
 	}
 
+	if buildType == "published" {
+		if err := a.rewritePublishedCoverImages(ctx, &content, buildSite); err != nil {
+			return fail(err)
+		}
+	}
+
 	outputPath, err := a.Services.Builder.GenerateSite(ctx, content, builder.GenerateOptions{
 		SiteID:     siteID,
 		Preview:    buildType == "preview",
@@ -2257,6 +2273,103 @@ func (a *API) createBuild(ctx context.Context, siteID string, payload buildCreat
 		return fail(err)
 	}
 	return a.getBuild(ctx, buildID)
+}
+
+// rewritePublishedCoverImages re-uploads any article cover image still
+// pointing at local/dev storage to the site's configured production S3
+// bucket and rewrites the URL in place, so published output never links
+// back to a dev-only host. It is a no-op when the site has no production
+// storage configured.
+func (a *API) rewritePublishedCoverImages(ctx context.Context, content *builder.SiteContent, site models.Site) error {
+	rawConfig, err := json.Marshal(site.StorageConfig)
+	if err != nil {
+		return err
+	}
+	prodConfig, err := storage.ParseConfig(string(rawConfig))
+	if err != nil || !prodConfig.IsConfigured() {
+		return nil
+	}
+
+	prodStorage, err := storage.NewFromSiteConfig(prodConfig, os.LookupEnv)
+	if err != nil {
+		return fmt.Errorf("production storage is misconfigured: %w", err)
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	for i := range content.Articles {
+		article := &content.Articles[i]
+		coverURL := strings.TrimSpace(article.CoverImageURL)
+		if coverURL == "" || !isDevStorageImageURL(coverURL, a.Config.S3PublicURL) {
+			continue
+		}
+		newURL, err := migrateImageToProductionStorage(ctx, client, prodStorage, site.ID, coverURL)
+		if err != nil {
+			return fmt.Errorf("unable to migrate cover image for %q: %w", article.Title, err)
+		}
+		article.CoverImageURL = newURL
+	}
+	return nil
+}
+
+// isDevStorageImageURL reports whether an image URL points at this server's
+// local/dev storage rather than an already-production host.
+func isDevStorageImageURL(rawURL, devPublicURL string) bool {
+	trimmed := strings.TrimSpace(rawURL)
+	if trimmed == "" {
+		return false
+	}
+	devPublicURL = strings.TrimRight(strings.TrimSpace(devPublicURL), "/")
+	if devPublicURL != "" && strings.HasPrefix(trimmed, devPublicURL+"/") {
+		return true
+	}
+	parsed, err := url.Parse(trimmed)
+	if err != nil {
+		return false
+	}
+	host := strings.ToLower(parsed.Hostname())
+	return host == "localhost" || host == "127.0.0.1"
+}
+
+func migrateImageToProductionStorage(ctx context.Context, client *http.Client, prodStorage storage.StorageProvider, siteID, imageURL string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("fetch image: unexpected status %d", resp.StatusCode)
+	}
+
+	contents, err := io.ReadAll(io.LimitReader(resp.Body, 25<<20+1))
+	if err != nil {
+		return "", err
+	}
+	if len(contents) > 25<<20 {
+		return "", errors.New("image exceeds the maximum size for migration")
+	}
+
+	mimeType := http.DetectContentType(contents)
+	fileName := "cover"
+	if parsed, parseErr := url.Parse(imageURL); parseErr == nil {
+		if base := filepath.Base(parsed.Path); base != "." && base != "/" {
+			fileName = base
+		}
+	}
+
+	stored, err := prodStorage.Upload(ctx, storage.UploadFile{
+		FileName: fileName,
+		Contents: contents,
+		MimeType: mimeType,
+		SiteID:   siteID,
+	})
+	if err != nil {
+		return "", err
+	}
+	return stored.PublicURL, nil
 }
 
 func buildLogs(buildType string, articleCount int) string {
@@ -2635,4 +2748,3 @@ func fallbackJSON(value, fallback string) string {
 	}
 	return value
 }
-

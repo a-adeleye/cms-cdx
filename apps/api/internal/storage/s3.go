@@ -28,32 +28,36 @@ type s3Storage struct {
 var unsafeObjectName = regexp.MustCompile(`[^a-zA-Z0-9._-]+`)
 
 func NewFromConfig(cfg config.Config) StorageProvider {
-	if strings.TrimSpace(cfg.S3Endpoint) == "" ||
-		strings.TrimSpace(cfg.S3Bucket) == "" ||
-		strings.TrimSpace(cfg.S3AccessKey) == "" ||
-		strings.TrimSpace(cfg.S3SecretKey) == "" ||
-		strings.TrimSpace(cfg.S3PublicURL) == "" {
+	return newS3Storage(cfg.S3Endpoint, cfg.S3Region, cfg.S3Bucket, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3PublicURL)
+}
+
+func newS3Storage(endpoint, region, bucket, accessKey, secretKey, publicURL string) StorageProvider {
+	if strings.TrimSpace(endpoint) == "" ||
+		strings.TrimSpace(bucket) == "" ||
+		strings.TrimSpace(accessKey) == "" ||
+		strings.TrimSpace(secretKey) == "" ||
+		strings.TrimSpace(publicURL) == "" {
 		return disabledStorage{reason: "storage is not configured"}
 	}
 
 	awsCfg, err := awsconfig.LoadDefaultConfig(
 		context.Background(),
-		awsconfig.WithRegion(cfg.S3Region),
-		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKey, cfg.S3SecretKey, "")),
+		awsconfig.WithRegion(region),
+		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
 	)
 	if err != nil {
 		return disabledStorage{reason: err.Error()}
 	}
 
 	client := s3.NewFromConfig(awsCfg, func(options *s3.Options) {
-		options.BaseEndpoint = aws.String(cfg.S3Endpoint)
+		options.BaseEndpoint = aws.String(endpoint)
 		options.UsePathStyle = true
 	})
 
 	return &s3Storage{
 		client:    client,
-		bucket:    cfg.S3Bucket,
-		publicURL: strings.TrimRight(cfg.S3PublicURL, "/"),
+		bucket:    bucket,
+		publicURL: strings.TrimRight(publicURL, "/"),
 		enabled:   true,
 	}
 }

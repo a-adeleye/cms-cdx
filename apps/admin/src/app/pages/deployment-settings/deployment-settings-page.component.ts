@@ -33,6 +33,8 @@ export class DeploymentSettingsPageComponent {
     productionRepositoryUrl: [''], productionContentPath: ['public/blog'], productionTokenSecretRef: [''], productionPublicUrl: [''],
     previewProjectName: [''], previewBranch: ['preview'], previewFirebaseSiteId: [''], previewSecretRef: [''],
     previewRepositoryUrl: [''], previewContentPath: ['public/blog'], previewTokenSecretRef: [''], previewPublicUrl: [''],
+    storageBucket: [''], storageRegion: [''], storageEndpoint: [''], storagePublicUrl: [''],
+    storageAccessKeySecretRef: [''], storageSecretKeySecretRef: [''],
   });
 
   constructor() {
@@ -43,6 +45,7 @@ export class DeploymentSettingsPageComponent {
         deployConfig: site.deployConfig || '{}', previewDeployConfig: site.previewDeployConfig || '{}',
         aiConfig: site.aiConfig || '{}', storageConfig: site.storageConfig || '{}',
         ...this.channelValues('production', site.deployConfig), ...this.channelValues('preview', site.previewDeployConfig),
+        ...this.storageConfigValues(site.storageConfig),
       }, { emitEvent: false });
     });
   }
@@ -63,12 +66,15 @@ export class DeploymentSettingsPageComponent {
     try {
       const productionConfig = this.serializeChannel('production');
       const previewConfig = this.serializeChannel('preview');
+      const storageConfig = this.serializeStorageConfig();
       this.deploymentSettingsForm.controls.deployConfig.setValue(productionConfig);
       this.deploymentSettingsForm.controls.previewDeployConfig.setValue(previewConfig);
+      this.deploymentSettingsForm.controls.storageConfig.setValue(storageConfig);
       this.feedback.loading('Saving deployment settings...');
       await this.state.updateSelectedSite({
         deployProvider: this.provider('production'), deployConfig: productionConfig,
         previewDeployProvider: this.provider('preview'), previewDeployConfig: previewConfig,
+        storageConfig,
       });
       this.feedback.success('Deployment settings saved successfully.');
     } catch (error) {
@@ -98,6 +104,37 @@ export class DeploymentSettingsPageComponent {
       [`${channel}FirebaseSiteId`]: value['siteId'] || value['projectId'] || '', [`${channel}SecretRef`]: value['serviceAccountSecretRef'] || '',
       [`${channel}RepositoryUrl`]: value['repositoryUrl'] || '', [`${channel}ContentPath`]: value['contentPath'] || 'public/blog',
       [`${channel}TokenSecretRef`]: value['tokenSecretRef'] || '', [`${channel}PublicUrl`]: value['publicUrl'] || '',
+    };
+  }
+
+  private serializeStorageConfig(): string {
+    const controls = this.deploymentSettingsForm.controls;
+    const config: Record<string, string> = {
+      bucket: controls.storageBucket.value.trim(),
+      region: controls.storageRegion.value.trim(),
+      endpoint: controls.storageEndpoint.value.trim(),
+      publicUrl: controls.storagePublicUrl.value.trim(),
+      accessKeySecretRef: controls.storageAccessKeySecretRef.value.trim(),
+      secretKeySecretRef: controls.storageSecretKeySecretRef.value.trim(),
+    };
+    if (!Object.values(config).some((value) => value)) {
+      return '{}';
+    }
+    for (const [key, value] of Object.entries(config)) {
+      if (!value && key !== 'endpoint' && key !== 'region') {
+        throw new Error(`Production storage ${key} is required.`);
+      }
+    }
+    return JSON.stringify(config, null, 2);
+  }
+
+  private storageConfigValues(raw: string): Record<string, string> {
+    let value: Record<string, string> = {};
+    try { value = JSON.parse(raw || '{}') as Record<string, string>; } catch { value = {}; }
+    return {
+      storageBucket: value['bucket'] || '', storageRegion: value['region'] || '', storageEndpoint: value['endpoint'] || '',
+      storagePublicUrl: value['publicUrl'] || '', storageAccessKeySecretRef: value['accessKeySecretRef'] || '',
+      storageSecretKeySecretRef: value['secretKeySecretRef'] || '',
     };
   }
 

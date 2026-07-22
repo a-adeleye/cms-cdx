@@ -263,21 +263,12 @@ func (a FirebaseAdapter) ensurePreviewChannel(ctx context.Context, accessToken, 
 	if ttl <= 0 {
 		ttl = 7 * 24 * time.Hour
 	}
-	payload := map[string]string{"ttl": fmt.Sprintf("%ds", int64(ttl.Seconds()))}
-	var channel firebaseChannelResponse
-	err := a.doJSON(ctx, accessToken, http.MethodPost, fmt.Sprintf("%s/sites/%s/channels?channelId=%s", a.baseAPIURL(), url.PathEscape(siteID), url.QueryEscape(channelID)), payload, &channel)
-	if err == nil {
-		return channel, nil
+	payload := map[string]string{
+		"name": fmt.Sprintf("sites/%s/channels/%s", siteID, channelID),
+		"ttl":  fmt.Sprintf("%ds", int64(ttl.Seconds())),
 	}
-	if !strings.Contains(strings.ToLower(err.Error()), "409") {
-		return firebaseChannelResponse{}, err
-	}
-	return a.getChannel(ctx, accessToken, siteID, channelID)
-}
-
-func (a FirebaseAdapter) getChannel(ctx context.Context, accessToken, siteID, channelID string) (firebaseChannelResponse, error) {
 	var channel firebaseChannelResponse
-	if err := a.doJSON(ctx, accessToken, http.MethodGet, fmt.Sprintf("%s/sites/%s/channels/%s", a.baseAPIURL(), url.PathEscape(siteID), url.PathEscape(channelID)), nil, &channel); err != nil {
+	if err := a.doJSON(ctx, accessToken, http.MethodPatch, fmt.Sprintf("%s/sites/%s/channels/%s?updateMask=ttl", a.baseAPIURL(), url.PathEscape(siteID), url.PathEscape(channelID)), payload, &channel); err != nil {
 		return firebaseChannelResponse{}, err
 	}
 	return channel, nil

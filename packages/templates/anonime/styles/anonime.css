@@ -281,16 +281,19 @@ body {
   margin-top: 27px;
 }
 
-.anonime-privacy-orbit {
+.anonime-hero-art {
   width: 100%;
   min-width: 0;
 }
 
-.anonime-privacy-orbit svg {
+.anonime-hero-art img {
   display: block;
   width: 100%;
   height: auto;
-  overflow: visible;
+}
+
+.anonime-hero-art .anonime-hero-art-dark {
+  display: none;
 }
 
 .anonime-cyber-visual {
@@ -974,7 +977,7 @@ body {
   padding-left: 5px;
 }
 
-.anonime-landing-hero .anonime-privacy-orbit {
+.anonime-landing-hero .anonime-hero-art {
   width: 680px;
   max-width: 108%;
   justify-self: end;
@@ -1038,7 +1041,7 @@ body {
   font-size: 58px;
 }
 
-.anonime-articles-hero .anonime-privacy-orbit {
+.anonime-articles-hero .anonime-hero-art {
   width: 620px;
   max-width: 105%;
   justify-self: end;
@@ -1557,8 +1560,8 @@ body {
     max-width: 560px;
   }
 
-  .anonime-landing-hero .anonime-privacy-orbit,
-  .anonime-articles-hero .anonime-privacy-orbit {
+  .anonime-landing-hero .anonime-hero-art,
+  .anonime-articles-hero .anonime-hero-art {
     width: min(100%, 680px);
     margin-top: 15px;
     justify-self: center;
@@ -1659,7 +1662,7 @@ body {
     font-size: 15px;
   }
 
-  .anonime-privacy-orbit {
+  .anonime-hero-art {
     margin-top: 20px !important;
   }
 
@@ -2189,6 +2192,14 @@ body {
 :is(:root[data-anonime-theme="dark"] .anonime-site, .anonime-site:has(.anonime-theme-input:checked)) .anonime-header {
   border-bottom-color: #182925;
   background: rgba(7, 17, 15, .97);
+}
+
+:is(:root[data-anonime-theme="dark"] .anonime-site, .anonime-site:has(.anonime-theme-input:checked)) .anonime-hero-art-light {
+  display: none;
+}
+
+:is(:root[data-anonime-theme="dark"] .anonime-site, .anonime-site:has(.anonime-theme-input:checked)) .anonime-hero-art-dark {
+  display: block;
 }
 
 :is(:root[data-anonime-theme="dark"] .anonime-site, .anonime-site:has(.anonime-theme-input:checked)) :where(

@@ -46,6 +46,11 @@ test('Astro renders formatting while keeping hostile Markdown inert', () => {
     assert.equal(landingHtml.includes('Thoughts that'), true);
     assert.equal(articlesHtml.includes('All Articles'), true);
     assert.equal(articleHtml.includes('On this page'), true);
+    for (const renderedHero of [landingHtml, articlesHtml]) {
+      assert.match(renderedHero, /class="anonime-hero-art"/);
+      assert.match(renderedHero, /anonime-blog-hero-white\.webp/);
+      assert.match(renderedHero, /anonime-blog-hero-black\.webp/);
+    }
     for (const renderedPage of [landingHtml, articlesHtml, articleHtml]) {
       assert.match(renderedPage, /href="https:\/\/anonime\.io\/#top"/);
       assert.match(renderedPage, /href="https:\/\/anonime\.io\/#how-it-works"/);

@@ -36,6 +36,10 @@ services:
       S3_ACCESS_KEY: minio
       S3_SECRET_KEY: minio123
       S3_PUBLIC_URL: http://localhost:9002/cms-builder
+      # Optional production-storage credentials. Site settings reference these
+      # names; the API resolves their values only when a production build runs.
+      PROD_S3_ACCESS_KEY: ${PROD_S3_ACCESS_KEY:-}
+      PROD_S3_SECRET_KEY: ${PROD_S3_SECRET_KEY:-}
       BUILDER_DIRECTORY: /app/builder
       BUILD_OUTPUT_ROOT: /var/lib/cms-builder/builds
       WRANGLER_COMMAND: /app/node_modules/.bin/wrangler

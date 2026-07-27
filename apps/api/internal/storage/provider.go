@@ -3,10 +3,11 @@ package storage
 import "context"
 
 type UploadFile struct {
-	FileName string
-	Contents []byte
-	MimeType string
-	SiteID   string
+	FileName  string
+	Contents  []byte
+	MimeType  string
+	SiteID    string
+	ObjectKey string
 }
 
 type StoredFile struct {
@@ -29,4 +30,3 @@ func (n NoopStorage) Upload(ctx context.Context, file UploadFile) (*StoredFile, 
 func (n NoopStorage) Delete(ctx context.Context, key string) error { return nil }
 
 func (n NoopStorage) GetPublicURL(key string) string { return "" }
-

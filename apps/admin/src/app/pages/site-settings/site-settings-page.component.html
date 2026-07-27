@@ -12,7 +12,7 @@
       <label>Site name<input type="text" formControlName="name" /></label>
       <label>Description<textarea rows="3" formControlName="description"></textarea><small>{{ form.controls.description.value.length }} / 180</small></label>
       <label>Blog context<select formControlName="contentContext"><option value="application_blog">Application blog</option><option value="standalone_blog">Standalone blog</option></select><small>@if (form.controls.contentContext.value === 'application_blog') { AI writing will prioritize search intent, product relevance, and conversion-aware calls to action. } @else { AI writing will prioritize helpful, editorial, and audience-focused articles. }</small></label>
-      <div class="field-row"><label>Public site URL<input type="url" formControlName="domain" placeholder="https://www.example.com" /></label><label>Blog path<input type="text" formControlName="blogPath" placeholder="/blog" /><small>For a repository deployment, this path is generated into the configured repository directory.</small></label></div>
+      <div class="field-row"><label>Public site URL<input type="url" formControlName="domain" placeholder="https://www.example.com" /><small>&nbsp;</small></label><label>Blog path<input type="text" formControlName="blogPath" placeholder="/blog" /><small>For a repository deployment, this path is generated into the configured repository directory.</small></label></div>
       <div class="field-row"><label>Template<select formControlName="templateKey">@for (option of templateOptions(); track option.value) { <option [value]="option.value">{{ option.label }}</option> }</select></label><label>Accent color<input type="color" formControlName="accentColor" /></label></div>
     </article>
 

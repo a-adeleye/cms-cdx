@@ -29,6 +29,7 @@ func TestGenerateSiteWritesArticlesToConfiguredBlogPath(t *testing.T) {
 	for _, relativePath := range []string{
 		filepath.Join("blog", "index.html"),
 		filepath.Join("blog", "hello-world", "index.html"),
+		filepath.Join("blog", "sitemap.xml"),
 	} {
 		if _, err := os.Stat(filepath.Join(outputPath, relativePath)); err != nil {
 			t.Fatalf("expected generated page at %s: %v", relativePath, err)
@@ -97,6 +98,60 @@ func TestGenerateAnonimeArticlesPagination(t *testing.T) {
 	}
 	if !strings.Contains(string(sitemap), `/blog/articles/`) || !strings.Contains(string(sitemap), `/blog/articles/page/2/`) {
 		t.Fatalf("expected sitemap to include paginated articles page, got %s", sitemap)
+	}
+	blogSitemap, err := os.ReadFile(filepath.Join(outputPath, "blog", "sitemap.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(blogSitemap), `<loc>http://localhost:8081/</loc>`) || !strings.Contains(string(blogSitemap), `/blog/articles/page/2/`) {
+		t.Fatalf("expected deployable blog sitemap to include only blog URLs, got %s", blogSitemap)
+	}
+}
+
+func TestArticlePagesRenderSEOAndStructuredData(t *testing.T) {
+	site := renderedSite{
+		Site:          models.Site{Name: "Example", Domain: "https://example.com", BlogPath: "/blog"},
+		BasePath:      "/blog",
+		PublicBaseURL: "https://example.com",
+		Title:         "Example",
+		Description:   "Site description",
+	}
+	article := ArticleContent{
+		Title:           "Article title",
+		Slug:            "article-title",
+		Excerpt:         "Article excerpt",
+		SEOTitle:        "Search title",
+		SEODescription:  "Search description",
+		CoverImageURL:   "/blog/cover.webp",
+		PublishedAt:     "2026-07-01T10:00:00Z",
+		UpdatedAt:       "2026-07-02T10:00:00Z",
+		AuthorName:      "Ada Example",
+		Tags:            []TagContent{{Name: "Privacy"}, {Name: "Security"}},
+		ContentMarkdown: "Body",
+	}
+
+	page := renderDefaultArticlePage(site, article)
+	for _, expected := range []string{
+		`<title>Search title | Example</title>`,
+		`name="description" content="Search description"`,
+		`rel="canonical" href="https://example.com/blog/article-title/"`,
+		`property="og:type" content="article"`,
+		`property="og:image" content="https://example.com/blog/cover.webp"`,
+		`name="twitter:card" content="summary_large_image"`,
+		`"@type":"BlogPosting"`,
+		`"author":{"@type":"Person","name":"Ada Example"}`,
+		`"keywords":"Privacy, Security"`,
+	} {
+		if !strings.Contains(page, expected) {
+			t.Errorf("expected article SEO output to contain %q", expected)
+		}
+	}
+}
+
+func TestPreviewPagesAreNotIndexable(t *testing.T) {
+	page := renderDefaultArticlePage(renderedSite{Preview: true, Title: "Example", Description: "Preview"}, ArticleContent{Title: "Draft", Slug: "draft"})
+	if !strings.Contains(page, `name="robots" content="noindex,nofollow"`) {
+		t.Fatalf("expected preview page to opt out of indexing, got %s", page)
 	}
 }
 
@@ -278,7 +333,7 @@ func TestAnonimeArticleEyebrowUsesArticleCategory(t *testing.T) {
 	}
 }
 
-func TestRenderAnonimeChromeUsesProductionLinksAndCSSOnlyTheme(t *testing.T) {
+func TestRenderAnonimeChromeUsesProductionLinksAndPersistentTheme(t *testing.T) {
 	site := renderedSite{Site: models.Site{
 		Name:    "Anonime",
 		LogoURL: "https://cdn.example/anonime-logo.svg",
@@ -305,26 +360,32 @@ func TestRenderAnonimeChromeUsesProductionLinksAndCSSOnlyTheme(t *testing.T) {
 		}
 	}
 
-	styles := anonimeStyles()
+	styles := renderStyles(themeForSite(models.Site{TemplateKey: "anonime", Name: "Anonime"}))
 	for _, expected := range []string{
-		`body.anonime-layout:has(#anonime-theme-toggle:checked)`,
+		`html[data-theme="dark"] body.anonime-layout`,
 		`.anonime-template .brand-logo-dark { display: none; }`,
-		`body.anonime-layout:has(#anonime-theme-toggle:checked) .brand-logo-light { display: none; }`,
-		`body.anonime-layout:has(#anonime-theme-toggle:checked) .brand-logo-dark { display: block; }`,
+		`html[data-theme="dark"] body.anonime-layout .brand-logo-light { display: none; }`,
+		`html[data-theme="dark"] body.anonime-layout .brand-logo-dark { display: block; }`,
 		`color-scheme: dark`,
 		`.anonime-theme-checkbox:checked + .anonime-theme-toggle .anonime-theme-sun`,
 		`@media (max-width: 920px)`,
 		`@media (max-width: 620px)`,
 		`font-family: Matter, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
 		`.anonime-hero-art .anonime-hero-art-dark { display: none; }`,
-		`body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-art-light { display: none; }`,
-		`body.anonime-layout:has(#anonime-theme-toggle:checked) .anonime-hero-art-dark { display: block; }`,
+		`html[data-theme="dark"] body.anonime-layout .anonime-hero-art-light { display: none; }`,
+		`html[data-theme="dark"] body.anonime-layout .anonime-hero-art-dark { display: block; }`,
 		`@media (prefers-color-scheme: dark)`,
 		`body.anonime-layout .anonime-hero-art-light { display: none; }`,
 		`body.anonime-layout .anonime-hero-art-dark { display: block; }`,
 	} {
 		if !strings.Contains(styles, expected) {
 			t.Errorf("anonimeStyles() did not contain %q", expected)
+		}
+	}
+	page := renderAnonimeHomePage(renderedSite{Theme: themeForSite(models.Site{TemplateKey: "anonime", Name: "Anonime"})})
+	for _, expected := range []string{`localStorage.getItem(key)`, `localStorage.setItem(key,dark?"dark":"light")`, `root.dataset.theme=dark?"dark":"light"`} {
+		if !strings.Contains(page, expected) {
+			t.Errorf("expected generated document to include persistent theme behavior %q", expected)
 		}
 	}
 	if strings.Contains(styles, `.anonime-hero-art::before`) || strings.Contains(styles, `.anonime-hero-art::after`) {

@@ -33,6 +33,43 @@ func TestIsDevStorageImageURL(t *testing.T) {
 	}
 }
 
+func TestDevStorageObjectURLUsesEndpointReachableByAPI(t *testing.T) {
+	imageURL, err := devStorageObjectURL(
+		"http://localhost:9002/cms-builder/site-1/media/cover.png",
+		"http://localhost:9002/cms-builder",
+		"http://minio:9000",
+		"cms-builder",
+	)
+	if err != nil {
+		t.Fatalf("devStorageObjectURL returned error: %v", err)
+	}
+	if imageURL != "http://minio:9000/cms-builder/site-1/media/cover.png" {
+		t.Fatalf("unexpected API-reachable image URL: %q", imageURL)
+	}
+}
+
+func TestDevStorageObjectURLRejectsAnUnconfiguredLocalhostURL(t *testing.T) {
+	_, err := devStorageObjectURL(
+		"http://localhost:4000/media/cover.png",
+		"http://localhost:9002/cms-builder",
+		"http://minio:9000",
+		"cms-builder",
+	)
+	if err == nil {
+		t.Fatal("expected an error for an image outside configured development storage")
+	}
+}
+
+func TestProductionCoverObjectKeyUsesTheBlogFolderWithoutMediaSubfolder(t *testing.T) {
+	key, err := productionCoverObjectKey("/blog", "http://localhost:9002/cms-builder/site-1/media/cover.png")
+	if err != nil {
+		t.Fatalf("productionCoverObjectKey returned error: %v", err)
+	}
+	if key != "blog/cover.png" {
+		t.Fatalf("unexpected production object key: %q", key)
+	}
+}
+
 type capturingStorageProvider struct {
 	uploaded []storage.UploadFile
 }
@@ -49,7 +86,7 @@ func (f *capturingStorageProvider) GetPublicURL(key string) string {
 }
 
 func TestMigrateImageToProductionStorageUploadsFetchedBytes(t *testing.T) {
-	pngBytes := []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}
+	pngBytes := testPNG(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "image/png")
 		_, _ = w.Write(pngBytes)
@@ -57,25 +94,28 @@ func TestMigrateImageToProductionStorageUploadsFetchedBytes(t *testing.T) {
 	defer server.Close()
 
 	fake := &capturingStorageProvider{}
-	newURL, err := migrateImageToProductionStorage(context.Background(), server.Client(), fake, "site-1", server.URL+"/media/cover.png")
+	newURL, err := migrateImageToProductionStorage(context.Background(), server.Client(), fake, "site-1", server.URL+"/media/cover.png", "blog/cover.png")
 	if err != nil {
 		t.Fatalf("migrateImageToProductionStorage returned error: %v", err)
 	}
-	if newURL != "https://cdn.example.com/site-1/media/cover.png" {
+	if newURL != "https://cdn.example.com/site-1/media/cover.webp" {
 		t.Fatalf("unexpected migrated URL: %q", newURL)
 	}
 	if len(fake.uploaded) != 1 {
 		t.Fatalf("expected exactly one upload, got %d", len(fake.uploaded))
 	}
 	uploaded := fake.uploaded[0]
-	if uploaded.FileName != "cover.png" {
-		t.Fatalf("expected filename cover.png, got %q", uploaded.FileName)
+	if uploaded.FileName != "cover.webp" {
+		t.Fatalf("expected filename cover.webp, got %q", uploaded.FileName)
 	}
 	if uploaded.SiteID != "site-1" {
 		t.Fatalf("expected siteID site-1, got %q", uploaded.SiteID)
 	}
-	if string(uploaded.Contents) != string(pngBytes) {
-		t.Fatalf("expected uploaded contents to match fetched bytes")
+	if uploaded.ObjectKey != "blog/cover.webp" {
+		t.Fatalf("expected object key blog/cover.webp, got %q", uploaded.ObjectKey)
+	}
+	if detected := http.DetectContentType(uploaded.Contents); detected != "image/webp" {
+		t.Fatalf("expected an uploaded WebP image, got %q", detected)
 	}
 }
 
@@ -86,7 +126,7 @@ func TestMigrateImageToProductionStorageReturnsErrorOnFetchFailure(t *testing.T)
 	defer server.Close()
 
 	fake := &capturingStorageProvider{}
-	if _, err := migrateImageToProductionStorage(context.Background(), server.Client(), fake, "site-1", server.URL+"/missing.png"); err == nil {
+	if _, err := migrateImageToProductionStorage(context.Background(), server.Client(), fake, "site-1", server.URL+"/missing.png", "blog/missing.png"); err == nil {
 		t.Fatal("expected an error when the source image cannot be fetched")
 	}
 	if len(fake.uploaded) != 0 {

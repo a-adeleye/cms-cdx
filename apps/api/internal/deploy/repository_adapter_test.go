@@ -28,6 +28,7 @@ func TestRepositoryAdapterPreservesLandingSiteAndReplacesOnlyBlogDirectory(t *te
 
 	output := filepath.Join(root, "output")
 	writeTestFile(t, filepath.Join(output, "blog", "index.html"), "new blog")
+	writeTestFile(t, filepath.Join(output, "blog", "sitemap.xml"), "new sitemap")
 	adapter := NewRepositoryAdapter()
 	adapter.AllowLocalRepositories = true
 	site := models.Site{Domain: "https://example.com", BlogPath: "/blog", DeployProvider: "git_repository", DeployConfig: map[string]any{
@@ -45,6 +46,7 @@ func TestRepositoryAdapterPreservesLandingSiteAndReplacesOnlyBlogDirectory(t *te
 	runTestGit(t, root, "clone", "--branch", "main", bare, checkout)
 	assertTestFile(t, filepath.Join(checkout, "index.html"), "landing page")
 	assertTestFile(t, filepath.Join(checkout, "public", "blog", "index.html"), "new blog")
+	assertTestFile(t, filepath.Join(checkout, "public", "blog", "sitemap.xml"), "new sitemap")
 	if _, err := os.Stat(filepath.Join(checkout, "public", "blog", "old.html")); !os.IsNotExist(err) {
 		t.Fatalf("expected old blog file to be removed, got %v", err)
 	}

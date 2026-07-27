@@ -3,6 +3,7 @@ package builder
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -56,6 +57,18 @@ type renderedSite struct {
 	FeaturedArticles []ArticleContent
 	RecentArticles   []ArticleContent
 	Now              time.Time
+}
+
+type documentMetadata struct {
+	Title       string
+	Description string
+	Canonical   string
+	Image       string
+	Type        string
+	PublishedAt string
+	ModifiedAt  string
+	Author      string
+	Tags        []TagContent
 }
 
 type sitemapURL struct {
@@ -191,6 +204,9 @@ func (b LocalBuilder) GenerateSite(ctx context.Context, content SiteContent, opt
 		if err := writeFile(filepath.Join(articleDir, "index.html"), renderArticlePage(rendered, article)); err != nil {
 			return "", err
 		}
+	}
+	if err := writeFile(filepath.Join(blogOutputPath, "sitemap.xml"), renderBlogSitemap(rendered)); err != nil {
+		return "", err
 	}
 	if err := writeFile(filepath.Join(outputPath, "sitemap.xml"), renderSitemap(rendered)); err != nil {
 		return "", err
@@ -425,7 +441,7 @@ func renderDefaultHomePage(site renderedSite) string {
 	body.WriteString(`</article>`)
 	body.WriteString(`</section>`)
 
-	return renderDocument(site, "Home", body.String(), site.PublicBaseURL+"/")
+	return renderDocument(site, siteDocumentMetadata(site, "Home", site.PublicBaseURL+"/"), body.String())
 }
 
 func renderArticlesPage(site renderedSite) string {
@@ -457,7 +473,7 @@ func renderDefaultArticlesPage(site renderedSite) string {
 	}
 	body.WriteString(`</div></section>`)
 
-	return renderDocument(site, "Articles", body.String(), articlesURL(site))
+	return renderDocument(site, siteDocumentMetadata(site, "Articles", articlesURL(site)), body.String())
 }
 
 func renderArticlePage(site renderedSite, article ArticleContent) string {
@@ -519,7 +535,7 @@ func renderDefaultArticlePage(site renderedSite, article ArticleContent) string 
 	}
 	body.WriteString(`</article>`)
 
-	return renderDocument(site, article.Title, body.String(), canonicalURL(site, article))
+	return renderDocument(site, articleDocumentMetadata(site, article), body.String())
 }
 
 func renderArticleCards(site renderedSite, articles []ArticleContent, featured bool) string {
@@ -577,7 +593,7 @@ func renderArticleCard(site renderedSite, article ArticleContent, featured bool)
 	return body.String()
 }
 
-func renderDocument(site renderedSite, title, body, canonical string) string {
+func renderDocument(site renderedSite, metadata documentMetadata, body string) string {
 	var builder strings.Builder
 	builder.WriteString(`<!doctype html><html lang="en"><head><meta charset="utf-8">`)
 	builder.WriteString(`<meta name="viewport" content="width=device-width, initial-scale=1">`)
@@ -586,17 +602,73 @@ func renderDocument(site renderedSite, title, body, canonical string) string {
 		builder.WriteString(html.EscapeString(favicon))
 		builder.WriteString(`">`)
 	}
+	if site.Theme.Name == "anonime" {
+		builder.WriteString(renderAnonimeThemeScript())
+	}
 	builder.WriteString(`<title>`)
-	builder.WriteString(html.EscapeString(pageTitle(site, title)))
+	builder.WriteString(html.EscapeString(pageTitle(site, metadata.Title)))
 	builder.WriteString(`</title>`)
-	if strings.TrimSpace(canonical) != "" {
+	if strings.TrimSpace(metadata.Canonical) != "" {
 		builder.WriteString(`<link rel="canonical" href="`)
-		builder.WriteString(html.EscapeString(canonical))
+		builder.WriteString(html.EscapeString(metadata.Canonical))
 		builder.WriteString(`">`)
 	}
 	builder.WriteString(`<meta name="description" content="`)
-	builder.WriteString(html.EscapeString(site.Description))
+	builder.WriteString(html.EscapeString(metadata.Description))
 	builder.WriteString(`">`)
+	if site.Preview {
+		builder.WriteString(`<meta name="robots" content="noindex,nofollow">`)
+	} else {
+		builder.WriteString(`<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">`)
+	}
+	builder.WriteString(`<meta property="og:type" content="`)
+	builder.WriteString(html.EscapeString(metadata.Type))
+	builder.WriteString(`"><meta property="og:site_name" content="`)
+	builder.WriteString(html.EscapeString(site.Title))
+	builder.WriteString(`"><meta property="og:title" content="`)
+	builder.WriteString(html.EscapeString(pageTitle(site, metadata.Title)))
+	builder.WriteString(`"><meta property="og:description" content="`)
+	builder.WriteString(html.EscapeString(metadata.Description))
+	builder.WriteString(`">`)
+	if strings.TrimSpace(metadata.Canonical) != "" {
+		builder.WriteString(`<meta property="og:url" content="`)
+		builder.WriteString(html.EscapeString(metadata.Canonical))
+		builder.WriteString(`">`)
+	}
+	if strings.TrimSpace(metadata.Image) != "" {
+		builder.WriteString(`<meta property="og:image" content="`)
+		builder.WriteString(html.EscapeString(metadata.Image))
+		builder.WriteString(`">`)
+	}
+	if metadata.Type == "article" {
+		if strings.TrimSpace(metadata.PublishedAt) != "" {
+			builder.WriteString(`<meta property="article:published_time" content="`)
+			builder.WriteString(html.EscapeString(metadata.PublishedAt))
+			builder.WriteString(`">`)
+		}
+		if strings.TrimSpace(metadata.ModifiedAt) != "" {
+			builder.WriteString(`<meta property="article:modified_time" content="`)
+			builder.WriteString(html.EscapeString(metadata.ModifiedAt))
+			builder.WriteString(`">`)
+		}
+	}
+	builder.WriteString(`<meta name="twitter:card" content="`)
+	if strings.TrimSpace(metadata.Image) != "" {
+		builder.WriteString(`summary_large_image`)
+	} else {
+		builder.WriteString(`summary`)
+	}
+	builder.WriteString(`"><meta name="twitter:title" content="`)
+	builder.WriteString(html.EscapeString(pageTitle(site, metadata.Title)))
+	builder.WriteString(`"><meta name="twitter:description" content="`)
+	builder.WriteString(html.EscapeString(metadata.Description))
+	builder.WriteString(`">`)
+	if strings.TrimSpace(metadata.Image) != "" {
+		builder.WriteString(`<meta name="twitter:image" content="`)
+		builder.WriteString(html.EscapeString(metadata.Image))
+		builder.WriteString(`">`)
+	}
+	builder.WriteString(renderStructuredData(site, metadata))
 	builder.WriteString(`<style>`)
 	builder.WriteString(renderStyles(site.Theme))
 	builder.WriteString(`</style></head><body class="`)
@@ -606,6 +678,91 @@ func renderDocument(site renderedSite, title, body, canonical string) string {
 	builder.WriteString(body)
 	builder.WriteString(`</main></body></html>`)
 	return builder.String()
+}
+
+func siteDocumentMetadata(site renderedSite, title, canonical string) documentMetadata {
+	return documentMetadata{
+		Title:       title,
+		Description: site.Description,
+		Canonical:   canonical,
+		Type:        "website",
+	}
+}
+
+func articleDocumentMetadata(site renderedSite, article ArticleContent) documentMetadata {
+	title := strings.TrimSpace(article.SEOTitle)
+	if title == "" {
+		title = article.Title
+	}
+	description := strings.TrimSpace(article.SEODescription)
+	if description == "" {
+		description = strings.TrimSpace(article.Excerpt)
+	}
+	if description == "" {
+		description = site.Description
+	}
+	return documentMetadata{
+		Title:       title,
+		Description: description,
+		Canonical:   canonicalURL(site, article),
+		Image:       absolutePublicURL(site, article.CoverImageURL),
+		Type:        "article",
+		PublishedAt: article.PublishedAt,
+		ModifiedAt:  article.UpdatedAt,
+		Author:      article.AuthorName,
+		Tags:        article.Tags,
+	}
+}
+
+func absolutePublicURL(site renderedSite, value string) string {
+	value = strings.TrimSpace(value)
+	if strings.HasPrefix(value, "/") {
+		return site.PublicBaseURL + value
+	}
+	return value
+}
+
+func renderStructuredData(site renderedSite, metadata documentMetadata) string {
+	data := map[string]any{
+		"@context":    "https://schema.org",
+		"@type":       "WebSite",
+		"name":        site.Title,
+		"description": metadata.Description,
+		"url":         metadata.Canonical,
+	}
+	if metadata.Type == "article" {
+		data["@type"] = "BlogPosting"
+		data["headline"] = metadata.Title
+		data["mainEntityOfPage"] = map[string]string{"@type": "WebPage", "@id": metadata.Canonical}
+		if metadata.Image != "" {
+			data["image"] = []string{metadata.Image}
+		}
+		if metadata.PublishedAt != "" {
+			data["datePublished"] = metadata.PublishedAt
+		}
+		if metadata.ModifiedAt != "" {
+			data["dateModified"] = metadata.ModifiedAt
+		}
+		if metadata.Author != "" {
+			data["author"] = map[string]string{"@type": "Person", "name": metadata.Author}
+		}
+		if len(metadata.Tags) > 0 {
+			keywords := make([]string, 0, len(metadata.Tags))
+			for _, tag := range metadata.Tags {
+				if name := strings.TrimSpace(tag.Name); name != "" {
+					keywords = append(keywords, name)
+				}
+			}
+			if len(keywords) > 0 {
+				data["keywords"] = strings.Join(keywords, ", ")
+			}
+		}
+	}
+	encoded, err := json.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	return `<script type="application/ld+json">` + string(encoded) + `</script>`
 }
 
 func pageTitle(site renderedSite, title string) string {
@@ -629,7 +786,11 @@ func renderStyles(theme themeVariant) string {
 		"{{featureBadgeBackground}}", theme.FeatureBadgeBackground,
 	).Replace(baseStyles())
 	if theme.Name == "anonime" {
-		styles += anonimeStyles()
+		styles += strings.ReplaceAll(
+			anonimeStyles(),
+			`body.anonime-layout:has(#anonime-theme-toggle:checked)`,
+			`html[data-theme="dark"] body.anonime-layout`,
+		)
 	}
 	return styles
 }
@@ -881,10 +1042,20 @@ func canonicalURL(site renderedSite, article ArticleContent) string {
 }
 
 func renderSitemap(site renderedSite) string {
-	urls := []sitemapURL{
-		{Loc: site.PublicBaseURL + "/"},
-		{Loc: site.PublicBaseURL + site.BasePath + "/"},
+	urls := sitemapURLs(site, true)
+	return renderSitemapURLs(urls)
+}
+
+func renderBlogSitemap(site renderedSite) string {
+	return renderSitemapURLs(sitemapURLs(site, false))
+}
+
+func sitemapURLs(site renderedSite, includeHome bool) []sitemapURL {
+	urls := make([]sitemapURL, 0, len(site.Articles)+4)
+	if includeHome {
+		urls = append(urls, sitemapURL{Loc: site.PublicBaseURL + "/"})
 	}
+	urls = append(urls, sitemapURL{Loc: site.PublicBaseURL + site.BasePath + "/"})
 	if site.Theme.Name == "anonime" {
 		urls = append(urls, sitemapURL{Loc: articlesURL(site)})
 		for page := 2; page <= anonimeArticlePageCount(len(site.Articles)); page++ {
@@ -894,7 +1065,10 @@ func renderSitemap(site renderedSite) string {
 	for _, article := range site.Articles {
 		urls = append(urls, sitemapURL{Loc: articleURL(site, article), LastMod: article.UpdatedAt})
 	}
+	return urls
+}
 
+func renderSitemapURLs(urls []sitemapURL) string {
 	doc := urlSet{
 		Xmlns: "http://www.sitemaps.org/schemas/sitemap/0.9",
 		URLs:  urls,

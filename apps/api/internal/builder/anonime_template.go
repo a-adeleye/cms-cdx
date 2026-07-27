@@ -26,7 +26,7 @@ func renderAnonimeBlogLandingDocument(site renderedSite, canonical string) strin
 	body.WriteString(renderAnonimePricingCallout())
 	body.WriteString(renderAnonimeFooter(site))
 	body.WriteString(`</div></section>`)
-	return renderDocument(site, "Home", body.String(), canonical)
+	return renderDocument(site, siteDocumentMetadata(site, "Home", canonical), body.String())
 }
 
 func renderAnonimeArticlesPage(site renderedSite) string {
@@ -42,7 +42,7 @@ func renderAnonimeArticlesPageNumber(site renderedSite, requestedPage int) strin
 	body.WriteString(renderAnonimeArticlesIndex(site, articles, currentPage, totalPages))
 	body.WriteString(renderAnonimeFooter(site))
 	body.WriteString(`</div></section>`)
-	return renderDocument(site, "Articles", body.String(), anonimeArticlesPageURL(site, currentPage))
+	return renderDocument(site, siteDocumentMetadata(site, "Articles", anonimeArticlesPageURL(site, currentPage)), body.String())
 }
 
 func renderAnonimeArticlePage(site renderedSite, article ArticleContent) string {
@@ -52,7 +52,7 @@ func renderAnonimeArticlePage(site renderedSite, article ArticleContent) string 
 	body.WriteString(renderAnonimeArticleLayout(site, article))
 	body.WriteString(renderAnonimeFooter(site))
 	body.WriteString(`</div></section>`)
-	return renderDocument(site, article.Title, body.String(), canonicalURL(site, article))
+	return renderDocument(site, articleDocumentMetadata(site, article), body.String())
 }
 
 func renderAnonimeHeader(site renderedSite) string {
@@ -72,6 +72,10 @@ func renderAnonimeHeader(site renderedSite) string {
 	body.WriteString(`<details class="anonime-mobile-nav"><summary aria-label="Open navigation"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></summary><nav aria-label="Mobile navigation"><a href="https://anonime.io/#top">Home</a><a href="https://anonime.io/#how-it-works">How it Works</a><a href="https://anonime.io/pricing">Plans &amp; Pricing</a><a href="https://anonime.io/blog">Blog</a><a href="https://app.anonime.io">Log in</a><a href="https://app.anonime.io">Get Started</a></nav></details>`)
 	body.WriteString(`</div></header>`)
 	return body.String()
+}
+
+func renderAnonimeThemeScript() string {
+	return `<script>(function(){var key="anonime-theme",root=document.documentElement;function prefersDark(){return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches}function setTheme(dark,persist){root.dataset.theme=dark?"dark":"light";var toggle=document.getElementById("anonime-theme-toggle");if(toggle){toggle.checked=dark}if(persist){try{localStorage.setItem(key,dark?"dark":"light")}catch(_){}}}var saved="";try{saved=localStorage.getItem(key)||""}catch(_){}setTheme(saved==="dark"||(saved===""&&prefersDark()),false);document.addEventListener("DOMContentLoaded",function(){var toggle=document.getElementById("anonime-theme-toggle");if(!toggle){return}toggle.checked=root.dataset.theme==="dark";toggle.addEventListener("change",function(){setTheme(toggle.checked,true)})})})();</script>`
 }
 
 func renderAnonimeHeaderBrand() string {

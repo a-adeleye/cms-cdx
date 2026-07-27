@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -17,6 +18,7 @@ import (
 
 	"cms-builder/api/internal/ai"
 	"cms-builder/api/internal/builder"
+	"cms-builder/api/internal/media"
 	"cms-builder/api/internal/middleware"
 	"cms-builder/api/internal/models"
 	"cms-builder/api/internal/storage"
@@ -2036,11 +2038,15 @@ func (a *API) uploadMediaAsset(ctx context.Context, siteID, fileName string, con
 	if len(contents) == 0 {
 		return mediaAssetResponse{}, fmt.Errorf("%w: file contents are required", errValidation)
 	}
+	optimized, err := media.OptimizeForUpload(fileName, mimeType, contents)
+	if err != nil {
+		return mediaAssetResponse{}, fmt.Errorf("%w: unable to optimize image", errValidation)
+	}
 
 	stored, err := a.Services.Storage.Upload(ctx, storage.UploadFile{
-		FileName: fileName,
-		Contents: contents,
-		MimeType: mimeType,
+		FileName: optimized.FileName,
+		Contents: optimized.Contents,
+		MimeType: optimized.MimeType,
 		SiteID:   siteID,
 	})
 	if err != nil {
@@ -2051,10 +2057,10 @@ func (a *API) uploadMediaAsset(ctx context.Context, siteID, fileName string, con
 	}
 
 	return a.persistMediaAsset(ctx, siteID, mediaUpsertRequest{
-		FileName:        fileName,
+		FileName:        optimized.FileName,
 		FileURL:         stored.PublicURL,
-		MimeType:        mimeType,
-		SizeBytes:       int64(len(contents)),
+		MimeType:        optimized.MimeType,
+		SizeBytes:       int64(len(optimized.Contents)),
 		StorageProvider: a.storageProviderName(),
 		StorageKey:      stored.Key,
 		AltText:         altText,
@@ -2294,6 +2300,10 @@ func (a *API) rewritePublishedCoverImages(ctx context.Context, content *builder.
 	if err != nil {
 		return fmt.Errorf("production storage is misconfigured: %w", err)
 	}
+	blogPath, err := models.CanonicalBlogPath(site.BlogPath)
+	if err != nil {
+		return fmt.Errorf("production storage requires a valid blog path: %w", err)
+	}
 
 	client := &http.Client{Timeout: 30 * time.Second}
 	for i := range content.Articles {
@@ -2302,13 +2312,77 @@ func (a *API) rewritePublishedCoverImages(ctx context.Context, content *builder.
 		if coverURL == "" || !isDevStorageImageURL(coverURL, a.Config.S3PublicURL) {
 			continue
 		}
-		newURL, err := migrateImageToProductionStorage(ctx, client, prodStorage, site.ID, coverURL)
+		sourceURL, err := devStorageObjectURL(coverURL, a.Config.S3PublicURL, a.Config.S3Endpoint, a.Config.S3Bucket)
+		if err != nil {
+			return fmt.Errorf("unable to resolve dev cover image source for %q: %w", article.Title, err)
+		}
+		objectKey, err := productionCoverObjectKey(blogPath, coverURL)
+		if err != nil {
+			return fmt.Errorf("unable to resolve production cover image key for %q: %w", article.Title, err)
+		}
+
+		newURL, err := migrateImageToProductionStorage(ctx, client, prodStorage, site.ID, sourceURL, objectKey)
 		if err != nil {
 			return fmt.Errorf("unable to migrate cover image for %q: %w", article.Title, err)
 		}
 		article.CoverImageURL = newURL
 	}
 	return nil
+}
+
+// productionCoverObjectKey keeps production cover images directly beneath the
+// generated blog path, for example blog/cover.png.
+func productionCoverObjectKey(blogPath, imageURL string) (string, error) {
+	canonicalBlogPath, err := models.CanonicalBlogPath(blogPath)
+	if err != nil {
+		return "", err
+	}
+	parsed, err := url.Parse(strings.TrimSpace(imageURL))
+	if err != nil {
+		return "", errors.New("cover image URL is invalid")
+	}
+	fileName := path.Base(parsed.Path)
+	if fileName == "." || fileName == "/" || fileName == "" {
+		return "", errors.New("cover image file name is missing")
+	}
+	return path.Join(strings.TrimPrefix(canonicalBlogPath, "/"), fileName), nil
+}
+
+// devStorageObjectURL maps a browser-facing development storage URL to the
+// S3 endpoint reachable by the API server. This prevents a container from
+// attempting to reach its own localhost port while publishing cover images.
+func devStorageObjectURL(imageURL, devPublicURL, devEndpoint, bucket string) (string, error) {
+	image, err := url.Parse(strings.TrimSpace(imageURL))
+	if err != nil || image.Scheme == "" || image.Host == "" {
+		return "", errors.New("cover image URL is invalid")
+	}
+	public, err := url.Parse(strings.TrimRight(strings.TrimSpace(devPublicURL), "/"))
+	if err != nil || public.Scheme == "" || public.Host == "" {
+		return "", errors.New("development storage public URL is invalid")
+	}
+	endpoint, err := url.Parse(strings.TrimRight(strings.TrimSpace(devEndpoint), "/"))
+	if err != nil || (endpoint.Scheme != "http" && endpoint.Scheme != "https") || endpoint.Host == "" {
+		return "", errors.New("development storage endpoint is invalid")
+	}
+	bucket = strings.TrimSpace(bucket)
+	if bucket == "" {
+		return "", errors.New("development storage bucket is not configured")
+	}
+
+	publicPath := strings.TrimRight(public.Path, "/")
+	if image.Scheme != public.Scheme || !strings.EqualFold(image.Host, public.Host) || !strings.HasPrefix(image.Path, publicPath+"/") {
+		return "", errors.New("cover image does not use the configured development storage public URL")
+	}
+	objectKey := strings.TrimPrefix(image.Path, publicPath+"/")
+	if objectKey == "" {
+		return "", errors.New("cover image storage key is missing")
+	}
+
+	endpoint.Path = "/" + strings.TrimLeft(path.Join(endpoint.Path, bucket, objectKey), "/")
+	endpoint.RawPath = ""
+	endpoint.RawQuery = ""
+	endpoint.Fragment = ""
+	return endpoint.String(), nil
 }
 
 // isDevStorageImageURL reports whether an image URL points at this server's
@@ -2330,7 +2404,7 @@ func isDevStorageImageURL(rawURL, devPublicURL string) bool {
 	return host == "localhost" || host == "127.0.0.1"
 }
 
-func migrateImageToProductionStorage(ctx context.Context, client *http.Client, prodStorage storage.StorageProvider, siteID, imageURL string) (string, error) {
+func migrateImageToProductionStorage(ctx context.Context, client *http.Client, prodStorage storage.StorageProvider, siteID, imageURL, objectKey string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
 	if err != nil {
 		return "", err
@@ -2359,12 +2433,18 @@ func migrateImageToProductionStorage(ctx context.Context, client *http.Client, p
 			fileName = base
 		}
 	}
+	optimized, err := media.OptimizeForUpload(fileName, mimeType, contents)
+	if err != nil {
+		return "", err
+	}
+	objectKey = path.Join(path.Dir(objectKey), optimized.FileName)
 
 	stored, err := prodStorage.Upload(ctx, storage.UploadFile{
-		FileName: fileName,
-		Contents: contents,
-		MimeType: mimeType,
-		SiteID:   siteID,
+		FileName:  optimized.FileName,
+		Contents:  optimized.Contents,
+		MimeType:  optimized.MimeType,
+		SiteID:    siteID,
+		ObjectKey: objectKey,
 	})
 	if err != nil {
 		return "", err

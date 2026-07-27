@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"path"
 	"regexp"
 	"strings"
@@ -19,10 +20,11 @@ import (
 )
 
 type s3Storage struct {
-	client    *s3.Client
-	bucket    string
-	publicURL string
-	enabled   bool
+	client               *s3.Client
+	bucket               string
+	publicURL            string
+	requiresBucketPolicy bool
+	enabled              bool
 }
 
 var unsafeObjectName = regexp.MustCompile(`[^a-zA-Z0-9._-]+`)
@@ -32,6 +34,7 @@ func NewFromConfig(cfg config.Config) StorageProvider {
 }
 
 func newS3Storage(endpoint, region, bucket, accessKey, secretKey, publicURL string) StorageProvider {
+	endpoint = normalizedS3Endpoint(endpoint, bucket)
 	if strings.TrimSpace(endpoint) == "" ||
 		strings.TrimSpace(bucket) == "" ||
 		strings.TrimSpace(accessKey) == "" ||
@@ -55,10 +58,11 @@ func newS3Storage(endpoint, region, bucket, accessKey, secretKey, publicURL stri
 	})
 
 	return &s3Storage{
-		client:    client,
-		bucket:    bucket,
-		publicURL: strings.TrimRight(publicURL, "/"),
-		enabled:   true,
+		client:               client,
+		bucket:               bucket,
+		publicURL:            strings.TrimRight(publicURL, "/"),
+		requiresBucketPolicy: requiresBucketPolicy(endpoint),
+		enabled:              true,
 	}
 }
 
@@ -73,13 +77,16 @@ func (s *s3Storage) Upload(ctx context.Context, file UploadFile) (*StoredFile, e
 		return nil, err
 	}
 
-	key := storageObjectKey(file.SiteID, file.FileName)
+	key, err := uploadObjectKey(file)
+	if err != nil {
+		return nil, err
+	}
 	contentType := strings.TrimSpace(file.MimeType)
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
 
-	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
+	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
 		Key:         aws.String(key),
 		Body:        bytes.NewReader(file.Contents),
@@ -95,6 +102,45 @@ func (s *s3Storage) Upload(ctx context.Context, file UploadFile) (*StoredFile, e
 	}, nil
 }
 
+// normalizedS3Endpoint removes an incorrectly appended R2 bucket name. R2
+// expects the account-level S3 endpoint; the bucket is supplied separately to
+// each S3 operation.
+func normalizedS3Endpoint(endpoint, bucket string) string {
+	endpoint = strings.TrimRight(strings.TrimSpace(endpoint), "/")
+	parsed, err := url.Parse(endpoint)
+	if err != nil || !strings.HasSuffix(strings.ToLower(parsed.Hostname()), ".r2.cloudflarestorage.com") {
+		return endpoint
+	}
+	if strings.Trim(parsed.Path, "/") != strings.TrimSpace(bucket) {
+		return endpoint
+	}
+	parsed.Path = ""
+	parsed.RawPath = ""
+	return parsed.String()
+}
+
+func requiresBucketPolicy(endpoint string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(endpoint))
+	return err != nil || !strings.HasSuffix(strings.ToLower(parsed.Hostname()), ".r2.cloudflarestorage.com")
+}
+
+func uploadObjectKey(file UploadFile) (string, error) {
+	if strings.TrimSpace(file.ObjectKey) == "" {
+		return storageObjectKey(file.SiteID, file.FileName), nil
+	}
+
+	key := strings.Trim(strings.TrimSpace(file.ObjectKey), "/")
+	if key == "" {
+		return "", errors.New("storage object key is required")
+	}
+	for _, segment := range strings.Split(key, "/") {
+		if segment == "" || segment == "." || segment == ".." {
+			return "", errors.New("storage object key is invalid")
+		}
+	}
+	return key, nil
+}
+
 func (s *s3Storage) ensureBucket(ctx context.Context) error {
 	_, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(s.bucket),
@@ -106,6 +152,9 @@ func (s *s3Storage) ensureBucket(ctx context.Context) error {
 		if createErr != nil {
 			return fmt.Errorf("unable to prepare storage bucket: %w", createErr)
 		}
+	}
+	if !s.requiresBucketPolicy {
+		return nil
 	}
 
 	policy, err := publicReadBucketPolicy(s.bucket)

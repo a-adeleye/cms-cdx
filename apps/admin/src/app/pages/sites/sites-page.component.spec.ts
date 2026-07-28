@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
@@ -15,6 +15,7 @@ describe('SitesPageComponent', () => {
     slug: 'example',
     domain: 'https://example.test',
     blogPath: '/articles',
+    contentContext: 'standalone_blog' as const,
     status: 'active' as const,
     templateKey: 'default-blog',
     themeConfig: '{}',
@@ -34,10 +35,11 @@ describe('SitesPageComponent', () => {
         { id: 'template-default', name: 'Default Blog', slug: 'default-blog', updatedAt: '2026-05-23T00:00:00.000Z' },
         { id: 'template-premium', name: 'Premium SaaS', slug: 'premium-saas', updatedAt: '2026-05-23T00:00:00.000Z' },
       ]),
-      sites: jasmine.createSpy('sites').and.returnValue([selectedSite]),
+      sites: jasmine.createSpy('sites').and.returnValue([selectedSite, { ...selectedSite, id: 'site-other', name: 'Other Site' }]),
       selectedSiteId: jasmine.createSpy('selectedSiteId').and.returnValue('site-example'),
       createSite: jasmine.createSpy('createSite').and.resolveTo(selectedSite),
       updateSite: jasmine.createSpy('updateSite').and.resolveTo(selectedSite),
+      deleteSite: jasmine.createSpy('deleteSite').and.resolveTo(),
       selectSite: jasmine.createSpy('selectSite').and.resolveTo(),
       reportError: jasmine.createSpy('reportError'),
     } as unknown as WorkspaceStateService;
@@ -130,5 +132,13 @@ describe('SitesPageComponent', () => {
     expect(fixture.nativeElement.querySelector('dialog')?.open).toBeTrue();
     expect(fixture.nativeElement.querySelector('input[formcontrolname="slug"]')?.value).toBe('example');
     expect(fixture.nativeElement.querySelector('select[formcontrolname="status"]')?.value).toBe('active');
+  });
+
+  it('deletes a site only after confirmation', async () => {
+    spyOn(TestBed.inject(DOCUMENT).defaultView!, 'confirm').and.returnValue(true);
+
+    await fixture.componentInstance.deleteSite(selectedSite);
+
+    expect(fakeState.deleteSite).toHaveBeenCalledWith('site-example');
   });
 });

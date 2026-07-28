@@ -1,0 +1,83 @@
+---
+import ClosingBand from './components/ClosingBand.astro';
+import MarkdownContent from './components/MarkdownContent.astro';
+import PostCard from './components/PostCard.astro';
+import PostMeta from './components/PostMeta.astro';
+import PostVisual from './components/PostVisual.astro';
+import SiteShell from './components/SiteShell.astro';
+import { parseArticleMarkdown } from './lib/markdown';
+import { designArticles, resolveArticles, resolveFeaturedArticle, resolveSite } from './lib/model';
+
+const {
+  site: siteInput,
+  article: articleInput,
+  relatedArticles: relatedInput,
+} = Astro.props as {
+  site?: unknown;
+  article?: unknown;
+  relatedArticles?: unknown;
+};
+const site = resolveSite(siteInput);
+const article = resolveFeaturedArticle(articleInput);
+const parsedContent = parseArticleMarkdown(article.contentMarkdown, article.title);
+const relatedArticles = relatedInput !== undefined
+  ? resolveArticles(relatedInput).slice(0, 3)
+  : articleInput === undefined ? designArticles.slice(0, 3) : [];
+const hasTableOfContents = parsedContent.tableOfContents.length > 0;
+---
+
+<SiteShell site={site} page="article">
+  <article>
+    <header class="article-hero">
+      <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="https://supromail.com/">Home</a><span>/</span>
+          <a href={`${site.blogPath}/`}>Blog</a><span>/</span>
+          <a href={`${site.blogPath}/?category=${article.categorySlug}`}>{article.category}</a>
+        </nav>
+        <h1>{article.title}</h1>
+        {article.excerpt && <p class="lede">{article.excerpt}</p>}
+        <PostMeta article={article} longDate />
+      </div>
+    </header>
+
+    <div class="container">
+      <PostVisual article={article} variant="cover" class="reveal reveal-scale" />
+    </div>
+
+    <div class:list={['container', 'article-layout', { 'no-toc': !hasTableOfContents }]}>
+      {hasTableOfContents && (
+        <aside class="toc" aria-label="On this page">
+          <h4>On this page</h4>
+          <ol id="tocList">
+            {parsedContent.tableOfContents.map((entry) => (
+              <li><a href={`#${entry.id}`}>{entry.label}</a></li>
+            ))}
+          </ol>
+        </aside>
+      )}
+      <MarkdownContent blocks={parsedContent.blocks} />
+    </div>
+  </article>
+
+  {relatedArticles.length > 0 && (
+    <section class="related section">
+      <div class="container">
+        <div class="related-head reveal">
+          <h2>Keep reading</h2>
+          <a href={`${site.blogPath}/`}>All articles →</a>
+        </div>
+        <div class="post-grid" data-stagger>
+          {relatedArticles.map((related) => <PostCard article={related} blogPath={site.blogPath} />)}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <ClosingBand
+    heading="Start sending from what you own"
+    body="Verify a domain, pair a phone, and send your first message in under 10 minutes."
+    ctaLabel="Start sending for free"
+    ctaHref="https://app.supromail.com"
+  />
+</SiteShell>

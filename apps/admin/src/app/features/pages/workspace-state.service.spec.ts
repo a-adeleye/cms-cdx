@@ -19,6 +19,7 @@ describe('WorkspaceStateService', () => {
       'loadWorkspace',
       'createSite',
       'updateSite',
+      'deleteSite',
       'upsertArticle',
       'createCategory',
       'updateCategory',
@@ -28,8 +29,12 @@ describe('WorkspaceStateService', () => {
       'updateLandingSection',
       'reorderLandingSections',
       'createBuild',
+      'clearBuildHistory',
       'createMediaAsset',
       'uploadMediaFile',
+      'updateMediaAsset',
+      'replaceMediaFile',
+      'deleteMediaAsset',
     ]);
 
     api.loadWorkspace.and.callFake(async (siteId?: string) => ({
@@ -184,6 +189,9 @@ describe('WorkspaceStateService', () => {
     });
     api.deleteCategory.and.resolveTo();
     api.deleteArticle.and.resolveTo();
+    api.deleteSite.and.resolveTo();
+    api.clearBuildHistory.and.resolveTo();
+    api.deleteMediaAsset.and.resolveTo();
     api.updateArticle.and.resolveTo({
       id: 'article-1',
       siteId: 'site-example',
@@ -217,6 +225,14 @@ describe('WorkspaceStateService', () => {
       storageProvider: 'minio',
       storageKey: 'site-example/cover.jpg',
       altText: 'Cover image',
+    });
+    api.updateMediaAsset.and.resolveTo({
+      id: 'media-new', siteId: 'site-example', fileName: 'cover.jpg', fileUrl: 'https://cdn.example/cover.jpg',
+      mimeType: 'image/jpeg', sizeBytes: 1024, storageProvider: 'minio', storageKey: 'site-example/cover.jpg', altText: 'Updated cover image',
+    });
+    api.replaceMediaFile.and.resolveTo({
+      id: 'media-new', siteId: 'site-example', fileName: 'replacement.jpg', fileUrl: 'https://cdn.example/replacement.jpg',
+      mimeType: 'image/jpeg', sizeBytes: 1024, storageProvider: 'minio', storageKey: 'site-example/cover.jpg', altText: 'Replacement image',
     });
 
     await TestBed.configureTestingModule({
@@ -293,6 +309,23 @@ describe('WorkspaceStateService', () => {
     expect(api.loadWorkspace.calls.count()).toBe(before);
     expect(media.id).toBe('media-new');
     expect(service.mediaAssets().some((asset) => asset.id === 'media-new')).toBeTrue();
+  });
+
+  it('manages the selected site and its media through the API', async () => {
+    await service.login('admin@example.com', 'admin123');
+    const file = new File(['replacement'], 'replacement.jpg', { type: 'image/jpeg' });
+
+    await service.clearBuildHistory();
+    await service.updateMediaAltText('media-new', 'Updated cover image');
+    await service.replaceMediaFile('media-new', file, 'Replacement image');
+    await service.deleteMediaAsset('media-new');
+    await service.deleteSite('site-example');
+
+    expect(api.clearBuildHistory).toHaveBeenCalledWith('site-example');
+    expect(api.updateMediaAsset).toHaveBeenCalledWith('site-example', 'media-new', 'Updated cover image');
+    expect(api.replaceMediaFile).toHaveBeenCalledWith('site-example', 'media-new', file, 'Replacement image');
+    expect(api.deleteMediaAsset).toHaveBeenCalledWith('site-example', 'media-new');
+    expect(api.deleteSite).toHaveBeenCalledWith('site-example');
   });
 
   it('deletes articles through the API and refreshes the workspace', async () => {

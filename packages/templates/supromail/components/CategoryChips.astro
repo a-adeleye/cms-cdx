@@ -1,0 +1,12 @@
+---
+const { categories } = Astro.props as { categories: Array<{ name: string; slug: string }> };
+---
+
+{categories.length > 0 && (
+  <div class="chip-row" role="group" aria-label="Filter by category">
+    <button class="chip active" type="button" data-filter="all">All</button>
+    {categories.map((category) => (
+      <button class="chip" type="button" data-filter={category.slug}>{category.name}</button>
+    ))}
+  </div>
+)}

@@ -56,6 +56,12 @@
   box-shadow: 0 3px 8px rgb(15 23 42 / 0.2);
 }
 
+.sidebar-brand__mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .sidebar-brand__site {
   min-width: 0;
   flex: 1;

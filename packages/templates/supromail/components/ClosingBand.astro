@@ -1,0 +1,16 @@
+---
+const { heading, body, ctaLabel = '', ctaHref = '' } = Astro.props as {
+  heading: string;
+  body: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+};
+---
+
+<section class="final-band section blog-cta">
+  <div class="container final-inner reveal reveal-scale">
+    <h2>{heading}</h2>
+    <p>{body}</p>
+    {ctaLabel && ctaHref && <a class="final-cta" href={ctaHref}>{ctaLabel}</a>}
+  </div>
+</section>

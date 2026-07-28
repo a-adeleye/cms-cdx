@@ -6,6 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"cms-builder/api/internal/builder"
+	"cms-builder/api/internal/config"
+	"cms-builder/api/internal/models"
+	"cms-builder/api/internal/services"
 	"cms-builder/api/internal/storage"
 )
 
@@ -131,5 +135,69 @@ func TestMigrateImageToProductionStorageReturnsErrorOnFetchFailure(t *testing.T)
 	}
 	if len(fake.uploaded) != 0 {
 		t.Fatalf("expected no uploads on fetch failure, got %d", len(fake.uploaded))
+	}
+}
+
+func TestRewritePublishedCoverImagesPersistsR2URLAndSkipsLaterUpload(t *testing.T) {
+	db := openTestDatabase(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	siteID := mustQueryText(t, db, ctx, `
+		INSERT INTO sites (name, slug, blog_path)
+		VALUES ('R2 persistence test', 'r2-persistence-' || replace(gen_random_uuid()::text, '-', ''), '/blog')
+		RETURNING id::text
+	`)
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM sites WHERE id = $1`, siteID)
+	})
+	articleID := mustQueryText(t, db, ctx, `
+		INSERT INTO articles (site_id, title, slug, content_markdown, cover_image_url, status)
+		VALUES ($1, 'Existing article', 'existing-article', 'Body', 'http://development.invalid/cover.png', 'published')
+		RETURNING id::text
+	`, siteID)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write(testPNG(t))
+	}))
+	defer server.Close()
+
+	devPublicURL := server.URL + "/cms-builder"
+	api := &API{
+		Services: services.Services{DB: db},
+		Config: config.Config{
+			S3Endpoint:  server.URL,
+			S3Bucket:    "cms-builder",
+			S3PublicURL: devPublicURL,
+		},
+	}
+	content := builder.SiteContent{Articles: []builder.ArticleContent{{
+		ID: articleID, Title: "Existing article", CoverImageURL: devPublicURL + "/" + siteID + "/media/cover.png",
+	}}}
+	provider := &capturingStorageProvider{}
+	site := models.Site{ID: siteID, BlogPath: "/blog"}
+
+	if err := api.rewritePublishedCoverImagesWithStorage(ctx, &content, site, provider); err != nil {
+		t.Fatalf("first migration returned error: %v", err)
+	}
+	if len(provider.uploaded) != 1 {
+		t.Fatalf("expected one initial upload, got %d", len(provider.uploaded))
+	}
+	if content.Articles[0].CoverImageURL != "https://cdn.example.com/site-1/media/cover.webp" {
+		t.Fatalf("unexpected rewritten cover URL: %q", content.Articles[0].CoverImageURL)
+	}
+	var persistedURL string
+	if err := db.QueryRowContext(ctx, `SELECT cover_image_url FROM articles WHERE id = $1`, articleID).Scan(&persistedURL); err != nil {
+		t.Fatal(err)
+	}
+	if persistedURL != content.Articles[0].CoverImageURL {
+		t.Fatalf("expected persisted cover URL %q, got %q", content.Articles[0].CoverImageURL, persistedURL)
+	}
+
+	if err := api.rewritePublishedCoverImagesWithStorage(ctx, &content, site, provider); err != nil {
+		t.Fatalf("later production build returned error: %v", err)
+	}
+	if len(provider.uploaded) != 1 {
+		t.Fatalf("expected later build to reuse the persisted R2 URL, got %d uploads", len(provider.uploaded))
 	}
 }

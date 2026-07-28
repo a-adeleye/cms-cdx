@@ -217,6 +217,15 @@ type mediaUpsertRequest struct {
 	AltText         string `json:"altText"`
 }
 
+type mediaUpdateRequest struct {
+	AltText string `json:"altText"`
+}
+
+const (
+	maxMediaUploadBytes  = 12 << 20
+	maxMediaAltTextRunes = 500
+)
+
 type buildCreateRequest struct {
 	BuildType  string   `json:"buildType"`
 	ArticleIDs []string `json:"articleIds"`
@@ -367,6 +376,23 @@ func (a *API) siteSubroutes(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			writeJSON(w, http.StatusOK, site)
+		case http.MethodDelete:
+			if !requireAdmin(w, r) {
+				return
+			}
+			if err := a.deleteSite(r.Context(), siteID); err != nil {
+				if errors.Is(err, errConflict) {
+					writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+					return
+				}
+				if errors.Is(err, sql.ErrNoRows) {
+					http.NotFound(w, r)
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to delete site"})
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -392,7 +418,7 @@ func (a *API) siteSubroutes(w http.ResponseWriter, r *http.Request) {
 	case "builds":
 		a.handleBuildRoutes(w, r, siteID)
 	case "media":
-		a.handleMediaRoutes(w, r, siteID)
+		a.handleMediaRoutes(w, r, siteID, parts[2:])
 	case "ai":
 		a.handleAISuggestion(w, r, siteID, parts[2:])
 	default:
@@ -751,12 +777,38 @@ func (a *API) handleBuildRoutes(w http.ResponseWriter, r *http.Request, siteID s
 			return
 		}
 		writeJSON(w, http.StatusCreated, build)
+	case http.MethodDelete:
+		if !requireAdmin(w, r) {
+			return
+		}
+		if err := a.clearBuildHistory(r.Context(), siteID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				http.NotFound(w, r)
+				return
+			}
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to clear deployment history"})
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func (a *API) handleMediaRoutes(w http.ResponseWriter, r *http.Request, siteID string) {
+func (a *API) handleMediaRoutes(w http.ResponseWriter, r *http.Request, siteID string, routeParts ...[]string) {
+	parts := []string{}
+	if len(routeParts) > 0 {
+		parts = routeParts[0]
+	}
+	if len(parts) > 1 {
+		http.NotFound(w, r)
+		return
+	}
+	if len(parts) == 1 && parts[0] != "" {
+		a.handleMediaAssetRoute(w, r, siteID, parts[0])
+		return
+	}
+
 	switch r.Method {
 	case http.MethodGet:
 		media, err := a.listMediaAssets(r.Context(), siteID)
@@ -767,63 +819,12 @@ func (a *API) handleMediaRoutes(w http.ResponseWriter, r *http.Request, siteID s
 		writeJSON(w, http.StatusOK, map[string]any{"items": media})
 	case http.MethodPost:
 		if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
-			r.Body = http.MaxBytesReader(w, r.Body, 12<<20)
-			if err := r.ParseMultipartForm(12 << 20); err != nil {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid multipart payload"})
-				return
-			}
-
-			file, header, err := r.FormFile("file")
+			fileName, contents, mimeType, altText, status, err := readMediaUpload(w, r)
 			if err != nil {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file is required"})
+				writeJSON(w, status, map[string]string{"error": err.Error()})
 				return
 			}
-			defer file.Close()
-
-			contents, err := io.ReadAll(io.LimitReader(file, 12<<20+1))
-			if err != nil {
-				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to read uploaded file"})
-				return
-			}
-			if len(contents) > 12<<20 {
-				writeJSON(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "file is too large"})
-				return
-			}
-			if len(contents) == 0 {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file is empty"})
-				return
-			}
-
-			// Never trust the multipart Content-Type supplied by the client. Detect the
-			// payload from its bytes and allow only formats supported by the CMS.
-			mimeType := http.DetectContentType(contents)
-			allowedImageTypes := map[string]bool{
-				"image/gif":    true,
-				"image/jpeg":   true,
-				"image/png":    true,
-				"image/webp":   true,
-				"image/x-icon": true,
-			}
-			if !allowedImageTypes[mimeType] {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "only image uploads are supported"})
-				return
-			}
-			extensionTypes := map[string]string{
-				".gif":  "image/gif",
-				".jpeg": "image/jpeg",
-				".jpg":  "image/jpeg",
-				".png":  "image/png",
-				".webp": "image/webp",
-				".ico":  "image/x-icon",
-			}
-			extension := strings.ToLower(filepath.Ext(header.Filename))
-			if extensionTypes[extension] != mimeType {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file extension does not match image content"})
-				return
-			}
-
-			altText := strings.TrimSpace(r.FormValue("altText"))
-			media, err := a.uploadMediaAsset(r.Context(), siteID, header.Filename, contents, mimeType, altText)
+			media, err := a.uploadMediaAsset(r.Context(), siteID, fileName, contents, mimeType, altText)
 			if err != nil {
 				if errors.Is(err, errValidation) {
 					writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
@@ -856,7 +857,111 @@ func (a *API) handleMediaRoutes(w http.ResponseWriter, r *http.Request, siteID s
 	}
 }
 
-var errValidation = errors.New("validation error")
+func (a *API) handleMediaAssetRoute(w http.ResponseWriter, r *http.Request, siteID, assetID string) {
+	switch r.Method {
+	case http.MethodPatch:
+		var payload mediaUpdateRequest
+		if err := decodeJSON(r, &payload); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON payload"})
+			return
+		}
+		media, err := a.updateMediaAsset(r.Context(), siteID, assetID, payload)
+		if err != nil {
+			if errors.Is(err, errValidation) {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+				return
+			}
+			if errors.Is(err, sql.ErrNoRows) {
+				http.NotFound(w, r)
+				return
+			}
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to update media asset"})
+			return
+		}
+		writeJSON(w, http.StatusOK, media)
+	case http.MethodPut:
+		fileName, contents, mimeType, altText, status, err := readMediaUpload(w, r)
+		if err != nil {
+			writeJSON(w, status, map[string]string{"error": err.Error()})
+			return
+		}
+		media, err := a.replaceMediaAsset(r.Context(), siteID, assetID, fileName, contents, mimeType, altText)
+		if err != nil {
+			if errors.Is(err, errValidation) {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+				return
+			}
+			if errors.Is(err, sql.ErrNoRows) {
+				http.NotFound(w, r)
+				return
+			}
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to replace media asset"})
+			return
+		}
+		writeJSON(w, http.StatusOK, media)
+	case http.MethodDelete:
+		if err := a.deleteMediaAsset(r.Context(), siteID, assetID); err != nil {
+			if errors.Is(err, errConflict) {
+				writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+				return
+			}
+			if errors.Is(err, sql.ErrNoRows) {
+				http.NotFound(w, r)
+				return
+			}
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to delete media asset"})
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func readMediaUpload(w http.ResponseWriter, r *http.Request) (string, []byte, string, string, int, error) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxMediaUploadBytes)
+	if err := r.ParseMultipartForm(maxMediaUploadBytes); err != nil {
+		return "", nil, "", "", http.StatusBadRequest, errors.New("invalid multipart payload")
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		return "", nil, "", "", http.StatusBadRequest, errors.New("file is required")
+	}
+	defer file.Close()
+
+	contents, err := io.ReadAll(io.LimitReader(file, maxMediaUploadBytes+1))
+	if err != nil {
+		return "", nil, "", "", http.StatusInternalServerError, errors.New("unable to read uploaded file")
+	}
+	if len(contents) > maxMediaUploadBytes {
+		return "", nil, "", "", http.StatusRequestEntityTooLarge, errors.New("file is too large")
+	}
+	if len(contents) == 0 {
+		return "", nil, "", "", http.StatusBadRequest, errors.New("file is empty")
+	}
+
+	mimeType := http.DetectContentType(contents)
+	allowedImageTypes := map[string]bool{
+		"image/gif": true, "image/jpeg": true, "image/png": true, "image/webp": true, "image/x-icon": true,
+	}
+	if !allowedImageTypes[mimeType] {
+		return "", nil, "", "", http.StatusBadRequest, errors.New("only image uploads are supported")
+	}
+	extensionTypes := map[string]string{
+		".gif": "image/gif", ".jpeg": "image/jpeg", ".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".ico": "image/x-icon",
+	}
+	if extensionTypes[strings.ToLower(filepath.Ext(header.Filename))] != mimeType {
+		return "", nil, "", "", http.StatusBadRequest, errors.New("file extension does not match image content")
+	}
+
+	return header.Filename, contents, mimeType, strings.TrimSpace(r.FormValue("altText")), http.StatusOK, nil
+}
+
+var (
+	errValidation = errors.New("validation error")
+	errConflict   = errors.New("conflict")
+)
 
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
@@ -1156,6 +1261,31 @@ func (a *API) updateSite(ctx context.Context, siteID string, payload siteUpsertR
 		return siteResponse{}, sql.ErrNoRows
 	}
 	return a.getSite(ctx, siteID)
+}
+
+func (a *API) deleteSite(ctx context.Context, siteID string) error {
+	tx, err := a.Services.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	var siteCount int
+	if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM sites`).Scan(&siteCount); err != nil {
+		return err
+	}
+	if siteCount <= 1 {
+		return fmt.Errorf("%w: create another site before deleting the last site", errConflict)
+	}
+
+	result, err := tx.ExecContext(ctx, `DELETE FROM sites WHERE id = $1`, siteID)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return sql.ErrNoRows
+	}
+	return tx.Commit()
 }
 
 func validateSitePayload(payload siteUpsertRequest) error {
@@ -2038,6 +2168,10 @@ func (a *API) uploadMediaAsset(ctx context.Context, siteID, fileName string, con
 	if len(contents) == 0 {
 		return mediaAssetResponse{}, fmt.Errorf("%w: file contents are required", errValidation)
 	}
+	altText, err := validateMediaAltText(altText)
+	if err != nil {
+		return mediaAssetResponse{}, err
+	}
 	optimized, err := media.OptimizeForUpload(fileName, mimeType, contents)
 	if err != nil {
 		return mediaAssetResponse{}, fmt.Errorf("%w: unable to optimize image", errValidation)
@@ -2082,6 +2216,126 @@ func (a *API) persistMediaAsset(ctx context.Context, siteID string, payload medi
 	}
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	return item, nil
+}
+
+func (a *API) updateMediaAsset(ctx context.Context, siteID, assetID string, payload mediaUpdateRequest) (mediaAssetResponse, error) {
+	altText, err := validateMediaAltText(payload.AltText)
+	if err != nil {
+		return mediaAssetResponse{}, err
+	}
+
+	result, err := a.Services.DB.ExecContext(ctx, `
+		UPDATE media_assets
+		SET alt_text = NULLIF($3, '')
+		WHERE id = $1 AND site_id = $2
+	`, assetID, siteID, altText)
+	if err != nil {
+		return mediaAssetResponse{}, err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return mediaAssetResponse{}, sql.ErrNoRows
+	}
+	return a.getMediaAsset(ctx, siteID, assetID)
+}
+
+func (a *API) replaceMediaAsset(ctx context.Context, siteID, assetID, fileName string, contents []byte, mimeType, altText string) (mediaAssetResponse, error) {
+	altText, err := validateMediaAltText(altText)
+	if err != nil {
+		return mediaAssetResponse{}, err
+	}
+	current, err := a.getMediaAsset(ctx, siteID, assetID)
+	if err != nil {
+		return mediaAssetResponse{}, err
+	}
+	optimized, err := media.OptimizeForUpload(fileName, mimeType, contents)
+	if err != nil {
+		return mediaAssetResponse{}, fmt.Errorf("%w: unable to optimize image", errValidation)
+	}
+
+	stored, err := a.Services.Storage.Upload(ctx, storage.UploadFile{
+		FileName:  optimized.FileName,
+		Contents:  optimized.Contents,
+		MimeType:  optimized.MimeType,
+		SiteID:    siteID,
+		ObjectKey: current.StorageKey,
+	})
+	if err != nil {
+		return mediaAssetResponse{}, err
+	}
+	if stored == nil || strings.TrimSpace(stored.PublicURL) == "" {
+		return mediaAssetResponse{}, fmt.Errorf("%w: storage did not return a public URL", errValidation)
+	}
+
+	result, err := a.Services.DB.ExecContext(ctx, `
+		UPDATE media_assets
+		SET file_name = $3, file_url = $4, mime_type = $5, size_bytes = $6, storage_provider = $7, storage_key = $8, alt_text = NULLIF($9, '')
+		WHERE id = $1 AND site_id = $2
+	`, assetID, siteID, optimized.FileName, stored.PublicURL, optimized.MimeType, len(optimized.Contents), a.storageProviderName(), stored.Key, altText)
+	if err != nil {
+		return mediaAssetResponse{}, err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return mediaAssetResponse{}, sql.ErrNoRows
+	}
+	return a.getMediaAsset(ctx, siteID, assetID)
+}
+
+func (a *API) deleteMediaAsset(ctx context.Context, siteID, assetID string) error {
+	asset, err := a.getMediaAsset(ctx, siteID, assetID)
+	if err != nil {
+		return err
+	}
+
+	var inUse bool
+	if err := a.Services.DB.QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM articles WHERE site_id = $1 AND cover_image_url = $2
+			UNION ALL
+			SELECT 1 FROM sites WHERE id = $1 AND (logo_media_id = $3::uuid OR favicon_media_id = $3::uuid)
+		)
+	`, siteID, asset.FileURL, assetID).Scan(&inUse); err != nil {
+		return err
+	}
+	if inUse {
+		return fmt.Errorf("%w: remove this asset from articles or site branding before deleting it", errConflict)
+	}
+	if asset.StorageKey != "" {
+		if err := a.Services.Storage.Delete(ctx, asset.StorageKey); err != nil {
+			return err
+		}
+	}
+
+	result, err := a.Services.DB.ExecContext(ctx, `DELETE FROM media_assets WHERE id = $1 AND site_id = $2`, assetID, siteID)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (a *API) getMediaAsset(ctx context.Context, siteID, assetID string) (mediaAssetResponse, error) {
+	row := a.Services.DB.QueryRowContext(ctx, `
+		SELECT id::text, site_id::text, file_name, file_url, COALESCE(mime_type, ''), COALESCE(size_bytes, 0), storage_provider, COALESCE(storage_key, ''), COALESCE(alt_text, ''), created_at
+		FROM media_assets
+		WHERE id = $1 AND site_id = $2
+	`, assetID, siteID)
+	var item mediaAssetResponse
+	var createdAt time.Time
+	if err := row.Scan(&item.ID, &item.SiteID, &item.FileName, &item.FileURL, &item.MimeType, &item.SizeBytes, &item.StorageProvider, &item.StorageKey, &item.AltText, &createdAt); err != nil {
+		return mediaAssetResponse{}, err
+	}
+	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+	return item, nil
+}
+
+func validateMediaAltText(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if len([]rune(value)) > maxMediaAltTextRunes {
+		return "", fmt.Errorf("%w: alt text must not exceed %d characters", errValidation, maxMediaAltTextRunes)
+	}
+	return value, nil
 }
 
 func (a *API) storageProviderName() string {
@@ -2142,6 +2396,18 @@ func (a *API) listBuilds(ctx context.Context, siteID string) ([]buildResponse, e
 		items = append(items, item)
 	}
 	return items, rows.Err()
+}
+
+func (a *API) clearBuildHistory(ctx context.Context, siteID string) error {
+	var exists bool
+	if err := a.Services.DB.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM sites WHERE id = $1)`, siteID).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return sql.ErrNoRows
+	}
+	_, err := a.Services.DB.ExecContext(ctx, `DELETE FROM builds WHERE site_id = $1`, siteID)
+	return err
 }
 
 func (a *API) getBuild(ctx context.Context, buildID string) (buildResponse, error) {
@@ -2300,6 +2566,10 @@ func (a *API) rewritePublishedCoverImages(ctx context.Context, content *builder.
 	if err != nil {
 		return fmt.Errorf("production storage is misconfigured: %w", err)
 	}
+	return a.rewritePublishedCoverImagesWithStorage(ctx, content, site, prodStorage)
+}
+
+func (a *API) rewritePublishedCoverImagesWithStorage(ctx context.Context, content *builder.SiteContent, site models.Site, prodStorage storage.StorageProvider) error {
 	blogPath, err := models.CanonicalBlogPath(site.BlogPath)
 	if err != nil {
 		return fmt.Errorf("production storage requires a valid blog path: %w", err)
@@ -2325,7 +2595,27 @@ func (a *API) rewritePublishedCoverImages(ctx context.Context, content *builder.
 		if err != nil {
 			return fmt.Errorf("unable to migrate cover image for %q: %w", article.Title, err)
 		}
+		if err := a.persistProductionCoverImageURL(ctx, site.ID, article.ID, newURL); err != nil {
+			return fmt.Errorf("unable to save production cover image URL for %q: %w", article.Title, err)
+		}
 		article.CoverImageURL = newURL
+	}
+	return nil
+}
+
+func (a *API) persistProductionCoverImageURL(ctx context.Context, siteID, articleID, coverImageURL string) error {
+	result, err := a.Services.DB.ExecContext(ctx, `
+		UPDATE articles
+		SET cover_image_url = $1, updated_at = NOW()
+		WHERE id = $2 AND site_id = $3
+	`, coverImageURL, articleID, siteID)
+	if err != nil {
+		return err
+	}
+	if affected, err := result.RowsAffected(); err != nil {
+		return err
+	} else if affected == 0 {
+		return sql.ErrNoRows
 	}
 	return nil
 }

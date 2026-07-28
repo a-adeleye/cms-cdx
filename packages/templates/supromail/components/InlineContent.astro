@@ -1,0 +1,13 @@
+---
+import type { InlineNode } from '../lib/markdown';
+
+const { nodes = [] } = Astro.props as { nodes: InlineNode[] };
+---
+
+{nodes.map((node) => (
+  node.kind === 'text' ? node.value :
+  node.kind === 'code' ? <code>{node.value}</code> :
+  node.kind === 'strong' ? <strong><Astro.self nodes={node.children} /></strong> :
+  node.kind === 'emphasis' ? <em><Astro.self nodes={node.children} /></em> :
+  <a href={node.href} rel={node.isExternal ? 'noopener noreferrer' : undefined}><Astro.self nodes={node.children} /></a>
+))}

@@ -105,6 +105,10 @@ interface MediaCreatePayload {
   altText: string;
 }
 
+interface MediaUpdatePayload {
+  altText: string;
+}
+
 interface CategoryUpsertPayload {
   name: string;
   description: string;
@@ -182,6 +186,10 @@ export class AdminApiService {
 
   async updateSite(siteId: string, payload: SiteUpsertPayload): Promise<SiteRecord> {
     return firstValueFrom(this.http.patch<SiteRecord>(`${this.baseUrl}/sites/${siteId}`, payload, { headers: this.headers() }));
+  }
+
+  async deleteSite(siteId: string): Promise<void> {
+    await firstValueFrom(this.http.delete(`${this.baseUrl}/sites/${siteId}`, { headers: this.headers() }));
   }
 
   async listSites(): Promise<ItemsResponse<SiteRecord>> {
@@ -344,6 +352,10 @@ export class AdminApiService {
     );
   }
 
+  async clearBuildHistory(siteId: string): Promise<void> {
+    await firstValueFrom(this.http.delete(`${this.baseUrl}/sites/${siteId}/builds`, { headers: this.headers() }));
+  }
+
   async createMediaAsset(siteId: string, payload: MediaCreatePayload): Promise<MediaAssetRecord> {
     return firstValueFrom(this.http.post<MediaAssetRecord>(`${this.baseUrl}/sites/${siteId}/media`, payload, { headers: this.headers() }));
   }
@@ -353,6 +365,21 @@ export class AdminApiService {
     formData.append('file', file, file.name);
     formData.append('altText', altText);
     return firstValueFrom(this.http.post<MediaAssetRecord>(`${this.baseUrl}/sites/${siteId}/media`, formData, { headers: this.headers() }));
+  }
+
+  async updateMediaAsset(siteId: string, assetId: string, altText: string): Promise<MediaAssetRecord> {
+    return firstValueFrom(this.http.patch<MediaAssetRecord>(`${this.baseUrl}/sites/${siteId}/media/${assetId}`, { altText } satisfies MediaUpdatePayload, { headers: this.headers() }));
+  }
+
+  async replaceMediaFile(siteId: string, assetId: string, file: File, altText: string): Promise<MediaAssetRecord> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    formData.append('altText', altText);
+    return firstValueFrom(this.http.put<MediaAssetRecord>(`${this.baseUrl}/sites/${siteId}/media/${assetId}`, formData, { headers: this.headers() }));
+  }
+
+  async deleteMediaAsset(siteId: string, assetId: string): Promise<void> {
+    await firstValueFrom(this.http.delete(`${this.baseUrl}/sites/${siteId}/media/${assetId}`, { headers: this.headers() }));
   }
 
   private headers(): HttpHeaders {

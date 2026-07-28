@@ -285,6 +285,11 @@ export class WorkspaceStateService {
     await this.updateSite(site.id, patch);
   }
 
+  async deleteSite(siteId: string): Promise<void> {
+    await this.api.deleteSite(siteId);
+    await this.loadWorkspace();
+  }
+
   async createArticleDraft(): Promise<ArticleRecord> {
     const site = this.selectedSite();
     const article = await this.api.upsertArticle(site.id, {
@@ -544,6 +549,16 @@ export class WorkspaceStateService {
     }
   }
 
+  async clearBuildHistory(): Promise<void> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    await this.api.clearBuildHistory(site.id);
+    await this.loadWorkspace(site.id);
+  }
+
   async uploadMediaFile(file: File, altText: string): Promise<MediaAssetRecord> {
     const site = this.selectedSite();
     if (!site.id) {
@@ -556,6 +571,47 @@ export class WorkspaceStateService {
       mediaAssets: [media, ...state.mediaAssets.filter((asset) => asset.id !== media.id)],
     }));
     return media;
+  }
+
+  async updateMediaAltText(assetId: string, altText: string): Promise<MediaAssetRecord> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    const media = await this.api.updateMediaAsset(site.id, assetId, altText);
+    this.state.update((state) => ({
+      ...state,
+      mediaAssets: state.mediaAssets.map((asset) => asset.id === media.id ? media : asset),
+    }));
+    return media;
+  }
+
+  async replaceMediaFile(assetId: string, file: File, altText: string): Promise<MediaAssetRecord> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    const media = await this.api.replaceMediaFile(site.id, assetId, file, altText);
+    this.state.update((state) => ({
+      ...state,
+      mediaAssets: state.mediaAssets.map((asset) => asset.id === media.id ? media : asset),
+    }));
+    return media;
+  }
+
+  async deleteMediaAsset(assetId: string): Promise<void> {
+    const site = this.selectedSite();
+    if (!site.id) {
+      throw new Error('No site selected.');
+    }
+
+    await this.api.deleteMediaAsset(site.id, assetId);
+    this.state.update((state) => ({
+      ...state,
+      mediaAssets: state.mediaAssets.filter((asset) => asset.id !== assetId),
+    }));
   }
 
   private async refreshSession(): Promise<void> {

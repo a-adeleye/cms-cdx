@@ -1,0 +1,29 @@
+---
+import type { ArticleViewModel } from '../lib/model';
+
+const { article, showDate = true, showReadingTime = true, longDate = false } = Astro.props as {
+  article: ArticleViewModel;
+  showDate?: boolean;
+  showReadingTime?: boolean;
+  longDate?: boolean;
+};
+const dateLabel = longDate ? article.publishedLongLabel : article.publishedLabel;
+const hasDate = showDate && Boolean(dateLabel);
+---
+
+<div class="post-meta">
+  <span class="avatar">{article.authorInitials}</span>
+  <span>{article.author}</span>
+  {hasDate && (
+    <>
+      <span class="dot"></span>
+      <span>{article.publishedIso ? <time datetime={article.publishedIso}>{dateLabel}</time> : dateLabel}</span>
+    </>
+  )}
+  {showReadingTime && (
+    <>
+      <span class="dot"></span>
+      <span>{article.readingTime} min read</span>
+    </>
+  )}
+</div>

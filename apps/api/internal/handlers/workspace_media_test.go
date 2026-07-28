@@ -22,6 +22,7 @@ import (
 
 type fakeStorageProvider struct {
 	uploaded []storage.UploadFile
+	deleted  []string
 }
 
 func (f *fakeStorageProvider) Upload(ctx context.Context, file storage.UploadFile) (*storage.StoredFile, error) {
@@ -33,6 +34,7 @@ func (f *fakeStorageProvider) Upload(ctx context.Context, file storage.UploadFil
 }
 
 func (f *fakeStorageProvider) Delete(ctx context.Context, key string) error {
+	f.deleted = append(f.deleted, key)
 	return nil
 }
 

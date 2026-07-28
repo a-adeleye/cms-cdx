@@ -1,0 +1,66 @@
+---
+import ClosingBand from './components/ClosingBand.astro';
+import FeaturedPost from './components/FeaturedPost.astro';
+import PostCard from './components/PostCard.astro';
+import SiteShell from './components/SiteShell.astro';
+import {
+  designArticles,
+  featuredDesignArticle,
+  resolveArticles,
+  resolveSite,
+} from './lib/model';
+
+const { site: siteInput, articles: articleInput } = Astro.props as {
+  site?: unknown;
+  articles?: unknown;
+};
+const site = resolveSite(siteInput);
+const hasCmsArticles = articleInput !== undefined;
+const cmsArticles = resolveArticles(articleInput);
+const featured = hasCmsArticles
+  ? (cmsArticles.find((article) => article.isFeatured) ?? cmsArticles[0])
+  : featuredDesignArticle;
+const unfeatured = featured ? cmsArticles.filter((article) => article.slug !== featured.slug) : cmsArticles;
+const latest = hasCmsArticles ? unfeatured.slice(0, 6) : designArticles.slice(0, 6);
+---
+
+<SiteShell site={site} page="landing">
+  <header class="page-hero container">
+    <p class="kicker">The {site.name} blog</p>
+    <h1 class="page-title">Notes on messaging <em>you actually own.</em></h1>
+    <p class="page-lede">Deliverability, SMS routing, webhooks, and the engineering behind sending from infrastructure you control.</p>
+  </header>
+
+  {featured && (
+    <section class="section supromail-featured-section" aria-label="Featured article">
+      <div class="container">
+        <FeaturedPost article={featured} blogPath={site.blogPath} />
+      </div>
+    </section>
+  )}
+
+  <section class="section supromail-latest-section" aria-label="Latest articles">
+    <div class="container section-heading reveal">
+      <h2>Latest writing</h2>
+      <p>Practical pieces from the team building {site.name}.</p>
+    </div>
+
+    {latest.length === 0 ? (
+      <p class="container empty-state">No articles published yet.</p>
+    ) : (
+      <>
+        <div class="container post-grid" data-stagger>
+          {latest.map((article) => <PostCard article={article} blogPath={site.blogPath} />)}
+        </div>
+        <div class="container grid-actions reveal">
+          <a class="btn btn-dark btn-pill" href={`${site.blogPath}/`}>View all articles</a>
+        </div>
+      </>
+    )}
+  </section>
+
+  <ClosingBand
+    heading="Get the next one by email"
+    body="One post a month on deliverability and messaging infrastructure. No product spam."
+  />
+</SiteShell>

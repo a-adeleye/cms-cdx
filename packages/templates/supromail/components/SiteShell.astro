@@ -1,0 +1,173 @@
+---
+import '../styles/supromail.css';
+import type { SiteViewModel } from '../lib/model';
+import SiteFooter from './SiteFooter.astro';
+import SiteHeader from './SiteHeader.astro';
+
+const { site, page = '' } = Astro.props as { site: SiteViewModel; page?: string };
+---
+
+<script is:inline>document.documentElement.classList.add('js');</script>
+
+<div class={`supromail-site supromail-page-${page}`}>
+  {page === 'article' && <div class="read-progress" id="readProgress" aria-hidden="true"></div>}
+  <SiteHeader site={site} />
+  <main><slot /></main>
+  <SiteFooter site={site} />
+</div>
+
+<script is:inline>
+  (() => {
+    /* ---- Mobile navigation ------------------------------- */
+    const nav = document.querySelector('.nav');
+    const navToggle = document.querySelector('.nav-toggle');
+
+    if (nav && navToggle) {
+      navToggle.addEventListener('click', () => {
+        const open = nav.classList.toggle('open');
+        navToggle.setAttribute('aria-expanded', String(open));
+      });
+    }
+
+    /* ---- Scroll reveal ----------------------------------- */
+    // Tag the children of any [data-stagger] group so they cascade into view.
+    document.querySelectorAll('[data-stagger]').forEach((group) => {
+      Array.from(group.children).forEach((child, index) => {
+        child.classList.add('reveal');
+        child.style.setProperty('--reveal-delay', `${index * 90}ms`);
+      });
+    });
+
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('visible');
+        revealObserver.unobserve(entry.target);
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+
+    document.querySelectorAll('.reveal').forEach((element) => revealObserver.observe(element));
+
+    /* ---- Frosted header on scroll ------------------------ */
+    // A sentinel + IntersectionObserver rather than window.scrollY: the host
+    // document decides what scrolls, so window scroll tracking is unreliable.
+    const siteHeader = document.querySelector('.site-header');
+
+    if (siteHeader) {
+      const sentinel = document.createElement('div');
+      sentinel.setAttribute('aria-hidden', 'true');
+      sentinel.style.cssText = 'position:absolute;top:0;left:0;width:1px;height:12px;pointer-events:none;';
+      document.body.prepend(sentinel);
+      new IntersectionObserver(([entry]) => {
+        siteHeader.classList.toggle('scrolled', !entry.isIntersecting);
+      }, { threshold: 0 }).observe(sentinel);
+    }
+
+    /* ---- Category filter (all-articles page) -------------- */
+    const chips = document.querySelectorAll('.chip[data-filter]');
+    const articleGrid = document.querySelector('#articleGrid');
+    const emptyState = document.querySelector('#emptyState');
+
+    if (chips.length && articleGrid) {
+      const cards = Array.from(articleGrid.querySelectorAll('[data-category]'));
+
+      chips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+          chips.forEach((other) => other.classList.remove('active'));
+          chip.classList.add('active');
+
+          const filter = chip.dataset.filter;
+          let shown = 0;
+
+          cards.forEach((card) => {
+            const match = filter === 'all' || card.dataset.category === filter;
+            card.hidden = !match;
+            if (!match) return;
+
+            // Opt the card out of the scroll-reveal rules entirely — toggling
+            // `visible` mid-transition can leave a card stranded at opacity 0 —
+            // and run its own cascade instead.
+            card.classList.remove('reveal', 'filter-in');
+            card.classList.add('visible');
+            void card.offsetWidth; // restart the animation
+            card.style.animationDelay = `${shown * 45}ms`;
+            card.classList.add('filter-in');
+            shown += 1;
+          });
+
+          if (emptyState) emptyState.hidden = shown > 0;
+        });
+      });
+    }
+
+    /* ---- Reading progress (article page) ------------------ */
+    // Read the offset from documentElement first and fall back to window.scrollY,
+    // so the bar tracks whichever element the host document scrolls.
+    const progressBar = document.querySelector('#readProgress');
+
+    if (progressBar) {
+      let progressTicking = false;
+      const updateProgress = () => {
+        const doc = document.documentElement;
+        const scrolled = doc.scrollTop || window.scrollY || 0;
+        const max = doc.scrollHeight - doc.clientHeight;
+        progressBar.style.transform = `scaleX(${max > 0 ? Math.min(scrolled / max, 1) : 0})`;
+      };
+      const onProgressScroll = () => {
+        if (progressTicking) return;
+        progressTicking = true;
+        requestAnimationFrame(() => {
+          updateProgress();
+          progressTicking = false;
+        });
+      };
+
+      window.addEventListener('scroll', onProgressScroll, { passive: true });
+      window.addEventListener('resize', onProgressScroll, { passive: true });
+      updateProgress();
+    }
+
+    /* ---- Table of contents highlighting ------------------- */
+    const tocLinks = document.querySelectorAll('#tocList a');
+
+    if (tocLinks.length) {
+      const headings = Array.from(tocLinks)
+        .map((link) => document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1))))
+        .filter(Boolean);
+
+      const setActive = (id) => {
+        tocLinks.forEach((link) => {
+          link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+        });
+      };
+
+      // The last heading to have crossed the reading line is the one being read.
+      // An IntersectionObserver callback only carries headings whose visibility
+      // *changed*, so during a fast scroll the topmost entry in a batch can belong
+      // to a section nowhere near the viewport and the highlight jumps around.
+      const applyActiveHeading = () => {
+        const line = window.innerHeight * 0.18;
+        let current = headings[0];
+        for (const heading of headings) {
+          if (heading.getBoundingClientRect().top > line) break;
+          current = heading;
+        }
+        if (current) setActive(current.id);
+      };
+
+      let tocTicking = false;
+      const onTocScroll = () => {
+        if (tocTicking) return;
+        tocTicking = true;
+        requestAnimationFrame(() => {
+          applyActiveHeading();
+          tocTicking = false;
+        });
+      };
+
+      window.addEventListener('scroll', onTocScroll, { passive: true });
+      window.addEventListener('resize', onTocScroll, { passive: true });
+      applyActiveHeading();
+    }
+  })();
+</script>

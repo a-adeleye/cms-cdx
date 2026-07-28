@@ -63,4 +63,42 @@ describe('AdminApiService article persistence', () => {
     request.flush(article);
     await expectAsync(result).toBeResolvedTo(article);
   });
+
+  it('sends destructive site and history requests to their scoped endpoints', async () => {
+    const deleteSite = service.deleteSite('site-1');
+    const siteRequest = http.expectOne('/api/v1/sites/site-1');
+    expect(siteRequest.request.method).toBe('DELETE');
+    siteRequest.flush(null);
+
+    const clearHistory = service.clearBuildHistory('site-1');
+    const historyRequest = http.expectOne('/api/v1/sites/site-1/builds');
+    expect(historyRequest.request.method).toBe('DELETE');
+    historyRequest.flush(null);
+
+    await expectAsync(deleteSite).toBeResolved();
+    await expectAsync(clearHistory).toBeResolved();
+  });
+
+  it('updates, replaces, and deletes scoped media assets', async () => {
+    const updated = service.updateMediaAsset('site-1', 'media-1', 'Accessible image description');
+    const updateRequest = http.expectOne('/api/v1/sites/site-1/media/media-1');
+    expect(updateRequest.request.method).toBe('PATCH');
+    expect(updateRequest.request.body).toEqual({ altText: 'Accessible image description' });
+    updateRequest.flush({ id: 'media-1' });
+
+    const replacement = service.replaceMediaFile('site-1', 'media-1', new File(['image'], 'replacement.png', { type: 'image/png' }), 'Replacement');
+    const replacementRequest = http.expectOne('/api/v1/sites/site-1/media/media-1');
+    expect(replacementRequest.request.method).toBe('PUT');
+    expect(replacementRequest.request.body instanceof FormData).toBeTrue();
+    replacementRequest.flush({ id: 'media-1' });
+
+    const deleted = service.deleteMediaAsset('site-1', 'media-1');
+    const deleteRequest = http.expectOne('/api/v1/sites/site-1/media/media-1');
+    expect(deleteRequest.request.method).toBe('DELETE');
+    deleteRequest.flush(null);
+
+    await expectAsync(updated).toBeResolved();
+    await expectAsync(replacement).toBeResolved();
+    await expectAsync(deleted).toBeResolved();
+  });
 });

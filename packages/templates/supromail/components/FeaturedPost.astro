@@ -1,0 +1,17 @@
+---
+import type { ArticleViewModel } from '../lib/model';
+import PostMeta from './PostMeta.astro';
+import PostVisual from './PostVisual.astro';
+
+const { article, blogPath } = Astro.props as { article: ArticleViewModel; blogPath: string };
+---
+
+<a class="featured reveal reveal-scale" href={`${blogPath}/${article.slug}/`}>
+  <PostVisual article={article} variant="featured" />
+  <div class="featured-body">
+    <span class="post-tag">Featured · {article.category}</span>
+    <h2>{article.title}</h2>
+    <p>{article.excerpt}</p>
+    <PostMeta article={article} />
+  </div>
+</a>

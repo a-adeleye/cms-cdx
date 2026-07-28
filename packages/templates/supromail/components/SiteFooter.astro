@@ -1,0 +1,51 @@
+---
+import type { SiteViewModel } from '../lib/model';
+
+const { site } = Astro.props as { site: SiteViewModel };
+const footerGroups = [
+  {
+    label: 'Product',
+    links: [
+      ['Email', 'https://supromail.com/#platform'],
+      ['SMS', 'https://supromail.com/#platform'],
+      ['Pricing', 'https://supromail.com/pricing'],
+    ],
+  },
+  {
+    label: 'Resources',
+    links: [
+      ['Docs', 'https://supromail.com/documentation'],
+      ['Blog', `${site.blogPath}/`],
+      ['FAQ', 'https://supromail.com/faq'],
+      ['Security', 'https://supromail.com/security'],
+    ],
+  },
+  {
+    label: 'Legal',
+    links: [
+      ['Contact', 'https://supromail.com/contact'],
+      ['Privacy', 'https://supromail.com/privacy'],
+      ['Terms', 'https://supromail.com/terms'],
+      ['Acceptable Use', 'https://supromail.com/aup'],
+    ],
+  },
+];
+---
+
+<footer class="site-footer">
+  <div class="container footer-grid" data-stagger>
+    <div>
+      <a href="https://supromail.com/" class="footer-logo" aria-label={`${site.name} home`}>
+        <img src="https://supromail.com/images/supromail-logo-dark.webp" alt={site.name} width="150" height="32" />
+      </a>
+      <p>One workspace for every conversation your business owns.</p>
+    </div>
+    {footerGroups.map((group) => (
+      <div>
+        <h4>{group.label}</h4>
+        {group.links.map(([label, href]) => <a href={href}>{label}</a>)}
+      </div>
+    ))}
+  </div>
+  <div class="container footer-wordmark">{site.name}</div>
+</footer>

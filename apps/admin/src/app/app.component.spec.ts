@@ -52,6 +52,7 @@ describe('AppComponent', () => {
   let fixture: ComponentFixture<AppComponent>;
   let location: Location;
   let router: Router;
+  let selectedSite: { id: string; name: string; domain: string; blogPath: string; templateKey: string; deployProvider: string; previewDeployProvider: string; previewDeployConfig: string; logoUrl?: string };
   const fakeState = {
     isAuthenticated: () => true,
     selectedSiteId: () => 'site-example',
@@ -64,16 +65,7 @@ describe('AppComponent', () => {
         previewDeployConfig: '{}',
       },
     ],
-    selectedSite: () => ({
-      id: 'site-example',
-      name: 'Example Site',
-      domain: 'https://example.test',
-      blogPath: '/articles',
-      templateKey: 'default-blog',
-      deployProvider: 'netlify',
-      previewDeployProvider: 'none',
-      previewDeployConfig: '{}',
-    }),
+    selectedSite: () => selectedSite,
     authSession: () => ({
       email: 'admin@example.com',
       fullName: 'Admin User',
@@ -85,6 +77,16 @@ describe('AppComponent', () => {
   };
 
   beforeEach(async () => {
+    selectedSite = {
+      id: 'site-example',
+      name: 'Example Site',
+      domain: 'https://example.test',
+      blogPath: '/articles',
+      templateKey: 'default-blog',
+      deployProvider: 'netlify',
+      previewDeployProvider: 'none',
+      previewDeployConfig: '{}',
+    };
     await TestBed.configureTestingModule({
       declarations: [
         AppComponent,
@@ -253,5 +255,18 @@ describe('AppComponent', () => {
 
     expect(fakeState.logout).toHaveBeenCalled();
     expect(location.path()).toBe('/login');
+  });
+
+  it('renders the selected site logo in the sidebar brand mark', async () => {
+    selectedSite = { ...selectedSite, logoUrl: 'https://cdn.example/logo.png' };
+    await router.navigate(['/dashboard']);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const logo = fixture.nativeElement.querySelector('.sidebar-brand__mark img') as HTMLImageElement | null;
+
+    expect(logo?.src).toBe('https://cdn.example/logo.png');
+    expect(logo?.alt).toBe('');
   });
 });

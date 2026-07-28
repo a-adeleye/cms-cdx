@@ -1,0 +1,21 @@
+---
+import type { ArticleViewModel } from '../lib/model';
+import PostMeta from './PostMeta.astro';
+import PostVisual from './PostVisual.astro';
+
+const { article, blogPath, showDate = false } = Astro.props as {
+  article: ArticleViewModel;
+  blogPath: string;
+  showDate?: boolean;
+};
+---
+
+<a class="post-card" href={`${blogPath}/${article.slug}/`} data-category={article.categorySlug}>
+  <PostVisual article={article} />
+  <div class="post-card-body">
+    <span class="post-tag">{article.category}</span>
+    <h3>{article.title}</h3>
+    <p>{article.excerpt}</p>
+    <PostMeta article={article} showDate={showDate} showReadingTime={!showDate} />
+  </div>
+</a>

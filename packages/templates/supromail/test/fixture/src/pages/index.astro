@@ -1,0 +1,15 @@
+---
+import Article from '../../../../article.astro';
+
+const article = {
+  title: 'Security fixture',
+  slug: 'security-fixture',
+  excerpt: 'A build-only template security fixture.',
+  contentMarkdown: '# Security fixture\n\n<script>alert(1)</script> **Bold** [safe](https://example.com) [unsafe](javascript:alert(1))\n\n## Safe heading\n\n```\n<script>alert(2)</script>\n```',
+};
+---
+
+<html lang="en">
+  <head><meta charset="utf-8" /><title>Security fixture</title></head>
+  <body><Article site={{ name: 'Supromail', blogPath: '/blog' }} article={article} /></body>
+</html>

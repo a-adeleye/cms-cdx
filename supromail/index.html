@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blog | Supromail</title>
+  <meta name="description" content="Notes on deliverability, SMS routing, and building messaging infrastructure you actually own." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://supromail.com/blog/" />
+  <link rel="icon" type="image/webp" href="../images/supromail-logo.webp" />
+  <script>document.documentElement.classList.add('js');</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Open+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./blog.css" />
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav container" aria-label="Main navigation">
+      <a class="brand" href="../index.html" aria-label="Supromail home"><img src="../images/supromail-logo.webp" alt="Supromail" /></a>
+      <button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false"><span></span><span></span></button>
+      <div class="nav-menu">
+        <a href="../index.html#platform">Platform</a>
+        <a href="../documentation.html">Documentation</a>
+        <a href="../pricing.html">Pricing</a>
+        <a href="./index.html" aria-current="page">Blog</a>
+        <a href="../faq.html">FAQ</a>
+      </div>
+      <div class="nav-actions">
+        <a class="btn btn-soft" href="https://app.supromail.com">Sign in</a>
+        <a class="btn btn-dark" href="https://app.supromail.com">Start free</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <header class="page-hero container">
+      <p class="kicker">The Supromail blog</p>
+      <h1 class="page-title">Notes on messaging <em>you actually own.</em></h1>
+      <p class="page-lede">Deliverability, SMS routing, webhooks, and the engineering behind sending from infrastructure you control.</p>
+    </header>
+
+    <section class="section" style="padding-top: 20px;" aria-label="Featured article">
+      <div class="container">
+        <a class="featured reveal reveal-scale" href="./article.html">
+          <div class="featured-media">
+            <img src="../images/owned-messaging-map.webp" alt="Messaging channels connected into one Supromail workspace" />
+          </div>
+          <div class="featured-body">
+            <span class="post-tag">Featured &middot; Deliverability</span>
+            <h2>Why owned sending beats rented reputation</h2>
+            <p>Shared IP pools make your delivery rate a function of someone else's worst customer. Here is what changes when the domains, the phones, and the routes are yours.</p>
+            <div class="post-meta">
+              <span class="avatar">AA</span>
+              <span>Ada Ajayi</span>
+              <span class="dot"></span>
+              <span>12 Jun 2026</span>
+              <span class="dot"></span>
+              <span>8 min read</span>
+            </div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top: 0;" aria-label="Latest articles">
+      <div class="container section-heading reveal" style="margin-inline: auto;">
+        <h2>Latest writing</h2>
+        <p>Practical pieces from the team building Supromail.</p>
+      </div>
+
+      <div class="container post-grid" data-stagger>
+        <a class="post-card" href="./article.html">
+          <div class="post-card-media alt">
+            <span class="post-card-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M17 2v5h-5"/><path d="M7 22v-5h5"/><path d="M20 11a8 8 0 0 0-13.5-5.8L4 7.5"/><path d="M4 13a8 8 0 0 0 13.5 5.8L20 16.5"/></svg>
+            </span>
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag">Engineering</span>
+            <h3>A practical guide to SMS failover across devices</h3>
+            <p>Device pools, health checks, and the routing rules that keep sends moving when a phone drops offline.</p>
+            <div class="post-meta"><span class="avatar">TO</span><span>Tunde Okafor</span><span class="dot"></span><span>6 min read</span></div>
+          </div>
+        </a>
+
+        <a class="post-card" href="./article.html">
+          <div class="post-card-media">
+            <img src="../images/connect-all-your-channels.webp" alt="Connect all your channels" />
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag">Deliverability</span>
+            <h3>DKIM, SPF, and DMARC without the headache</h3>
+            <p>The three records every sending domain needs, what each one actually proves, and how to verify them fast.</p>
+            <div class="post-meta"><span class="avatar">AA</span><span>Ada Ajayi</span><span class="dot"></span><span>9 min read</span></div>
+          </div>
+        </a>
+
+        <a class="post-card" href="./article.html">
+          <div class="post-card-media dark">
+            <span class="post-card-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.2 2.7 8.1 7 9.8 4.3-1.7 7-5.6 7-9.8V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg>
+            </span>
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag">Engineering</span>
+            <h3>Designing webhook consumers that never lose an event</h3>
+            <p>Signature verification, retries, and the queue-first pattern that keeps delivery state consistent.</p>
+            <div class="post-meta"><span class="avatar">TO</span><span>Tunde Okafor</span><span class="dot"></span><span>7 min read</span></div>
+          </div>
+        </a>
+
+        <a class="post-card" href="./article.html">
+          <div class="post-card-media">
+            <img src="../images/suproamail-app-window.webp" alt="Supromail workspace" />
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag">Product</span>
+            <h3>The hidden cost of per-message platform markup</h3>
+            <p>We priced a year of SMS through three gateways and against direct carrier rates. The gap compounds.</p>
+            <div class="post-meta"><span class="avatar">NE</span><span>Nkem Eze</span><span class="dot"></span><span>5 min read</span></div>
+          </div>
+        </a>
+
+        <a class="post-card" href="./article.html">
+          <div class="post-card-media alt">
+            <span class="post-card-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/><path d="M5 6v12"/></svg>
+            </span>
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag">Product</span>
+            <h3>Local SIM routing: what it is and when to use it</h3>
+            <p>Sending in-country changes both cost and answer rates. Here is how to decide which traffic to route locally.</p>
+            <div class="post-meta"><span class="avatar">NE</span><span>Nkem Eze</span><span class="dot"></span><span>6 min read</span></div>
+          </div>
+        </a>
+
+        <a class="post-card" href="./article.html">
+          <div class="post-card-media dark">
+            <span class="post-card-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h3"/><path d="M8 13h8"/><path d="M15.5 9h.01"/><path d="M18 9h.01"/></svg>
+            </span>
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag">Security</span>
+            <h3>How we think about workspace isolation</h3>
+            <p>Scoped API keys, per-workspace log boundaries, and why we keep customer message history off shared storage.</p>
+            <div class="post-meta"><span class="avatar">AA</span><span>Ada Ajayi</span><span class="dot"></span><span>4 min read</span></div>
+          </div>
+        </a>
+      </div>
+
+      <div class="container grid-actions reveal">
+        <a class="btn btn-dark btn-pill" href="./articles.html">View all articles</a>
+      </div>
+    </section>
+
+    <section class="final-band section blog-cta">
+      <div class="container final-inner reveal reveal-scale">
+        <h2>Get the next one by email</h2>
+        <p>One post a month on deliverability and messaging infrastructure. No product spam.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid" data-stagger>
+      <div>
+        <a href="../index.html" class="footer-logo"><img src="../images/supromail-logo-dark.webp" alt="Supromail" /></a>
+        <p>One workspace for every conversation your business owns.</p>
+      </div>
+      <div><h4>Product</h4><a href="../index.html#platform">Email</a><a href="../index.html#platform">SMS</a><a href="../pricing.html">Pricing</a></div>
+      <div><h4>Resources</h4><a href="../documentation.html">Docs</a><a href="./index.html">Blog</a><a href="../faq.html">FAQ</a><a href="../security.html">Security</a></div>
+      <div><h4>Legal</h4><a href="../contact.html">Contact</a><a href="../privacy.html">Privacy</a><a href="../terms.html">Terms</a><a href="../aup.html">Acceptable Use</a></div>
+    </div>
+    <div class="container footer-wordmark">Supromail</div>
+  </footer>
+
+  <script src="./blog.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+---
+import type { ArticleViewModel } from '../lib/model';
+import Icon from './Icon.astro';
+
+const { article, variant = 'card', class: className = '' } = Astro.props as {
+  article: ArticleViewModel;
+  variant?: 'card' | 'featured' | 'cover';
+  class?: string;
+};
+const baseClass = variant === 'featured'
+  ? 'featured-media'
+  : variant === 'cover' ? 'article-cover' : 'post-card-media';
+// Only the card grid carries the alternate gradient tones; the featured panel and
+// the read-page cover keep the single signature gradient from the design.
+const toneClass = variant === 'card' && article.tone !== 'light' ? article.tone : '';
+---
+
+<div class:list={[baseClass, toneClass, className]}>
+  {article.imageUrl ? (
+    <img src={article.imageUrl} alt={`${article.title} cover`} loading="lazy" />
+  ) : (
+    <span class="post-card-glyph" aria-hidden="true"><Icon name={article.visual} size={30} /></span>
+  )}
+</div>

@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
@@ -12,8 +13,10 @@ describe('DeploymentHistoryPageComponent', () => {
   };
   const productionBuild = { ...previewBuild, id: 'production-build-1', buildType: 'published', deployProvider: 'netlify' };
   const state = {
-    selectedSite: () => ({ domain: 'https://anonime.io' }),
+    selectedSite: () => ({ name: 'Example Site', domain: 'https://anonime.io' }),
     builds: () => [previewBuild, productionBuild],
+    clearBuildHistory: jasmine.createSpy('clearBuildHistory').and.resolveTo(),
+    reportError: jasmine.createSpy('reportError'),
   };
 
   beforeEach(async () => {
@@ -38,5 +41,13 @@ describe('DeploymentHistoryPageComponent', () => {
 
   it('normalizes the site link and formats deployment duration', () => {
     expect(fixture.componentInstance.duration(previewBuild.startedAt, previewBuild.finishedAt)).toBe('1m 5s');
+  });
+
+  it('clears the current site deployment history after confirmation', async () => {
+    spyOn(TestBed.inject(DOCUMENT).defaultView!, 'confirm').and.returnValue(true);
+
+    await fixture.componentInstance.clearHistory();
+
+    expect(state.clearBuildHistory).toHaveBeenCalled();
   });
 });

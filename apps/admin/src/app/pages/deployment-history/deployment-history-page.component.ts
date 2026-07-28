@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
@@ -13,6 +13,7 @@ import { externalSiteUrl } from '../../features/pages/external-url';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeploymentHistoryPageComponent {
+  private readonly document = inject(DOCUMENT);
   readonly state = inject(WorkspaceStateService);
   readonly search = signal('');
   readonly environment = signal<'all' | 'preview' | 'published'>('all');
@@ -27,6 +28,24 @@ export class DeploymentHistoryPageComponent {
 
   setSearch(value: string): void { this.search.set(value); }
   setEnvironment(value: string): void { this.environment.set(value as 'all' | 'preview' | 'published'); }
+
+  async clearHistory(): Promise<void> {
+    if (this.state.builds().length === 0) {
+      return;
+    }
+    const siteName = this.state.selectedSite().name || 'this site';
+    const confirmed = this.document.defaultView?.confirm(`Clear all deployment history for ${siteName}? This cannot be undone.`) ?? false;
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await this.state.clearBuildHistory();
+    } catch (error) {
+      this.state.reportError(error instanceof Error ? error.message : 'Unable to clear deployment history.');
+    }
+  }
+
   shortId(id: string): string { return id.length > 8 ? id.slice(0, 8) : id; }
   deployNumber(index: number): number { return Math.max(1, this.state.builds().length - index); }
   duration(startedAt: string | null, finishedAt: string | null): string {

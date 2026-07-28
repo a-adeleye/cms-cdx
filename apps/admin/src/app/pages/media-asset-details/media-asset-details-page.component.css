@@ -7,7 +7,8 @@
 .asset-link { display: block; margin-top: 16px; }
 .asset-actions { padding: 0; overflow: hidden; }
 .asset-actions h2 { padding: 18px; }
-.asset-actions a, .asset-actions button { display: grid; width: 100%; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 14px 18px; border: 0; border-top: 1px solid var(--line); background: #fff; color: var(--text); text-align: left; }
+.asset-actions a, .asset-actions button, .asset-actions label { display: grid; width: 100%; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 14px 18px; border: 0; border-top: 1px solid var(--line); background: #fff; color: var(--text); text-align: left; }
+.asset-actions label { cursor: pointer; }
 .asset-actions button:disabled { opacity: .65; }
 .asset-actions strong, .asset-actions small { display: block; }
 .asset-actions strong { font-size: 12px; }

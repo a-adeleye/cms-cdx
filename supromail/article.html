@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Why owned sending beats rented reputation | Supromail</title>
+  <meta name="description" content="Shared IP pools make your delivery rate a function of someone else's worst customer. What changes when the domains, phones, and routes are yours." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://supromail.com/blog/why-owned-sending-beats-rented-reputation" />
+  <link rel="icon" type="image/webp" href="../images/supromail-logo.webp" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Why owned sending beats rented reputation" />
+  <meta property="og:description" content="Shared IP pools make your delivery rate a function of someone else's worst customer." />
+  <meta property="og:url" content="https://supromail.com/blog/why-owned-sending-beats-rented-reputation" />
+  <meta property="og:image" content="https://supromail.com/images/owned-messaging-map.webp" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <script>document.documentElement.classList.add('js');</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Open+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./blog.css" />
+</head>
+<body>
+  <div class="read-progress" id="readProgress" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <nav class="nav container" aria-label="Main navigation">
+      <a class="brand" href="../index.html" aria-label="Supromail home"><img src="../images/supromail-logo.webp" alt="Supromail" /></a>
+      <button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false"><span></span><span></span></button>
+      <div class="nav-menu">
+        <a href="../index.html#platform">Platform</a>
+        <a href="../documentation.html">Documentation</a>
+        <a href="../pricing.html">Pricing</a>
+        <a href="./index.html" aria-current="page">Blog</a>
+        <a href="../faq.html">FAQ</a>
+      </div>
+      <div class="nav-actions">
+        <a class="btn btn-soft" href="https://app.supromail.com">Sign in</a>
+        <a class="btn btn-dark" href="https://app.supromail.com">Start free</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <header class="article-hero">
+        <div class="container">
+          <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="../index.html">Home</a><span>/</span>
+            <a href="./index.html">Blog</a><span>/</span>
+            <a href="./articles.html">Deliverability</a>
+          </nav>
+          <h1>Why owned sending beats rented reputation</h1>
+          <p class="lede">Shared IP pools make your delivery rate a function of someone else's worst customer. Here is what changes when the domains, the phones, and the routes are yours.</p>
+          <div class="post-meta">
+            <span class="avatar">AA</span>
+            <span>Ada Ajayi</span>
+            <span class="dot"></span>
+            <span><time datetime="2026-06-12">12 June 2026</time></span>
+            <span class="dot"></span>
+            <span>8 min read</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="container">
+        <div class="article-cover reveal reveal-scale">
+          <img src="../images/owned-messaging-map.webp" alt="Messaging channels connected into one Supromail workspace" />
+        </div>
+      </div>
+
+      <div class="container article-layout">
+        <aside class="toc" aria-label="On this page">
+          <h4>On this page</h4>
+          <ol id="tocList">
+            <li><a href="#rented">What renting actually buys you</a></li>
+            <li><a href="#pool">The shared pool problem</a></li>
+            <li><a href="#owned">What owned sending changes</a></li>
+            <li><a href="#sms">The same argument for SMS</a></li>
+            <li><a href="#start">Where to start</a></li>
+          </ol>
+        </aside>
+
+        <div class="prose">
+          <p>Every messaging platform sells the same promise: hand us your traffic and we will handle deliverability. It is a good pitch, and for the first few thousand messages it works. The trouble starts when your volume grows enough that the shortcuts underneath the promise begin to show.</p>
+
+          <p>Those shortcuts have names. Shared IP pools. Pooled short codes. Rotating sender IDs. Each one is a way of borrowing reputation you did not build, from a pool you do not control, alongside senders you will never meet.</p>
+
+          <h2 id="rented">What renting actually buys you</h2>
+
+          <p>When you send through a traditional provider, you are not really buying delivery. You are buying access to a reputation asset the provider owns and rations. Your messages leave from their IPs, carry their sending domain in the return path, and inherit whatever mailbox providers currently think of that infrastructure.</p>
+
+          <p>That works fine while the pool is healthy. It is a reasonable trade when you are sending your first campaign and have no reputation of your own to speak of. But it comes with a structural catch: <strong>you cannot improve the asset, and you cannot leave with it.</strong></p>
+
+          <blockquote>
+            <p>Reputation you rent is reputation you have to re-earn every time you switch providers.</p>
+          </blockquote>
+
+          <p>Two years of clean sending, low complaint rates, and careful list hygiene should compound into something. On a shared pool, it mostly does not. The pool's reputation moves as an aggregate, and your contribution to it is a rounding error.</p>
+
+          <h2 id="pool">The shared pool problem</h2>
+
+          <p>Here is the failure mode we see most often. A team sends transactional email — receipts, password resets, delivery notifications — on a shared pool. Complaint rates are near zero. Then, over a single week, open rates fall off a cliff and password resets start landing in spam.</p>
+
+          <p>Nothing changed on their side. What changed was that another tenant on the same pool ran a large acquisition campaign against a purchased list, and the mailbox providers responded to the IP range, not to the individual sender.</p>
+
+          <div class="callout">
+            <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8v5"/><path d="M12 16h.01"/><circle cx="12" cy="12" r="9"/></svg></span>
+            <p>The tell is timing: a deliverability drop that starts on a specific day, affects every mailbox provider at once, and has no corresponding change in your own sending behaviour.</p>
+          </div>
+
+          <p>Diagnosing this from inside a rented setup is close to impossible. You can see your bounce codes, but you cannot see the pool. You file a support ticket, wait, and are eventually moved to a different pool — which is to say, a different set of strangers.</p>
+
+          <h2 id="owned">What owned sending changes</h2>
+
+          <p>Owned sending inverts the arrangement. The domain is yours. The DKIM key is generated against your domain and lives in your DNS. The relay is one you chose, and can change without touching the reputation you have built, because the reputation is attached to <code>mail.yourcompany.com</code> and not to someone's IP block.</p>
+
+          <p>Three things follow from that:</p>
+
+          <ul>
+            <li><strong>Isolation.</strong> Your delivery outcomes reflect your sending behaviour and nothing else. When something breaks, the cause is in your own data.</li>
+            <li><strong>Portability.</strong> Switching infrastructure becomes an operational change rather than a reputation reset.</li>
+            <li><strong>Diagnosability.</strong> Every bounce, defer, and complaint maps to a message you sent, a domain you own, and a route you chose.</li>
+          </ul>
+
+          <p>Setting up a verified sending domain in Supromail is three DNS records and a verification check:</p>
+
+          <pre><code>curl -X POST https://api.supromail.com/v1/domains \
+  -H "Authorization: Bearer $SUPROMAIL_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "domain": "mail.yourcompany.com" }'
+
+# → returns the DKIM, SPF, and DMARC records to publish</code></pre>
+
+          <p>Once the records propagate, the domain moves to <code>verified</code> and every send from it is signed with a key only you control.</p>
+
+          <h2 id="sms">The same argument for SMS</h2>
+
+          <p>The email version of this story is well understood. The SMS version is newer, and the economics are sharper, because on SMS you are not only renting reputation — you are also renting numbers and paying a per-message toll on top of the carrier rate.</p>
+
+          <figure>
+            <div class="gradient-card">
+              <img src="../images/connect-all-your-channels.webp" alt="Owned phones, SIMs, and domains connected into one routing layer" />
+            </div>
+            <figcaption>Owned channels — verified domains, paired devices, and local SIMs — routed from one place.</figcaption>
+          </figure>
+
+          <p>Pooled short codes have the same aggregation problem as shared IPs: filtering decisions land on the number, and the number is shared. Sending through your own SIMs means the number your customer sees is one you control, and the answer rate reflects your relationship with them rather than the pool's.</p>
+
+          <h3>Failover is the counter-argument, and it is solvable</h3>
+
+          <p>The honest objection to owned SMS is resilience. One phone is a single point of failure in a way a carrier gateway is not. That is real, and it is why device pools and routing rules exist: when a device goes offline, the next healthy device in the pool picks up the queue, and the send continues.</p>
+
+          <p>We wrote about the mechanics of that in <a href="./articles.html">a practical guide to SMS failover across devices</a>.</p>
+
+          <h2 id="start">Where to start</h2>
+
+          <p>You do not have to move everything at once, and you should not. The migration that works looks like this:</p>
+
+          <ol>
+            <li>Verify one sending domain and move a low-risk transactional stream to it.</li>
+            <li>Watch bounce and complaint rates for two weeks against your existing baseline.</li>
+            <li>Move the remaining transactional traffic, then marketing.</li>
+            <li>For SMS, pair two devices before routing any production traffic, so failover exists from day one.</li>
+          </ol>
+
+          <p>The point is not that managed providers are bad. It is that the asset they are managing on your behalf should belong to you — so that two years of careful sending compounds into something you can keep.</p>
+        </div>
+      </div>
+    </article>
+
+    <section class="related section">
+      <div class="container">
+        <div class="related-head reveal">
+          <h2>Keep reading</h2>
+          <a href="./articles.html">All articles →</a>
+        </div>
+        <div class="post-grid" data-stagger>
+          <a class="post-card" href="./article.html">
+            <div class="post-card-media alt">
+              <span class="post-card-glyph" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M17 2v5h-5"/><path d="M7 22v-5h5"/><path d="M20 11a8 8 0 0 0-13.5-5.8L4 7.5"/><path d="M4 13a8 8 0 0 0 13.5 5.8L20 16.5"/></svg>
+              </span>
+            </div>
+            <div class="post-card-body">
+              <span class="post-tag">Engineering</span>
+              <h3>A practical guide to SMS failover across devices</h3>
+              <p>Device pools, health checks, and the routing rules that keep sends moving.</p>
+              <div class="post-meta"><span class="avatar">TO</span><span>Tunde Okafor</span><span class="dot"></span><span>6 min read</span></div>
+            </div>
+          </a>
+
+          <a class="post-card" href="./article.html">
+            <div class="post-card-media">
+              <img src="../images/connect-all-your-channels.webp" alt="Connect all your channels" />
+            </div>
+            <div class="post-card-body">
+              <span class="post-tag">Deliverability</span>
+              <h3>DKIM, SPF, and DMARC without the headache</h3>
+              <p>The three records every sending domain needs, and how to verify them fast.</p>
+              <div class="post-meta"><span class="avatar">AA</span><span>Ada Ajayi</span><span class="dot"></span><span>9 min read</span></div>
+            </div>
+          </a>
+
+          <a class="post-card" href="./article.html">
+            <div class="post-card-media dark">
+              <span class="post-card-glyph" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h3"/><path d="M8 13h8"/><path d="M15.5 9h.01"/><path d="M18 9h.01"/></svg>
+              </span>
+            </div>
+            <div class="post-card-body">
+              <span class="post-tag">Security</span>
+              <h3>How we think about workspace isolation</h3>
+              <p>Scoped API keys, per-workspace log boundaries, and message history that stays yours.</p>
+              <div class="post-meta"><span class="avatar">AA</span><span>Ada Ajayi</span><span class="dot"></span><span>4 min read</span></div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="final-band section blog-cta">
+      <div class="container final-inner reveal reveal-scale">
+        <h2>Start sending from what you own</h2>
+        <p>Verify a domain, pair a phone, and send your first message in under 10 minutes.</p>
+        <a class="final-cta" href="https://app.supromail.com">Start sending for free</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid" data-stagger>
+      <div>
+        <a href="../index.html" class="footer-logo"><img src="../images/supromail-logo-dark.webp" alt="Supromail" /></a>
+        <p>One workspace for every conversation your business owns.</p>
+      </div>
+      <div><h4>Product</h4><a href="../index.html#platform">Email</a><a href="../index.html#platform">SMS</a><a href="../pricing.html">Pricing</a></div>
+      <div><h4>Resources</h4><a href="../documentation.html">Docs</a><a href="./index.html">Blog</a><a href="../faq.html">FAQ</a><a href="../security.html">Security</a></div>
+      <div><h4>Legal</h4><a href="../contact.html">Contact</a><a href="../privacy.html">Privacy</a><a href="../terms.html">Terms</a><a href="../aup.html">Acceptable Use</a></div>
+    </div>
+    <div class="container footer-wordmark">Supromail</div>
+  </footer>
+
+  <script src="./blog.js"></script>
+</body>
+</html>

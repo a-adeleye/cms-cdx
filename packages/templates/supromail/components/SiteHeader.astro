@@ -1,0 +1,30 @@
+---
+import type { SiteViewModel } from '../lib/model';
+
+const { site } = Astro.props as { site: SiteViewModel };
+const navigation = [
+  { label: 'Platform', href: 'https://supromail.com/#platform' },
+  { label: 'Documentation', href: 'https://supromail.com/documentation' },
+  { label: 'Pricing', href: 'https://supromail.com/pricing' },
+  { label: 'Blog', href: `${site.blogPath}/`, isCurrent: true },
+  { label: 'FAQ', href: 'https://supromail.com/faq' },
+];
+---
+
+<header class="site-header">
+  <nav class="nav container" aria-label="Main navigation">
+    <a class="brand" href="https://supromail.com/" aria-label={`${site.name} home`}>
+      <img src="https://supromail.com/images/supromail-logo.webp" alt={site.name} width="150" height="32" />
+    </a>
+    <button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false"><span></span><span></span></button>
+    <div class="nav-menu">
+      {navigation.map((item) => (
+        <a href={item.href} aria-current={item.isCurrent ? 'page' : undefined}>{item.label}</a>
+      ))}
+    </div>
+    <div class="nav-actions">
+      <a class="btn btn-soft" href="https://app.supromail.com">Sign in</a>
+      <a class="btn btn-dark" href="https://app.supromail.com">Start free</a>
+    </div>
+  </nav>
+</header>

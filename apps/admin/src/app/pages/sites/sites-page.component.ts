@@ -103,6 +103,24 @@ export class SitesPageComponent {
     }
   }
 
+  async deleteSite(site: SiteRecord): Promise<void> {
+    if (this.sites().length <= 1) {
+      this.state.reportError('Create another site before deleting the last site.');
+      return;
+    }
+    const confirmed = this.document.defaultView?.confirm(`Delete ${site.name}? This permanently removes its CMS content.`) ?? false;
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await this.state.deleteSite(site.id);
+    } catch (error) {
+      const message = error instanceof Error && error.message ? `Unable to delete site. ${error.message}` : 'Unable to delete site.';
+      this.state.reportError(message);
+    }
+  }
+
   async saveSiteFromModal(): Promise<void> {
     const mode = this.siteDialogMode();
     if (!mode) {

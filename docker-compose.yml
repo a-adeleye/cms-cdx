@@ -69,9 +69,11 @@ services:
 
   builder:
     build:
-      context: ./apps/builder
+      context: .
+      dockerfile: apps/builder/Dockerfile
     environment:
       CMS_API_URL: http://api:8080/api/v1
+      CMS_TEMPLATE_ROOT: /workspace/apps/builder/templates/supromail
     depends_on:
       - api
     ports:

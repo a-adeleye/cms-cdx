@@ -1,0 +1,7 @@
+---
+import Template from '@cms-template/articles.astro';
+
+const { site, articles, page, totalPages } = Astro.props;
+---
+
+<Template site={site} articles={articles} page={page} totalPages={totalPages} />

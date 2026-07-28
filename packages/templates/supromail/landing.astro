@@ -3,6 +3,7 @@ import ClosingBand from './components/ClosingBand.astro';
 import FeaturedPost from './components/FeaturedPost.astro';
 import PostCard from './components/PostCard.astro';
 import SiteShell from './components/SiteShell.astro';
+import { relativeSiteHref } from './lib/links';
 import {
   designArticles,
   featuredDesignArticle,
@@ -22,6 +23,9 @@ const featured = hasCmsArticles
   : featuredDesignArticle;
 const unfeatured = featured ? cmsArticles.filter((article) => article.slug !== featured.slug) : cmsArticles;
 const latest = hasCmsArticles ? unfeatured.slice(0, 6) : designArticles.slice(0, 6);
+const hasLatestArticles = latest.length > 0;
+const hasNoPublishedArticles = hasCmsArticles && cmsArticles.length === 0;
+const allArticlesHref = relativeSiteHref(Astro.url.pathname, `${site.blogPath}/all/`);
 ---
 
 <SiteShell site={site} page="landing">
@@ -39,28 +43,34 @@ const latest = hasCmsArticles ? unfeatured.slice(0, 6) : designArticles.slice(0,
     </section>
   )}
 
-  <section class="section supromail-latest-section" aria-label="Latest articles">
-    <div class="container section-heading reveal">
-      <h2>Latest writing</h2>
-      <p>Practical pieces from the team building {site.name}.</p>
-    </div>
+  {hasLatestArticles && (
+    <section class="section supromail-latest-section" aria-label="Latest articles">
+      <div class="container section-heading reveal">
+        <h2>Latest writing</h2>
+        <p>Practical pieces from the team building {site.name}.</p>
+      </div>
 
-    {latest.length === 0 ? (
-      <p class="container empty-state">No articles published yet.</p>
-    ) : (
       <>
         <div class="container post-grid" data-stagger>
           {latest.map((article) => <PostCard article={article} blogPath={site.blogPath} />)}
         </div>
         <div class="container grid-actions reveal">
-          <a class="btn btn-dark btn-pill" href={`${site.blogPath}/`}>View all articles</a>
+          <a class="btn btn-dark btn-pill" href={allArticlesHref}>View all articles</a>
         </div>
       </>
-    )}
-  </section>
+    </section>
+  )}
+
+  {hasNoPublishedArticles && (
+    <section class="section supromail-latest-section" aria-label="Latest articles">
+      <p class="container empty-state">No articles published yet.</p>
+    </section>
+  )}
 
   <ClosingBand
-    heading="Get the next one by email"
-    body="One post a month on deliverability and messaging infrastructure. No product spam."
+    heading="Start sending from what you own"
+    body="Verify a domain, pair a phone, and send your first message in under 10 minutes."
+    ctaLabel="Start sending for free"
+    ctaHref="https://app.supromail.com"
   />
 </SiteShell>

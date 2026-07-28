@@ -1,26 +1,36 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { loadBuildData } from '../../../content';
+import SupromailArticles from '../../../templates/supromail/Articles.astro';
 
 const { site, articles } = loadBuildData();
 const { page, pageArticles } = Astro.props;
+const isSupromail = process.env.CMS_TEMPLATE_KEY === 'supromail';
+
+const articlesPerPage = isSupromail ? 6 : 10;
 
 export function getStaticPaths() {
-  const pages = Math.ceil(loadBuildData().articles.length / 10);
+  const articlesPerPage = process.env.CMS_TEMPLATE_KEY === 'supromail' ? 6 : 10;
+  const sourceArticles = loadBuildData().articles;
+  const pages = Math.ceil(sourceArticles.length / articlesPerPage);
   return Array.from({ length: Math.max(0, pages - 1) }, (_, index) => {
     const page = index + 2;
     return {
       params: { page: String(page) },
-      props: { page, pageArticles: loadBuildData().articles.slice((page - 1) * 10, page * 10) },
+      props: { page, pageArticles: sourceArticles.slice((page - 1) * articlesPerPage, page * articlesPerPage) },
     };
   });
 }
 ---
 
-<BaseLayout title={`Articles - Page ${page}`} description={`Published articles for ${site.name}.`} blogPath={site.blogPath}>
-  <section class="page">
-    <p class="eyebrow">Articles</p>
-    <h1>Page {page}</h1>
-    <ul>{pageArticles.map((article) => <li><a href={`${site.blogPath}/${article.slug}/`}>{article.title}</a></li>)}</ul>
-  </section>
-</BaseLayout>
+{isSupromail ? (
+  <SupromailArticles site={site} articles={pageArticles} page={page} totalPages={Math.ceil(articles.length / articlesPerPage)} />
+) : (
+  <BaseLayout title={`Articles - Page ${page}`} description={`Published articles for ${site.name}.`} blogPath={site.blogPath}>
+    <section class="page">
+      <p class="eyebrow">Articles</p>
+      <h1>Page {page}</h1>
+      <ul>{pageArticles.map((article) => <li><a href={`${site.blogPath}/${article.slug}/`}>{article.title}</a></li>)}</ul>
+    </section>
+  </BaseLayout>
+)}

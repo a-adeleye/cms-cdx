@@ -31,8 +31,13 @@ Local host ports:
 - The CMS is the source of truth.
 - Astro is only the static generator.
 - Public sites are static and SEO-friendly.
+- `supromail` is the first Astro-backed catalogue template. The API passes a typed CMS content file to `apps/builder`, which renders the template package and then deploys its static output through the existing provider adapters. See `docs/adr/002-supromail-astro-template-builds.md` for the package contract, operational limits, and rollback path.
 - AI-assisted content is saved as draft or review only.
 - Each site records whether it is an application blog or standalone blog, so future AI writing can apply the appropriate conversion-aware or editorial guidance.
+
+## Site Export and Import
+
+Admins can export a site from **Sites** and import the JSON bundle into a new, independently editable site. The versioned transfer API is `GET /api/v1/sites/{siteId}/export` and `POST /api/v1/site-imports`; the bundle's `version` field supports compatible readers as it evolves. The bundle includes site presentation settings, AI writing settings without secret references, landing sections, authors, categories, article content, and media-library entries. Imports receive fresh database IDs and a new `-imported` slug; deployment, storage, build history, and secret-bearing configuration are intentionally excluded. Imported media entries retain public URLs but do not take ownership of the source storage objects.
 
 ## AI Article Generation
 

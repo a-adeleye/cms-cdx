@@ -40,6 +40,8 @@ describe('SitesPageComponent', () => {
       createSite: jasmine.createSpy('createSite').and.resolveTo(selectedSite),
       updateSite: jasmine.createSpy('updateSite').and.resolveTo(selectedSite),
       deleteSite: jasmine.createSpy('deleteSite').and.resolveTo(),
+      exportSite: jasmine.createSpy('exportSite').and.resolveTo({ version: 1, exportedAt: '2026-07-28T00:00:00Z', site: {}, landingSections: [], authors: [], categories: [], mediaAssets: [], articles: [] }),
+      importSite: jasmine.createSpy('importSite').and.resolveTo(selectedSite),
       selectSite: jasmine.createSpy('selectSite').and.resolveTo(),
       reportError: jasmine.createSpy('reportError'),
     } as unknown as WorkspaceStateService;
@@ -140,5 +142,14 @@ describe('SitesPageComponent', () => {
     await fixture.componentInstance.deleteSite(selectedSite);
 
     expect(fakeState.deleteSite).toHaveBeenCalledWith('site-example');
+  });
+
+  it('opens the JSON file picker for site imports', () => {
+    const input = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
+    spyOn(input, 'click');
+
+    fixture.componentInstance.openSiteImport();
+
+    expect(input.click).toHaveBeenCalled();
   });
 });

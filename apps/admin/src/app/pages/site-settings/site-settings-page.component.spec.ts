@@ -37,6 +37,17 @@ describe('SiteSettingsPageComponent', () => {
     expect(state.updateSelectedSite).toHaveBeenCalledWith(jasmine.objectContaining({ contentContext: 'application_blog' }));
   });
 
+  it('does not inherit Anonime\'s master prompt when the selected site has none saved', () => {
+    state.selectedSite.and.returnValue({
+      id: 'site-2', name: 'New Anonime Site', domain: 'https://new.example.test', blogPath: '/blog', templateKey: 'anonime', themeConfig: '{}', aiConfig: '{}',
+    } as never);
+    const newSiteFixture = TestBed.createComponent(SiteSettingsPageComponent);
+
+    newSiteFixture.detectChanges();
+
+    expect(newSiteFixture.componentInstance.form.controls.masterPrompt.value).toBe('');
+  });
+
   it('persists the AI master prompt alongside the existing AI configuration', async () => {
     state.selectedSite.and.returnValue({
       id: 'site-1', name: 'Example Site', domain: 'https://example.test', blogPath: '/blog', templateKey: 'anonime', themeConfig: '{"accent":"#2563eb"}',

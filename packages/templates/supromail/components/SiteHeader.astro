@@ -1,12 +1,14 @@
 ---
+import { relativeSiteHref } from '../lib/links';
 import type { SiteViewModel } from '../lib/model';
 
 const { site } = Astro.props as { site: SiteViewModel };
+const blogHref = relativeSiteHref(Astro.url.pathname, `${site.blogPath}/`);
 const navigation = [
   { label: 'Platform', href: 'https://supromail.com/#platform' },
   { label: 'Documentation', href: 'https://supromail.com/documentation' },
   { label: 'Pricing', href: 'https://supromail.com/pricing' },
-  { label: 'Blog', href: `${site.blogPath}/`, isCurrent: true },
+  { label: 'Blog', href: blogHref, isCurrent: true },
   { label: 'FAQ', href: 'https://supromail.com/faq' },
 ];
 ---

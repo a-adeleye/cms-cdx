@@ -1,14 +1,14 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import { loadBuildData } from '../../content';
-import SupromailLanding from '../../templates/supromail/Landing.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { loadBuildData } from '../../../content';
+import SupromailArticles from '../../../templates/supromail/Articles.astro';
 
 const { site, articles } = loadBuildData();
 const isSupromail = process.env.CMS_TEMPLATE_KEY === 'supromail';
 ---
 
 {isSupromail ? (
-  <SupromailLanding site={site} articles={articles} />
+  <SupromailArticles site={site} articles={articles} page={1} totalPages={Math.max(1, Math.ceil(articles.length / 6))} />
 ) : (
   <BaseLayout title="Articles" description={`Published articles for ${site.name}.`} blogPath={site.blogPath}>
     <section class="page">
@@ -18,4 +18,3 @@ const isSupromail = process.env.CMS_TEMPLATE_KEY === 'supromail';
     </section>
   </BaseLayout>
 )}
-

@@ -60,6 +60,12 @@ body {
 .supromail-site a { color: inherit; text-decoration: none; }
 .supromail-site button { font: inherit; }
 
+/* The generic builder stylesheet is bundled for non-Supromail routes too.
+   Reset its unscoped layout rules inside this template. */
+.supromail-site main { padding: 0; }
+.supromail-site .page,
+.supromail-site .section { max-width: none; }
+
 .supromail-site :where(a, button):focus-visible {
   outline: 3px solid rgba(47, 128, 102, .3);
   outline-offset: 3px;

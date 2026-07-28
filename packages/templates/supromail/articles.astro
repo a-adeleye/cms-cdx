@@ -3,6 +3,7 @@ import CategoryChips from './components/CategoryChips.astro';
 import ClosingBand from './components/ClosingBand.astro';
 import PostCard from './components/PostCard.astro';
 import SiteShell from './components/SiteShell.astro';
+import { relativeSiteHref } from './lib/links';
 import {
   collectCategories,
   designArticles,
@@ -37,7 +38,10 @@ const paginationPages = Array.from({ length: Math.min(5, totalPages) }, (_, inde
 // The chips filter the rendered page in the browser, so they are derived from the
 // cards on it — a chip for a category held back by pagination would dead-end.
 const categories = collectCategories(visibleArticles);
-const pageHref = (pageNumber: number) => (pageNumber === 1 ? `${site.blogPath}/` : `${site.blogPath}/page/${pageNumber}/`);
+const pageHref = (pageNumber: number) => relativeSiteHref(
+  Astro.url.pathname,
+  pageNumber === 1 ? `${site.blogPath}/all/` : `${site.blogPath}/page/${pageNumber}/`,
+);
 ---
 
 <SiteShell site={site} page="articles">
@@ -81,7 +85,9 @@ const pageHref = (pageNumber: number) => (pageNumber === 1 ? `${site.blogPath}/`
   </section>
 
   <ClosingBand
-    heading="Get the next one by email"
-    body="One post a month on deliverability and messaging infrastructure. No product spam."
+    heading="Start sending from what you own"
+    body="Verify a domain, pair a phone, and send your first message in under 10 minutes."
+    ctaLabel="Start sending for free"
+    ctaHref="https://app.supromail.com"
   />
 </SiteShell>

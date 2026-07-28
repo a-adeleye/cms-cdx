@@ -7,6 +7,7 @@
       </div>
 
       <div class="hero-actions">
+        <button class="button button-secondary" type="button" (click)="openSiteImport()">Import site</button>
         <button class="button button-primary" type="button" (click)="openCreateSiteModal()">Create site</button>
       </div>
     </div>
@@ -16,7 +17,7 @@
     <div class="toolbar">
       <div>
         <h2>Sites</h2>
-        <p class="muted">Manage the sites in this workspace.</p>
+        <p class="muted">Manage the sites in this workspace. Imports copy content and media entries, but never deployment, storage, or secret settings.</p>
       </div>
     </div>
 
@@ -30,6 +31,7 @@
           </button>
           <div class="inline-actions">
             <button type="button" class="button button-secondary" (click)="openEditSiteModal(site.id)">Edit site</button>
+            <button type="button" class="button button-secondary" (click)="exportSite(site)">Export site</button>
             <button type="button" class="button button-danger" [disabled]="sites().length <= 1" (click)="deleteSite(site)">Delete site</button>
           </div>
         </article>
@@ -37,6 +39,8 @@
         <p class="muted">No sites have been created yet.</p>
       }
     </div>
+
+    <input #siteImportInput type="file" accept="application/json,.json" hidden (change)="importSiteFile($event)" />
 
     <dialog
       #siteDialog

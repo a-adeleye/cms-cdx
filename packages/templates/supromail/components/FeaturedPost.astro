@@ -1,12 +1,14 @@
 ---
+import { relativeSiteHref } from '../lib/links';
 import type { ArticleViewModel } from '../lib/model';
 import PostMeta from './PostMeta.astro';
 import PostVisual from './PostVisual.astro';
 
 const { article, blogPath } = Astro.props as { article: ArticleViewModel; blogPath: string };
+const articleHref = relativeSiteHref(Astro.url.pathname, `${blogPath}/${article.slug}/`);
 ---
 
-<a class="featured reveal reveal-scale" href={`${blogPath}/${article.slug}/`}>
+<a class="featured reveal reveal-scale" href={articleHref}>
   <PostVisual article={article} variant="featured" />
   <div class="featured-body">
     <span class="post-tag">Featured · {article.category}</span>

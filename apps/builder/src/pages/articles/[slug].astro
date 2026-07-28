@@ -1,9 +1,12 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { loadBuildData } from '../../content';
+import SupromailArticle from '../../templates/supromail/Article.astro';
 
 const { site, articles } = loadBuildData();
 const { article } = Astro.props;
+const isSupromail = process.env.CMS_TEMPLATE_KEY === 'supromail';
+const relatedArticles = articles.filter((candidate) => candidate.slug !== article.slug).slice(0, 3);
 
 export function getStaticPaths() {
   return loadBuildData().articles.map((article) => ({
@@ -13,11 +16,15 @@ export function getStaticPaths() {
 }
 ---
 
-<BaseLayout title={article.seoTitle || article.title} description={article.seoDescription || article.excerpt} blogPath={site.blogPath}>
-  <article class="page">
-    <p class="eyebrow">Article</p>
-    <h1>{article.title}</h1>
-    <p>{article.excerpt}</p>
-    <div style="white-space: pre-wrap">{article.contentMarkdown}</div>
-  </article>
-</BaseLayout>
+{isSupromail ? (
+  <SupromailArticle site={site} article={article} relatedArticles={relatedArticles} />
+) : (
+  <BaseLayout title={article.seoTitle || article.title} description={article.seoDescription || article.excerpt} blogPath={site.blogPath}>
+    <article class="page">
+      <p class="eyebrow">Article</p>
+      <h1>{article.title}</h1>
+      <p>{article.excerpt}</p>
+      <div style="white-space: pre-wrap">{article.contentMarkdown}</div>
+    </article>
+  </BaseLayout>
+)}

@@ -43,11 +43,21 @@ test('Astro renders formatting while keeping hostile Markdown inert', () => {
     const landingHtml = readFileSync(join(outputDirectory, 'landing', 'index.html'), 'utf8');
     const articlesHtml = readFileSync(join(outputDirectory, 'articles', 'index.html'), 'utf8');
     const articleHtml = readFileSync(join(outputDirectory, 'article', 'index.html'), 'utf8');
+    const singleArticleLandingHtml = readFileSync(join(outputDirectory, 'single-article', 'index.html'), 'utf8');
 
     assert.match(landingHtml, /Notes on messaging <em>you actually own\.<\/em>/);
     assert.match(landingHtml, /Latest writing/);
     assert.match(articlesHtml, /All articles/);
     assert.match(articleHtml, /On this page/);
+    assert.match(singleArticleLandingHtml, /The only published article/);
+    assert.doesNotMatch(singleArticleLandingHtml, /Latest writing/);
+    assert.doesNotMatch(singleArticleLandingHtml, /No articles published yet\./);
+
+    for (const renderedPage of [landingHtml, articlesHtml, articleHtml, singleArticleLandingHtml]) {
+      assert.match(renderedPage, /Start sending from what you own/);
+      assert.match(renderedPage, /Start sending for free/);
+      assert.doesNotMatch(renderedPage, /Get the next one by email/);
+    }
 
     for (const renderedPage of [landingHtml, articlesHtml, articleHtml]) {
       assert.match(renderedPage, /href="https:\/\/supromail\.com\/#platform"/);
@@ -55,8 +65,9 @@ test('Astro renders formatting while keeping hostile Markdown inert', () => {
       assert.match(renderedPage, /href="https:\/\/app\.supromail\.com"/);
       assert.match(renderedPage, /class="container footer-wordmark">Supromail</);
       assert.match(renderedPage, /One workspace for every conversation your business owns\./);
-      // Every internal route is confined to the configured blog path.
-      assert.doesNotMatch(renderedPage, /href="\.\.?\//);
+      // Internal blog routes stay relative so a static artifact also works
+      // when the CMS serves it below its local /deployments mount.
+      assert.doesNotMatch(renderedPage, /href="\/blog\//);
     }
 
     // The listing page keeps the client-side category filter wired to real data.
@@ -68,7 +79,7 @@ test('Astro renders formatting while keeping hostile Markdown inert', () => {
     assert.match(articleHtml, /<h1>Why owned sending beats rented reputation<\/h1>/);
     assert.match(articleHtml, /<h2 id="what-owned-sending-changes">/);
     assert.match(articleHtml, /href="#what-owned-sending-changes"/);
-    assert.match(articleHtml, /href="\/blog\/sms-failover-across-devices\/"/);
+    assert.match(articleHtml, /href="\.\.\/blog\/sms-failover-across-devices\/"/);
     assert.match(articleHtml, /id="readProgress"/);
     assert.match(articleHtml, /<code>mail\.yourcompany\.com<\/code>/);
     assert.doesNotMatch(landingHtml, /id="readProgress"/);

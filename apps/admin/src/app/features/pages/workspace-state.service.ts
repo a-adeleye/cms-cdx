@@ -14,7 +14,7 @@ import {
   TemplateRecord,
 } from './pages.model';
 import { INITIAL_STATE } from './pages.seed';
-import { AdminApiService, AIArticleDraftPayload, AIArticleDraftResponse, AISuggestionPayload, AISuggestionResponse } from './admin-api.service';
+import { AdminApiService, AIArticleDraftPayload, AIArticleDraftResponse, AISuggestionPayload, AISuggestionResponse, SiteExportBundle } from './admin-api.service';
 import { AuthTokenService } from './auth-token.service';
 
 interface ArticleDraftInput {
@@ -288,6 +288,16 @@ export class WorkspaceStateService {
   async deleteSite(siteId: string): Promise<void> {
     await this.api.deleteSite(siteId);
     await this.loadWorkspace();
+  }
+
+  async exportSite(siteId: string): Promise<SiteExportBundle> {
+    return this.api.exportSite(siteId);
+  }
+
+  async importSite(bundle: SiteExportBundle): Promise<SiteRecord> {
+    const site = await this.api.importSite(bundle);
+    await this.loadWorkspace(site.id);
+    return site;
   }
 
   async createArticleDraft(): Promise<ArticleRecord> {

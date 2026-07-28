@@ -2,11 +2,17 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionRenderer from '../components/SectionRenderer.astro';
 import { loadBuildData } from '../content';
+import SupromailLanding from '../templates/supromail/Landing.astro';
 
 const { site, articles, sections } = loadBuildData();
+const isSupromail = process.env.CMS_TEMPLATE_KEY === 'supromail';
 ---
 
-<BaseLayout title={site.name} description="Static landing page generated from CMS data." blogPath={site.blogPath}>
-  {sections.filter((section) => section.isEnabled).map((section) => <SectionRenderer section={section} articles={articles} blogPath={site.blogPath} />)}
-</BaseLayout>
+{isSupromail ? (
+  <SupromailLanding site={site} articles={articles} />
+) : (
+  <BaseLayout title={site.name} description="Static landing page generated from CMS data." blogPath={site.blogPath}>
+    {sections.filter((section) => section.isEnabled).map((section) => <SectionRenderer section={section} articles={articles} blogPath={site.blogPath} />)}
+  </BaseLayout>
+)}
 

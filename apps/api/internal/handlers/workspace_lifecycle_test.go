@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"strings"
 	"testing"
@@ -9,7 +10,7 @@ import (
 	"cms-builder/api/internal/services"
 )
 
-func TestDeleteSiteCascadesItsRecordsButPreservesAnotherSite(t *testing.T) {
+func TestDeleteSiteDetachesAuditHistoryBeforeRemovingContent(t *testing.T) {
 	db := openTestDatabase(t)
 	t.Cleanup(func() { _ = db.Close() })
 	ctx := context.Background()
@@ -19,6 +20,9 @@ func TestDeleteSiteCascadesItsRecordsButPreservesAnotherSite(t *testing.T) {
 		RETURNING id::text
 	`)
 	if _, err := db.ExecContext(ctx, `INSERT INTO builds (site_id, status, build_type) VALUES ($1, 'success', 'preview')`, siteID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO audit_logs (site_id, action, entity_type, entity_id) VALUES ($1, 'export_site', 'site', $1::uuid)`, siteID); err != nil {
 		t.Fatal(err)
 	}
 
@@ -33,6 +37,13 @@ func TestDeleteSiteCascadesItsRecordsButPreservesAnotherSite(t *testing.T) {
 	}
 	if count != 0 {
 		t.Fatalf("expected deleted site to be absent, found %d records", count)
+	}
+	var auditSiteID sql.NullString
+	if err := db.QueryRowContext(ctx, `SELECT site_id::text FROM audit_logs WHERE entity_id = $1::uuid AND action = 'export_site'`, siteID).Scan(&auditSiteID); err != nil {
+		t.Fatal(err)
+	}
+	if auditSiteID.Valid {
+		t.Fatalf("expected retained audit history to be detached from the deleted site, got %q", auditSiteID.String)
 	}
 }
 

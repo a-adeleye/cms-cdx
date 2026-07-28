@@ -109,6 +109,17 @@ interface MediaUpdatePayload {
   altText: string;
 }
 
+export interface SiteExportBundle {
+  version: number;
+  exportedAt: string;
+  site: Record<string, unknown>;
+  landingSections: unknown[];
+  authors: unknown[];
+  categories: unknown[];
+  mediaAssets: unknown[];
+  articles: unknown[];
+}
+
 interface CategoryUpsertPayload {
   name: string;
   description: string;
@@ -194,6 +205,14 @@ export class AdminApiService {
 
   async listSites(): Promise<ItemsResponse<SiteRecord>> {
     return firstValueFrom(this.http.get<ItemsResponse<SiteRecord>>(`${this.baseUrl}/sites`, { headers: this.headers() }));
+  }
+
+  async exportSite(siteId: string): Promise<SiteExportBundle> {
+    return firstValueFrom(this.http.get<SiteExportBundle>(`${this.baseUrl}/sites/${siteId}/export`, { headers: this.headers() }));
+  }
+
+  async importSite(bundle: SiteExportBundle): Promise<SiteRecord> {
+    return firstValueFrom(this.http.post<SiteRecord>(`${this.baseUrl}/site-imports`, bundle, { headers: this.headers() }));
   }
 
   async listArticles(siteId: string): Promise<ItemsResponse<ArticleRecord>> {

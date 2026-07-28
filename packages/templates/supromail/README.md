@@ -38,8 +38,13 @@ borrow preview-fixture metadata.
   reveals, the frosted scrolled header, the listing category filter, the article reading
   progress bar, and table-of-contents highlighting. Each block is guarded by the presence of
   its own markup, so the landing page does not run article-only code.
-- A builder integration should select the three entry points from a fixed template registry
-  and must not wrap them in the generic `BaseLayout` header.
+- The production builder selects these entry points from the fixed `supromail` template
+  registry. It passes a typed JSON file through `CMS_BUILD_DATA_FILE`, uses
+  `CMS_TEMPLATE_ROOT` to locate this package, and must not wrap them in the generic
+  `BaseLayout` header. Astro emits its source routes beneath `/articles`; the API moves that
+  static subtree to the site's configured `blogPath` after a successful build.
+- This package is trusted repository code, not an arbitrary upload format. Do not add runtime
+  dependency installation or server-side template code here.
 
 ## Verification
 

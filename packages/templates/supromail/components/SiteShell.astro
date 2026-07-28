@@ -7,16 +7,23 @@ import SiteHeader from './SiteHeader.astro';
 const { site, page = '' } = Astro.props as { site: SiteViewModel; page?: string };
 ---
 
-<script is:inline>document.documentElement.classList.add('js');</script>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{site.name}</title>
+    <script is:inline>document.documentElement.classList.add('js');</script>
+  </head>
+  <body>
+    <div class={`supromail-site supromail-page-${page}`}>
+      {page === 'article' && <div class="read-progress" id="readProgress" aria-hidden="true"></div>}
+      <SiteHeader site={site} />
+      <main><slot /></main>
+      <SiteFooter site={site} />
+    </div>
 
-<div class={`supromail-site supromail-page-${page}`}>
-  {page === 'article' && <div class="read-progress" id="readProgress" aria-hidden="true"></div>}
-  <SiteHeader site={site} />
-  <main><slot /></main>
-  <SiteFooter site={site} />
-</div>
-
-<script is:inline>
+    <script is:inline>
   (() => {
     /* ---- Mobile navigation ------------------------------- */
     const nav = document.querySelector('.nav');
@@ -170,4 +177,6 @@ const { site, page = '' } = Astro.props as { site: SiteViewModel; page?: string 
       applyActiveHeading();
     }
   })();
-</script>
+    </script>
+  </body>
+</html>

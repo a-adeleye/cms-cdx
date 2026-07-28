@@ -5,6 +5,7 @@ import PostCard from './components/PostCard.astro';
 import PostMeta from './components/PostMeta.astro';
 import PostVisual from './components/PostVisual.astro';
 import SiteShell from './components/SiteShell.astro';
+import { relativeSiteHref } from './lib/links';
 import { parseArticleMarkdown } from './lib/markdown';
 import { designArticles, resolveArticles, resolveFeaturedArticle, resolveSite } from './lib/model';
 
@@ -24,6 +25,9 @@ const relatedArticles = relatedInput !== undefined
   ? resolveArticles(relatedInput).slice(0, 3)
   : articleInput === undefined ? designArticles.slice(0, 3) : [];
 const hasTableOfContents = parsedContent.tableOfContents.length > 0;
+const blogHref = relativeSiteHref(Astro.url.pathname, `${site.blogPath}/`);
+const categoryHref = relativeSiteHref(Astro.url.pathname, `${site.blogPath}/all/?category=${article.categorySlug}`);
+const allArticlesHref = relativeSiteHref(Astro.url.pathname, `${site.blogPath}/all/`);
 ---
 
 <SiteShell site={site} page="article">
@@ -32,8 +36,8 @@ const hasTableOfContents = parsedContent.tableOfContents.length > 0;
       <div class="container">
         <nav class="breadcrumb" aria-label="Breadcrumb">
           <a href="https://supromail.com/">Home</a><span>/</span>
-          <a href={`${site.blogPath}/`}>Blog</a><span>/</span>
-          <a href={`${site.blogPath}/?category=${article.categorySlug}`}>{article.category}</a>
+          <a href={blogHref}>Blog</a><span>/</span>
+          <a href={categoryHref}>{article.category}</a>
         </nav>
         <h1>{article.title}</h1>
         {article.excerpt && <p class="lede">{article.excerpt}</p>}
@@ -65,7 +69,7 @@ const hasTableOfContents = parsedContent.tableOfContents.length > 0;
       <div class="container">
         <div class="related-head reveal">
           <h2>Keep reading</h2>
-          <a href={`${site.blogPath}/`}>All articles →</a>
+          <a href={allArticlesHref}>All articles →</a>
         </div>
         <div class="post-grid" data-stagger>
           {relatedArticles.map((related) => <PostCard article={related} blogPath={site.blogPath} />)}

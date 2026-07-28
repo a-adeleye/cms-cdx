@@ -400,6 +400,8 @@ func (a *API) siteSubroutes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch parts[1] {
+	case "export":
+		a.handleSiteExport(w, r, siteID, parts[2:])
 	case "workspace":
 		response, err := a.loadWorkspace(r.Context(), "", siteID)
 		if err != nil {
@@ -1276,6 +1278,11 @@ func (a *API) deleteSite(ctx context.Context, siteID string) error {
 	}
 	if siteCount <= 1 {
 		return fmt.Errorf("%w: create another site before deleting the last site", errConflict)
+	}
+	// Keep the administrative history while removing the foreign-key reference
+	// that would otherwise prevent a site and its content from being deleted.
+	if _, err = tx.ExecContext(ctx, `UPDATE audit_logs SET site_id = NULL WHERE site_id = $1`, siteID); err != nil {
+		return err
 	}
 
 	result, err := tx.ExecContext(ctx, `DELETE FROM sites WHERE id = $1`, siteID)

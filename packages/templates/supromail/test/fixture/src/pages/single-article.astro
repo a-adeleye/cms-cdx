@@ -1,0 +1,15 @@
+---
+import Landing from '../../../../landing.astro';
+
+const article = {
+  title: 'The only published article',
+  slug: 'the-only-published-article',
+  excerpt: 'A single published article should remain featured without an empty latest section.',
+  categoryName: 'General',
+  authorName: 'Site Editor',
+  publishedAt: '2026-07-28T00:00:00Z',
+  isFeatured: true,
+};
+---
+
+<html lang="en"><head><meta charset="utf-8" /><title>Supromail single article fixture</title></head><body><Landing site={{ name: 'Supromail', blogPath: '/blog' }} articles={[article]} /></body></html>

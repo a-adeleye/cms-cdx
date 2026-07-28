@@ -28,7 +28,7 @@ func New(db *sql.DB, cfg config.Config) Services {
 		DB:      db,
 		Config:  cfg,
 		AI:      ai.NewProvider(nil, nil),
-		Builder: builder.NewLocalBuilder(""),
+		Builder: builder.NewTemplateBuilder(cfg.BuildOutputRoot, cfg.BuilderDirectory, cfg.NPMCommand),
 		Deploy: deploy.NewAdapterWithCloudflareAndRepository("", deploy.CloudflarePagesAdapter{
 			APIToken:  cfg.CloudflareAPIToken,
 			AccountID: cfg.CloudflareAccountID,

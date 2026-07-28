@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"cms-builder/api/internal/builder"
+	"cms-builder/api/internal/database"
 	"cms-builder/api/internal/deploy"
 	"cms-builder/api/internal/services"
 )
@@ -13,6 +15,9 @@ import (
 func TestWorkspaceListsOnlyRenderedTemplatesWithPreviewURLs(t *testing.T) {
 	db := openTestDatabase(t)
 	ctx := context.Background()
+	if err := database.RunMigrations(ctx, db, filepath.Join("..", "..", "migrations")); err != nil {
+		t.Fatalf("apply template migrations: %v", err)
+	}
 	buildRoot := t.TempDir()
 	deployRoot := t.TempDir()
 	api := &API{Services: services.Services{DB: db, Builder: builder.NewLocalBuilder(buildRoot), Deploy: deploy.NewFilesystemAdapter(deployRoot)}}
@@ -21,18 +26,27 @@ func TestWorkspaceListsOnlyRenderedTemplatesWithPreviewURLs(t *testing.T) {
 		t.Fatalf("loadWorkspace returned error: %v", err)
 	}
 
-	found := false
+	foundAnonime := false
+	foundSupromail := false
 	for _, template := range workspace.Templates {
 		if template.Slug == "anonime" {
 			if template.PreviewURL != "/api/v1/template-previews/anonime" {
 				t.Fatalf("expected renderer preview URL, got %q", template.PreviewURL)
 			}
-			found = true
-			break
+			foundAnonime = true
+		}
+		if template.Slug == builder.SupromailTemplateKey {
+			if template.PreviewURL != "/api/v1/template-previews/supromail" {
+				t.Fatalf("expected Supromail preview URL, got %q", template.PreviewURL)
+			}
+			foundSupromail = true
 		}
 	}
-	if !found {
+	if !foundAnonime {
 		t.Fatalf("expected workspace templates to include anonime, got %#v", workspace.Templates)
+	}
+	if !foundSupromail {
+		t.Fatalf("expected workspace templates to include Supromail, got %#v", workspace.Templates)
 	}
 }
 

@@ -4,6 +4,7 @@ COPY package.json package-lock.json ./
 COPY apps/builder/package.json ./apps/builder/package.json
 RUN npm ci
 COPY apps/builder ./apps/builder
+COPY packages/templates/supromail ./apps/builder/templates/supromail
 
 FROM golang:1.23-alpine AS build
 WORKDIR /src

@@ -1,7 +1,9 @@
 ---
+import { relativeSiteHref } from '../lib/links';
 import type { SiteViewModel } from '../lib/model';
 
 const { site } = Astro.props as { site: SiteViewModel };
+const blogHref = relativeSiteHref(Astro.url.pathname, `${site.blogPath}/`);
 const footerGroups = [
   {
     label: 'Product',
@@ -15,7 +17,7 @@ const footerGroups = [
     label: 'Resources',
     links: [
       ['Docs', 'https://supromail.com/documentation'],
-      ['Blog', `${site.blogPath}/`],
+      ['Blog', blogHref],
       ['FAQ', 'https://supromail.com/faq'],
       ['Security', 'https://supromail.com/security'],
     ],

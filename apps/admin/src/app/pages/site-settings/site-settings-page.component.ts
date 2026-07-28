@@ -6,7 +6,6 @@ import { createPageActionFeedback } from '../../features/pages/page-feedback';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 import { DEFAULT_TEMPLATE_SLUG, templateSelectOptions } from '../../features/pages/site-config-options';
 import { externalSiteUrl } from '../../features/pages/external-url';
-import { ANONIME_ARTICLE_MASTER_PROMPT } from '../../features/pages/anonime-article-master-prompt';
 import type { SiteContentContext } from '../../features/pages/pages.model';
 
 @Component({
@@ -48,9 +47,7 @@ export class SiteSettingsPageComponent {
         contentContext: site.contentContext || 'standalone_blog',
         templateKey: site.templateKey || DEFAULT_TEMPLATE_SLUG,
         accentColor: typeof theme['accent'] === 'string' ? theme['accent'] : '#2563eb',
-        masterPrompt: typeof aiConfig['masterPrompt'] === 'string'
-          ? aiConfig['masterPrompt']
-          : site.templateKey === 'anonime' ? ANONIME_ARTICLE_MASTER_PROMPT : '',
+        masterPrompt: typeof aiConfig['masterPrompt'] === 'string' ? aiConfig['masterPrompt'] : '',
       }, { emitEvent: false });
     });
   }

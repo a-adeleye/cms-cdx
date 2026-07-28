@@ -7,6 +7,7 @@ import {
   templateSelectOptions,
 } from '../../features/pages/site-config-options';
 import { SiteRecord } from '../../features/pages/pages.model';
+import { SiteExportBundle } from '../../features/pages/admin-api.service';
 import { WorkspaceStateService } from '../../features/pages/workspace-state.service';
 
 @Component({
@@ -19,6 +20,7 @@ import { WorkspaceStateService } from '../../features/pages/workspace-state.serv
 })
 export class SitesPageComponent {
   @ViewChild('siteDialog') private siteDialog?: ElementRef<HTMLDialogElement>;
+  @ViewChild('siteImportInput') private siteImportInput?: ElementRef<HTMLInputElement>;
 
   private readonly document = inject(DOCUMENT);
   private readonly fb = inject(FormBuilder);
@@ -117,6 +119,46 @@ export class SitesPageComponent {
       await this.state.deleteSite(site.id);
     } catch (error) {
       const message = error instanceof Error && error.message ? `Unable to delete site. ${error.message}` : 'Unable to delete site.';
+      this.state.reportError(message);
+    }
+  }
+
+  async exportSite(site: SiteRecord): Promise<void> {
+    try {
+      const bundle = await this.state.exportSite(site.id);
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = this.document.createElement('a');
+      link.href = url;
+      link.download = `${site.slug || 'site'}-site-export.json`;
+      link.hidden = true;
+      this.document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      const message = error instanceof Error && error.message ? `Unable to export site. ${error.message}` : 'Unable to export site.';
+      this.state.reportError(message);
+    }
+  }
+
+  openSiteImport(): void {
+    this.siteImportInput?.nativeElement.click();
+  }
+
+  async importSiteFile(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) {
+      return;
+    }
+
+    try {
+      const bundle = JSON.parse(await file.text()) as SiteExportBundle;
+      await this.state.importSite(bundle);
+    } catch (error) {
+      const message = error instanceof Error && error.message ? `Unable to import site. ${error.message}` : 'Unable to import site.';
       this.state.reportError(message);
     }
   }

@@ -1,4 +1,5 @@
 ---
+import { relativeSiteHref } from '../lib/links';
 import type { ArticleViewModel } from '../lib/model';
 import PostMeta from './PostMeta.astro';
 import PostVisual from './PostVisual.astro';
@@ -8,9 +9,10 @@ const { article, blogPath, showDate = false } = Astro.props as {
   blogPath: string;
   showDate?: boolean;
 };
+const articleHref = relativeSiteHref(Astro.url.pathname, `${blogPath}/${article.slug}/`);
 ---
 
-<a class="post-card" href={`${blogPath}/${article.slug}/`} data-category={article.categorySlug}>
+<a class="post-card" href={articleHref} data-category={article.categorySlug}>
   <PostVisual article={article} />
   <div class="post-card-body">
     <span class="post-tag">{article.category}</span>

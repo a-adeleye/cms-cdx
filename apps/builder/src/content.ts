@@ -8,6 +8,12 @@ export type BuildArticle = {
   seoTitle: string;
   seoDescription: string;
   canonicalUrl: string;
+  categoryName?: string;
+  authorName?: string;
+  publishedAt?: string;
+  readingTime?: number;
+  coverImageUrl?: string;
+  isFeatured?: boolean;
 };
 
 export type BuildSection = {

@@ -79,6 +79,23 @@ describe('AdminApiService article persistence', () => {
     await expectAsync(clearHistory).toBeResolved();
   });
 
+  it('exports and imports site bundles through the protected transfer endpoints', async () => {
+    const bundle = { version: 1, exportedAt: '2026-07-28T00:00:00Z', site: {}, landingSections: [], authors: [], categories: [], mediaAssets: [], articles: [] };
+    const exported = service.exportSite('site-1');
+    const exportRequest = http.expectOne('/api/v1/sites/site-1/export');
+    expect(exportRequest.request.method).toBe('GET');
+    exportRequest.flush(bundle);
+
+    const imported = service.importSite(bundle);
+    const importRequest = http.expectOne('/api/v1/site-imports');
+    expect(importRequest.request.method).toBe('POST');
+    expect(importRequest.request.body).toEqual(bundle);
+    importRequest.flush({ id: 'site-2' });
+
+    await expectAsync(exported).toBeResolvedTo(bundle);
+    await expectAsync(imported).toBeResolvedTo(jasmine.objectContaining({ id: 'site-2' }));
+  });
+
   it('updates, replaces, and deletes scoped media assets', async () => {
     const updated = service.updateMediaAsset('site-1', 'media-1', 'Accessible image description');
     const updateRequest = http.expectOne('/api/v1/sites/site-1/media/media-1');

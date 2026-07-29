@@ -55,6 +55,8 @@ test('Supromail renders CMS content through the production Astro routes', () => 
     const articlesPage = readFileSync(join(outputPath, 'articles', 'all', 'index.html'), 'utf8');
     const articlePage = readFileSync(join(outputPath, 'articles', 'cms-article-1', 'index.html'), 'utf8');
     const paginationPage = readFileSync(join(outputPath, 'articles', 'page', '2', 'index.html'), 'utf8');
+    const sitemap = readFileSync(join(outputPath, 'sitemap.xml'), 'utf8');
+    const blogSitemap = readFileSync(join(outputPath, 'articles', 'sitemap.xml'), 'utf8');
 
     assert.match(landing, /^<!DOCTYPE html><html/);
     assert.match(landing, /The CMS Supromail blog/);
@@ -67,6 +69,14 @@ test('Supromail renders CMS content through the production Astro routes', () => 
     assert.match(paginationPage, /CMS article 7/);
     assert.match(landing, /href="blog\/cms-article-1\/"/);
     assert.doesNotMatch(landing, /href="\/(?:_astro|blog)\//);
+    assert.match(sitemap, /<loc>https:\/\/cms\.example\/<\/loc>/);
+    assert.match(sitemap, /<loc>https:\/\/cms\.example\/blog\/<\/loc>/);
+    assert.match(sitemap, /<loc>https:\/\/cms\.example\/blog\/all\/<\/loc>/);
+    assert.match(sitemap, /<loc>https:\/\/cms\.example\/blog\/page\/2\/<\/loc>/);
+    assert.match(sitemap, /<loc>https:\/\/cms\.example\/blog\/cms-article-1\/<\/loc><lastmod>2026-07-20<\/lastmod>/);
+    assert.doesNotMatch(sitemap, /https:\/\/cms\.example\/articles\//);
+    assert.match(blogSitemap, /<loc>https:\/\/cms\.example\/blog\/cms-article-1\/<\/loc>/);
+    assert.doesNotMatch(blogSitemap, /<loc>https:\/\/cms\.example\/<\/loc>/);
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true });
   }

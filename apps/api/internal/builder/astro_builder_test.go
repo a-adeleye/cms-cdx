@@ -39,6 +39,9 @@ func TestAstroBuilderCommandHelper(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(outputPath, "articles", "index.html"), []byte("<h1>Articles</h1>"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(outputPath, "articles", "sitemap.xml"), []byte("<urlset></urlset>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestAstroBuilderGeneratesSupromailTemplatePreview(t *testing.T) {
@@ -100,6 +103,9 @@ func TestAstroBuilderGeneratesSupromailOutputFromCMSData(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(outputPath, "blog", "index.html")); err != nil {
 		t.Fatalf("expected CMS blog path to receive Astro article routes: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(outputPath, "blog", "sitemap.xml")); err != nil {
+		t.Fatalf("expected blog sitemap to be relocated with Astro article routes: %v", err)
 	}
 }
 

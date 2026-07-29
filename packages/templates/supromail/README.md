@@ -42,7 +42,10 @@ borrow preview-fixture metadata.
   registry. It passes a typed JSON file through `CMS_BUILD_DATA_FILE`, uses
   `CMS_TEMPLATE_ROOT` to locate this package, and must not wrap them in the generic
   `BaseLayout` header. Astro emits its source routes beneath `/articles`; the API moves that
-  static subtree to the site's configured `blogPath` after a successful build.
+  static subtree to the site's configured `blogPath` after a successful build. The generated
+  root `sitemap.xml` uses that configured path, listing the landing page, blog landing,
+  article listing, pagination, and published article URLs. A blog-local `sitemap.xml` moves
+  with the static subtree and lists only blog URLs.
 - This package is trusted repository code, not an arbitrary upload format. Do not add runtime
   dependency installation or server-side template code here.
 

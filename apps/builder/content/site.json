@@ -1,0 +1,12 @@
+{
+  "name": "The Local Journal",
+  "domain": "http://127.0.0.1:4321",
+  "blogPath": "/articles",
+  "template": "anonime",
+  "theme": "emerald",
+  "seo": {
+    "title": "The Local Journal",
+    "description": "A Git-backed publication edited with the cms-cdx Pages CMS distribution.",
+    "canonicalUrl": "http://127.0.0.1:4321/"
+  }
+}

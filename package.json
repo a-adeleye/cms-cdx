@@ -8,8 +8,13 @@
   "scripts": {
     "dev:admin": "npm run start --workspace apps/admin",
     "dev:builder": "npm run dev --workspace apps/builder",
+    "dev:cms": "node scripts/dev-pagescms.mjs",
+    "dev:local": "node scripts/dev-local.mjs",
     "build:admin": "npm run build --workspace apps/admin",
     "build:builder": "npm run build --workspace apps/builder",
+    "build:cms": "npm run build --workspace apps/pagescms",
+    "test:cms": "npm run test --workspace apps/pagescms",
+    "test:builder": "npm run test --workspace apps/builder",
     "test:template:anonime": "npm --prefix packages/templates/anonime test"
   },
   "devDependencies": {

@@ -1,0 +1,18 @@
+{
+  "title": "A local-first content workflow",
+  "slug": "local-first-content",
+  "excerpt": "Why keeping structured content beside the site makes iteration easier to understand and safer to review.",
+  "body": "## Content you can inspect\n\nThe source of truth is a small set of JSON files in Git. Pages CMS edits them, Astro renders them, and normal code review shows exactly what changed.\n\n## One feedback loop\n\nRun the editor and preview together. A save in the CMS refreshes the local site without a database export or synchronization job.",
+  "author": "adele",
+  "category": "engineering",
+  "tags": ["cms", "local-first"],
+  "publishedAt": "2026-08-10",
+  "status": "published",
+  "featured": true,
+  "coverImage": "",
+  "seo": {
+    "title": "A local-first content workflow",
+    "description": "A practical Git-backed CMS workflow using Pages CMS and Astro.",
+    "canonicalUrl": "/articles/local-first-content/"
+  }
+}

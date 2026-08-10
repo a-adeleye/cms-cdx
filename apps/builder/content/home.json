@@ -1,0 +1,27 @@
+{
+  "seo": {
+    "title": "The Local Journal",
+    "description": "Ideas for building calmer, clearer software.",
+    "canonicalUrl": "http://127.0.0.1:4321/"
+  },
+  "sections": [
+    {
+      "type": "hero",
+      "enabled": true,
+      "eyebrow": "Independent notes",
+      "heading": "Build thoughtfully.\nPublish simply.",
+      "body": "A local-first publication whose content lives in Git and is edited through Pages CMS.",
+      "ctaLabel": "Read the journal",
+      "ctaHref": "/articles/"
+    },
+    { "type": "latest_articles", "enabled": true, "heading": "Latest articles", "ctaLabel": "See all articles" },
+    {
+      "type": "mission_cta",
+      "enabled": true,
+      "heading": "The CMS is part of the repository",
+      "body": "Edit, preview, and version every content change alongside the site that renders it.",
+      "ctaLabel": "Open the editor",
+      "ctaHref": "http://127.0.0.1:3000/"
+    }
+  ]
+}

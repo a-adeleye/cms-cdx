@@ -1,0 +1,161 @@
+media:
+  - name: media
+    label: Media
+    input: apps/builder/public/media
+    output: /media
+    extensions: [png, jpg, jpeg, webp]
+
+content:
+  - name: site
+    label: Site settings
+    type: file
+    path: apps/builder/content/site.json
+    format: json
+    fields:
+      - { name: name, label: Site name, type: string, required: true }
+      - { name: domain, label: Site URL, type: string, required: true }
+      - { name: blogPath, label: Articles path, type: string, required: true, pattern: "^/[a-z0-9/-]*$" }
+      - name: template
+        label: Template
+        type: select
+        required: true
+        options: { values: [anonime, generic] }
+      - name: theme
+        label: Theme
+        type: select
+        required: true
+        options: { values: [emerald, ocean] }
+      - name: seo
+        label: Default SEO
+        type: object
+        fields:
+          - { name: title, label: Title, type: string, required: true }
+          - { name: description, label: Description, type: text, required: true }
+          - { name: canonicalUrl, label: Canonical URL, type: string }
+
+  - name: home
+    label: Home page
+    type: file
+    path: apps/builder/content/home.json
+    format: json
+    fields:
+      - name: seo
+        label: SEO
+        type: object
+        fields:
+          - { name: title, label: Title, type: string, required: true }
+          - { name: description, label: Description, type: text, required: true }
+          - { name: canonicalUrl, label: Canonical URL, type: string }
+      - name: sections
+        label: Page sections
+        type: block
+        list: true
+        blockKey: type
+        blocks:
+          - name: hero
+            label: Hero
+            fields:
+              - { name: enabled, label: Enabled, type: boolean, default: true }
+              - { name: eyebrow, label: Eyebrow, type: string }
+              - { name: heading, label: Heading, type: text, required: true }
+              - { name: body, label: Body, type: text, required: true }
+              - { name: ctaLabel, label: CTA label, type: string }
+              - { name: ctaHref, label: CTA link, type: string }
+          - name: latest_articles
+            label: Latest articles
+            fields:
+              - { name: enabled, label: Enabled, type: boolean, default: true }
+              - { name: heading, label: Heading, type: string, required: true }
+              - { name: ctaLabel, label: CTA label, type: string }
+          - name: mission_cta
+            label: Mission CTA
+            fields:
+              - { name: enabled, label: Enabled, type: boolean, default: true }
+              - { name: heading, label: Heading, type: string, required: true }
+              - { name: body, label: Body, type: text, required: true }
+              - { name: ctaLabel, label: CTA label, type: string }
+              - { name: ctaHref, label: CTA link, type: string }
+
+  - name: articles
+    label: Articles
+    type: collection
+    path: apps/builder/content/articles
+    format: json
+    extension: json
+    filename: "{primary}.json"
+    view:
+      fields: [title, status, publishedAt]
+      primary: slug
+      sort: [publishedAt, title]
+    fields:
+      - name: ai_assistant
+        label: AI draft assistant
+        type: ai-draft
+        options:
+          instructions: Write an accurate, useful editorial article. Do not invent facts or sources.
+          targets:
+            title: title
+            excerpt: excerpt
+            body: body
+            seoTitle: seo.title
+            seoDescription: seo.description
+      - { name: title, label: Title, type: string, required: true }
+      - { name: slug, label: Slug, type: string, required: true, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+      - { name: excerpt, label: Excerpt, type: text, required: true }
+      - { name: body, label: Body, type: rich-text, required: true, options: { format: markdown } }
+      - { name: author, label: Author slug, type: string, required: true }
+      - { name: category, label: Category slug, type: string, required: true }
+      - { name: tags, label: Tag slugs, type: string, list: true }
+      - { name: publishedAt, label: Published date, type: date, required: true }
+      - name: status
+        label: Status
+        type: select
+        required: true
+        options: { values: [draft, published] }
+      - { name: featured, label: Featured, type: boolean, default: false }
+      - { name: coverImage, label: Cover image, type: image, options: { media: media } }
+      - name: seo
+        label: SEO
+        type: object
+        fields:
+          - { name: title, label: SEO title, type: string, required: true }
+          - { name: description, label: SEO description, type: text, required: true }
+          - { name: canonicalUrl, label: Canonical URL, type: string }
+
+  - name: authors
+    label: Authors
+    type: collection
+    path: apps/builder/content/authors
+    format: json
+    extension: json
+    filename: "{primary}.json"
+    view: { fields: [name], primary: slug }
+    fields:
+      - { name: slug, label: Slug, type: string, required: true, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+      - { name: name, label: Name, type: string, required: true }
+      - { name: bio, label: Bio, type: text }
+
+  - name: categories
+    label: Categories
+    type: collection
+    path: apps/builder/content/categories
+    format: json
+    extension: json
+    filename: "{primary}.json"
+    view: { fields: [name], primary: slug }
+    fields:
+      - { name: slug, label: Slug, type: string, required: true, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+      - { name: name, label: Name, type: string, required: true }
+      - { name: description, label: Description, type: text }
+
+  - name: tags
+    label: Tags
+    type: collection
+    path: apps/builder/content/tags
+    format: json
+    extension: json
+    filename: "{primary}.json"
+    view: { fields: [name], primary: slug }
+    fields:
+      - { name: slug, label: Slug, type: string, required: true, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+      - { name: name, label: Name, type: string, required: true }

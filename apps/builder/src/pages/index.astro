@@ -6,7 +6,7 @@ import { loadBuildData } from '../content';
 const { site, articles, sections } = loadBuildData();
 ---
 
-<BaseLayout title={site.name} description="Static landing page generated from CMS data." blogPath={site.blogPath}>
+<BaseLayout title={site.seoTitle || site.name} description={site.seoDescription} blogPath={site.blogPath}>
   {sections.filter((section) => section.isEnabled).map((section) => <SectionRenderer section={section} articles={articles} blogPath={site.blogPath} />)}
 </BaseLayout>
 

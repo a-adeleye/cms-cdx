@@ -1,0 +1,16 @@
+{
+  "title": "Editing static sites locally with Pages CMS",
+  "slug": "editing-static-sites-locally",
+  "excerpt": "A practical introduction to editing static sites locally with pages cms.",
+  "body": "## Editing static sites locally with Pages CMS\n\nThis local draft was generated deterministically so the complete CMS workflow can be tested without an API key.\n\n### Start here\n\nFocus on the reader's goal, explain the essential ideas clearly, and finish with a concrete next step.",
+  "author": "adele",
+  "category": "engineering",
+  "publishedAt": "2026-08-10",
+  "status": "published",
+  "featured": false,
+  "seo": {
+    "title": "Editing static sites locally with Pages CMS",
+    "description": "Learn the essentials of editing static sites locally with pages cms with a clear, practical guide.",
+    "canonicalUrl": "/articles/editing-static-sites-locally/"
+  }
+}
